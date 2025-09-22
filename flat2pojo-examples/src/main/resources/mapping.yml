@@ -1,0 +1,31 @@
+separator: "/"
+allowSparseRows: false
+rootKeys:
+  - "referencedProductId/identifier"
+
+lists:
+  - path: "definitions"
+    keyPaths:
+      - "definitions/id/identifier"
+
+  - path: "definitions/tracker/comments"
+    keyPaths:
+      - "definitions/id/identifier"
+      - "definitions/tracker/comments/loggedAt"
+
+  - path: "definitions/tracker/tasks"
+    keyPaths:
+      - "definitions/id/identifier"
+      - "definitions/tracker/tasks/taskDate"
+
+  - path: "definitions/tracker/tasks/comments"
+    keyPaths:
+      - "definitions/id/identifier"
+      - "definitions/tracker/tasks/taskDate"
+      - "definitions/tracker/tasks/comments/loggedAt"
+
+primitives:
+  - path: "definitions/schedule/weekdays"
+    split:
+      delimiter: ","
+      trim: true

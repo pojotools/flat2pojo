@@ -1,0 +1,21 @@
+package io.flat2pojo.examples.domain;
+
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import org.immutables.value.Value;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.List;
+
+@Value.Immutable
+@JsonSerialize(as = ImmutableSchedule.class)
+@JsonDeserialize(as = ImmutableSchedule.class)
+@JsonIgnoreProperties(ignoreUnknown = true)
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public interface Schedule {
+  @Nullable Identifier id();
+  @Nullable Integer day();
+  List<String> weekdays();
+}
