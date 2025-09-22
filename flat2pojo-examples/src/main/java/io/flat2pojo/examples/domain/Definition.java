@@ -1,9 +1,9 @@
 package io.flat2pojo.examples.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import org.immutables.value.Value;
 import org.jetbrains.annotations.Nullable;
 
@@ -14,8 +14,16 @@ import org.jetbrains.annotations.Nullable;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public interface Definition {
   Identifier id();
-  @Nullable String name();
-  @Nullable Schedule schedule();
-  @Nullable Audit audit();
-  @Nullable Tracker tracker();
+
+  @Nullable
+  String name();
+
+  @Nullable
+  Schedule schedule();
+
+  @Nullable
+  Audit audit();
+
+  @Nullable
+  Tracker tracker();
 }

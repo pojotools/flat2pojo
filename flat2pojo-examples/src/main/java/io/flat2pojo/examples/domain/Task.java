@@ -1,9 +1,9 @@
 package io.flat2pojo.examples.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import org.immutables.value.Value;
 import org.jetbrains.annotations.Nullable;
 
@@ -17,8 +17,15 @@ import java.util.List;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public interface Task {
   LocalDate taskDate();
-  @Nullable LocalDate dueDate();
-  @Nullable Boolean isUser();
-  @Nullable Integer gracePeriod();
-  List<TaskComment> comments();
+
+  @Nullable
+  LocalDate dueDate();
+
+  @Nullable
+  Boolean isUser();
+
+  @Nullable
+  Integer gracePeriod();
+
+  List<Comment> comments();
 }

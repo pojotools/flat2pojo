@@ -11,12 +11,20 @@ public final class CompositeKey {
     this.hash = Objects.hash(this.values);
   }
 
-  @Override public boolean equals(Object o){
+  @Override
+  public boolean equals(Object o) {
     if (this == o) return true;
     if (!(o instanceof CompositeKey k)) return false;
     return values.equals(k.values);
   }
-  @Override public int hashCode(){ return hash; }
 
-  @Override public String toString(){ return values.toString(); }
+  @Override
+  public int hashCode() {
+    return hash;
+  }
+
+  @Override
+  public String toString() {
+    return values.toString();
+  }
 }

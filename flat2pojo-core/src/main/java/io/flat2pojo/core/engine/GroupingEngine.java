@@ -4,129 +4,188 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.*;
 import io.flat2pojo.core.config.MappingConfig;
-import io.flat2pojo.core.paths.PathUtil;
+import io.flat2pojo.core.util.PathOps;
 import java.util.*;
 
 /** Manages list/grouping state while building the JSON tree. */
 public final class GroupingEngine {
-    private final ObjectMapper om;
-    private final MappingConfig cfg;
+  private final ObjectMapper om;
+  private final String separator;
+  private final char separatorChar;
 
-    // Side-car state for arrays encountered during building
-    private final IdentityHashMap<ArrayNode, ArrayBucket> buckets = new IdentityHashMap<>();
-    private final IdentityHashMap<ArrayNode, List<Comparator<ObjectNode>>> comparators = new IdentityHashMap<>();
+  // Side-car state for arrays encountered during building
+  private final IdentityHashMap<ArrayNode, ArrayBucket> buckets = new IdentityHashMap<>();
+  private final IdentityHashMap<ArrayNode, List<Comparator<ObjectNode>>> comparators =
+      new IdentityHashMap<>();
 
-    public GroupingEngine(ObjectMapper om, MappingConfig cfg) {
-        this.om = om; this.cfg = cfg;
+  // Cache for pre-built comparators by rule path
+  private final Map<String, List<Comparator<ObjectNode>>> comparatorCache = new HashMap<>();
+
+  public GroupingEngine(final ObjectMapper om, final MappingConfig cfg) {
+    this.om = om;
+    this.separator = cfg.separator();
+    this.separatorChar = separator.length() == 1 ? separator.charAt(0) : '/';
+    precomputeComparators(cfg);
+  }
+
+  private void precomputeComparators(final MappingConfig cfg) {
+    for (final var rule : cfg.lists()) {
+      final List<Comparator<ObjectNode>> ruleComparators = buildComparatorsForRule(rule);
+      comparatorCache.put(rule.path(), ruleComparators);
     }
+  }
 
-    /**
-     * Upsert an element inside a list located by a RELATIVE path from the given base object.
-     * Example: base=definitionElement, relativeListPath="tracker/tasks"
-     */
-    public ObjectNode upsertListElementRelative(ObjectNode base,
-                                                String relativeListPath,
-                                                Map<String, JsonNode> rowValues,
-                                                MappingConfig.ListRule rule) {
-        // Walk to the parent object of the array, using RELATIVE path segments
-        ObjectNode cursor = base;
-        String[] segs = relativeListPath.split(java.util.regex.Pattern.quote(cfg.separator()));
-        for (int i = 0; i < segs.length - 1; i++) {
-            cursor = ensureObject(cursor, segs[i]);
+  /**
+   * Upsert an element inside a list located by a RELATIVE path from the given base object. Example:
+   * base=definitionElement, relativeListPath="tracker/tasks"
+   */
+  public ObjectNode upsertListElementRelative(
+      final ObjectNode base,
+      final String relativeListPath,
+      final Map<String, JsonNode> rowValues,
+      final MappingConfig.ListRule rule) {
+    // Use PathOps for consistent path traversal
+    final ObjectNode parentNode = PathOps.traverseAndEnsurePath(base, relativeListPath, separatorChar,
+        GroupingEngine::ensureObject);
+    final String arrayField = PathOps.getFinalSegment(relativeListPath, separatorChar);
+    final ArrayNode arr = parentNode.withArray(arrayField);
+
+    // Per-array state
+    final ArrayBucket bucket = buckets.computeIfAbsent(arr, k -> new ArrayBucket());
+    comparators.computeIfAbsent(arr, k -> comparatorCache.get(rule.path()));
+
+    // Composite key (keyPaths are ABSOLUTE)
+    final List<Object> keyVals = new ArrayList<>(rule.keyPaths().size());
+    for (final String keyPath : rule.keyPaths()) {
+      final JsonNode v = rowValues.get(keyPath);
+      keyVals.add(v == null ? NullNode.getInstance() : v);
+    }
+    final CompositeKey key = new CompositeKey(keyVals);
+
+    final ObjectNode candidate = om.createObjectNode();
+    return bucket.upsert(key, candidate, rule.onConflict());
+  }
+
+  public void finalizeArrays(final ObjectNode node) {
+    final Deque<JsonNode> stack = new ArrayDeque<>();
+    stack.push(node);
+    while (!stack.isEmpty()) {
+      final JsonNode cur = stack.pop();
+      if (cur instanceof ObjectNode on) {
+        final Iterator<String> f = on.fieldNames();
+        final List<String> names = new ArrayList<>();
+        f.forEachRemaining(names::add);
+        for (final String n : names) {
+          final JsonNode v = on.get(n);
+          if (v instanceof ObjectNode || v instanceof ArrayNode) {
+            stack.push(v);
+          }
         }
-        String arrayField = segs[segs.length - 1];
-        ArrayNode arr = cursor.withArray(arrayField);
-
-        // Per-array state
-        ArrayBucket bucket = buckets.computeIfAbsent(arr, k -> new ArrayBucket());
-        comparators.computeIfAbsent(arr, k -> buildComparators(rule));
-
-        // Composite key (keyPaths are ABSOLUTE)
-        List<Object> keyVals = new ArrayList<>();
-        for (String keyPath : rule.keyPaths()) {
-            JsonNode v = rowValues.get(keyPath);
-            keyVals.add(v == null ? NullNode.getInstance() : v);
+      } else if (cur instanceof ArrayNode an) {
+        final ArrayBucket bucket = buckets.get(an);
+        if (bucket != null) {
+          final List<Comparator<ObjectNode>> comps = comparators.getOrDefault(an, List.of());
+          an.removeAll();
+          for (final ObjectNode e : bucket.ordered(comps)) {
+            an.add(e);
+          }
         }
-        CompositeKey key = new CompositeKey(keyVals);
-
-        ObjectNode candidate = om.createObjectNode();
-        return bucket.upsert(key, candidate, rule.onConflict());
-    }
-
-    /** Must be called after all rows are processed — materializes arrays with ordering. */
-    public void finalizeArrays(ObjectNode node) {
-        Deque<JsonNode> stack = new ArrayDeque<>();
-        stack.push(node);
-        while (!stack.isEmpty()) {
-            JsonNode cur = stack.pop();
-            if (cur instanceof ObjectNode on) {
-                Iterator<String> f = on.fieldNames();
-                List<String> names = new ArrayList<>();
-                f.forEachRemaining(names::add);
-                for (String n : names) {
-                    JsonNode v = on.get(n);
-                    if (v instanceof ObjectNode || v instanceof ArrayNode) stack.push(v);
-                }
-            } else if (cur instanceof ArrayNode an) {
-                ArrayBucket bucket = buckets.get(an);
-                if (bucket != null) {
-                    List<Comparator<ObjectNode>> comps = comparators.getOrDefault(an, List.of());
-                    an.removeAll();
-                    for (ObjectNode e : bucket.ordered(comps)) an.add(e);
-                }
-                for (JsonNode child : an) stack.push(child);
-            }
+        for (final JsonNode child : an) {
+          stack.push(child);
         }
+      }
+    }
+  }
+
+  private List<Comparator<ObjectNode>> buildComparatorsForRule(
+      final MappingConfig.ListRule rule) {
+    final String rulePathPrefix = rule.path() + separator;
+    final List<Comparator<ObjectNode>> comparatorList = new ArrayList<>();
+
+    for (final var orderBy : rule.orderBy()) {
+      final String orderPath = orderBy.path();
+      final String relativePath = orderPath.startsWith(rulePathPrefix)
+              ? orderPath.substring(rulePathPrefix.length())
+              : orderPath;
+
+      final boolean isAscending = orderBy.direction() == MappingConfig.Direction.asc;
+      final boolean nullsFirst = orderBy.nulls() == MappingConfig.Nulls.first;
+
+      comparatorList.add(createFieldComparator(relativePath, isAscending, nullsFirst));
     }
 
-    // Build comparators relative to the list element (strip rule.path prefix if present)
-    private List<Comparator<ObjectNode>> buildComparators(MappingConfig.ListRule rule) {
-        String sep = cfg.separator();
-        final String prefix = rule.path() + sep;
+    return comparatorList;
+  }
 
-        List<Comparator<ObjectNode>> comps = new ArrayList<>();
-        for (var ob : rule.orderBy()) {
-            final String raw = ob.path();
-            final String rel = raw.startsWith(prefix) ? raw.substring(prefix.length()) : raw;
-            final boolean asc = ob.direction() == MappingConfig.Direction.asc;
-            final boolean nullsFirst = ob.nulls() == MappingConfig.Nulls.first;
+  private Comparator<ObjectNode> createFieldComparator(
+      final String relativePath, final boolean isAscending, final boolean nullsFirst) {
+    return (nodeA, nodeB) -> {
+      final JsonNode valueA = findValueAtPath(nodeA, relativePath);
+      final JsonNode valueB = findValueAtPath(nodeB, relativePath);
 
-            comps.add((a,b) -> {
-                JsonNode va = find(a, rel, sep);
-                JsonNode vb = find(b, rel, sep);
-                boolean na = (va == null || va.isNull());
-                boolean nb = (vb == null || vb.isNull());
-                if (na != nb) return nullsFirst ? (na ? -1 : 1) : (na ? 1 : -1);
-                if (na && nb) return 0;
-                int cmp = compare(va, vb);
-                return asc ? cmp : -cmp;
-            });
-        }
-        return comps;
+      final boolean isANull = (valueA == null || valueA.isNull());
+      final boolean isBNull = (valueB == null || valueB.isNull());
+
+      if (isANull != isBNull) {
+        return nullsFirst ? (isANull ? -1 : 1) : (isANull ? 1 : -1);
+      }
+
+      if (isANull && isBNull) {
+        return 0;
+      }
+
+      final int comparison = compareJsonValues(valueA, valueB);
+      return isAscending ? comparison : -comparison;
+    };
+  }
+
+  private static int compareJsonValues(final JsonNode a, final JsonNode b) {
+    if (a.isNumber() && b.isNumber()) {
+      return Double.compare(a.asDouble(), b.asDouble());
+    }
+    return a.asText().compareTo(b.asText());
+  }
+
+  private JsonNode findValueAtPath(final ObjectNode base, final String relativePath) {
+    if (relativePath.isEmpty()) {
+      return base;
     }
 
-    private static int compare(JsonNode a, JsonNode b) {
-        if (a.isNumber() && b.isNumber()) return Double.compare(a.asDouble(), b.asDouble());
-        return a.asText().compareTo(b.asText());
+    JsonNode currentNode = base;
+    int start = 0;
+    int sepIndex;
+
+    while ((sepIndex = PathOps.nextSep(relativePath, start, separatorChar)) >= 0) {
+      if (!(currentNode instanceof ObjectNode objectNode)) {
+        return NullNode.getInstance();
+      }
+
+      final String segment = relativePath.substring(start, sepIndex);
+      currentNode = objectNode.get(segment);
+      if (currentNode == null) {
+        return NullNode.getInstance();
+      }
+      start = sepIndex + 1;
     }
 
-    private static JsonNode find(ObjectNode base, String relPath, String sep) {
-        if (relPath.isEmpty()) return base;
-        String[] segs = relPath.split(java.util.regex.Pattern.quote(sep));
-        JsonNode cur = base;
-        for (String s : segs) {
-            if (!(cur instanceof ObjectNode co)) return NullNode.getInstance();
-            cur = co.get(s);
-            if (cur == null) return NullNode.getInstance();
-        }
-        return cur;
+    if (start < relativePath.length()) {
+      if (!(currentNode instanceof ObjectNode objectNode)) {
+        return NullNode.getInstance();
+      }
+      final String lastSegment = relativePath.substring(start);
+      currentNode = objectNode.get(lastSegment);
     }
 
-    private static ObjectNode ensureObject(ObjectNode parent, String field) {
-        JsonNode n = parent.get(field);
-        if (n instanceof ObjectNode existing) return existing;
-        ObjectNode created = parent.objectNode();
-        parent.set(field, created);
-        return created;
+    return currentNode == null ? NullNode.getInstance() : currentNode;
+  }
+
+  private static ObjectNode ensureObject(final ObjectNode parent, final String field) {
+    final JsonNode n = parent.get(field);
+    if (n instanceof ObjectNode existing) {
+      return existing;
     }
+    final ObjectNode created = parent.objectNode();
+    parent.set(field, created);
+    return created;
+  }
 }

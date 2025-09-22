@@ -1,79 +1,146 @@
 package io.flat2pojo.core.config;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import org.immutables.value.Value;
 import java.util.*;
 
-public final class MappingConfig {
-    private final String separator;
-    private final boolean allowSparseRows;
-    private final List<String> rootKeys;
-    private final List<ListRule> lists;
-    private final List<PrimitiveSplitRule> primitives;
-    private final NullPolicy nullPolicy;
+/**
+ * Immutable configuration for flat-to-POJO conversion.
+ *
+ * <p>This class defines how flat key-value maps should be transformed into structured objects,
+ * including rules for grouping related data into lists, handling conflicts, and processing
+ * primitive values.
+ *
+ * <p>Instances are thread-safe and should be reused across multiple conversions for optimal
+ * performance. Use {@link ImmutableMappingConfig#builder()} to create new configurations.
+ */
+@Value.Immutable
+@JsonSerialize(as = ImmutableMappingConfig.class)
+@JsonDeserialize(as = ImmutableMappingConfig.class)
+@JsonIgnoreProperties(ignoreUnknown = true)
+public abstract class MappingConfig {
 
-    private MappingConfig(Builder b) {
-        this.separator = b.separator;
-        this.allowSparseRows = b.allowSparseRows;
-        this.rootKeys = List.copyOf(b.rootKeys);
-        this.lists = List.copyOf(b.lists);
-        this.primitives = List.copyOf(b.primitives);
-        this.nullPolicy = b.nullPolicy;
+  // ======= ABSTRACT GETTERS (implemented by Immutables) =======
+
+  @Value.Default
+  public String separator() {
+    return "/";
+  }
+
+  @Value.Default
+  public boolean allowSparseRows() {
+    return false;
+  }
+
+  @Value.Default
+  public List<String> rootKeys() {
+    return List.of();
+  }
+
+  @Value.Default
+  public List<ListRule> lists() {
+    return List.of();
+  }
+
+  @Value.Default
+  public List<PrimitiveSplitRule> primitives() {
+    return List.of();
+  }
+
+  @Value.Default
+  public NullPolicy nullPolicy() {
+    return new NullPolicy(false);
+  }
+
+  // ======= DERIVED/CACHED FIELDS =======
+
+  @Value.Derived
+  public char separatorChar() {
+    return separator().length() == 1 ? separator().charAt(0) : '/';
+  }
+
+  @Value.Derived
+  public Set<String> listPaths() {
+    return precomputeListPaths();
+  }
+
+  @Value.Derived
+  public Map<String, Set<String>> childListPrefixesMap() {
+    return precomputeChildListPrefixes();
+  }
+
+  public Set<String> getChildListPrefixes(final String listPath) {
+    return childListPrefixesMap().getOrDefault(listPath, Set.of());
+  }
+
+  // ======= CONVENIENCE BUILDER =======
+
+  public static ImmutableMappingConfig.Builder builder() {
+    return ImmutableMappingConfig.builder();
+  }
+
+  // ======= HELPER METHODS FOR DERIVED FIELDS =======
+
+  private Set<String> precomputeListPaths() {
+    final Set<String> paths = new HashSet<>();
+    for (final ListRule rule : lists()) {
+      paths.add(rule.path());
+    }
+    return Set.copyOf(paths);
+  }
+
+  private Map<String, Set<String>> precomputeChildListPrefixes() {
+    final Map<String, Set<String>> prefixMap = new HashMap<>();
+    final String sep = separator();
+
+    for (final ListRule rule : lists()) {
+      final String rulePath = rule.path();
+      final Set<String> childPrefixes = new HashSet<>();
+
+      for (final ListRule otherRule : lists()) {
+        final String otherPath = otherRule.path();
+        if (!otherPath.equals(rulePath) && otherPath.startsWith(rulePath + sep)) {
+          childPrefixes.add(otherPath + sep);
+        }
+      }
+
+      prefixMap.put(rulePath, Set.copyOf(childPrefixes));
     }
 
-    // ======= GETTERS (used throughout the codebase) =======
-    public String separator() { return separator; }
-    public boolean allowSparseRows() { return allowSparseRows; }
-    public List<String> rootKeys() { return rootKeys; }
-    public List<ListRule> lists() { return lists; }
-    public List<PrimitiveSplitRule> primitives() { return primitives; }
-    public NullPolicy nullPolicy() { return nullPolicy; }
+    return Map.copyOf(prefixMap);
+  }
 
-    // ======= Builder =======
-    public static Builder builder() { return new Builder(); }
-    public static final class Builder {
-        private String separator = "/";
-        private boolean allowSparseRows = false;
-        private List<String> rootKeys = new ArrayList<>();
-        private List<ListRule> lists = new ArrayList<>();
-        private List<PrimitiveSplitRule> primitives = new ArrayList<>();
-        private NullPolicy nullPolicy = new NullPolicy(false);
+  // ======= VALUE TYPES =======
 
-        public Builder separator(String s){ this.separator = s; return this; }
-        public Builder allowSparseRows(boolean b){ this.allowSparseRows = b; return this; }
-        public Builder addRootKey(String k){ this.rootKeys.add(k); return this; }
-        public Builder rootKeys(List<String> ks){ this.rootKeys = new ArrayList<>(ks); return this; }
-        public Builder addListRule(ListRule r){ this.lists.add(r); return this; }
-        public Builder listRules(List<ListRule> rs){ this.lists = new ArrayList<>(rs); return this; }
-        public Builder addPrimitiveRule(PrimitiveSplitRule r){ this.primitives.add(r); return this; }
-        public Builder primitiveRules(List<PrimitiveSplitRule> rs){ this.primitives = new ArrayList<>(rs); return this; }
-        public Builder nullPolicy(NullPolicy np){ this.nullPolicy = np; return this; }
-        public MappingConfig build(){ return new MappingConfig(this); }
-    }
+  public record NullPolicy(boolean blanksAsNulls) {}
 
-    // ======= Value types (records) with getters by default =======
-    public record NullPolicy(boolean blanksAsNulls) {}
+  public record ListRule(
+      String path,
+      List<String> keyPaths,
+      List<OrderBy> orderBy,
+      boolean dedupe,
+      ConflictPolicy onConflict) {}
 
-    public record ListRule(
-        String path,
-        List<String> keyPaths,
-        List<OrderBy> orderBy,
-        boolean dedupe,
-        ConflictPolicy onConflict
-    ) {}
+  public enum ConflictPolicy {
+    error,
+    lastWriteWins,
+    firstWriteWins,
+    merge
+  }
 
-    public enum ConflictPolicy { error, lastWriteWins, firstWriteWins, merge }
+  public record OrderBy(String path, Direction direction, Nulls nulls) {}
 
-    public record OrderBy(
-        String path,
-        Direction direction,
-        Nulls nulls
-    ) {}
+  public enum Direction {
+    asc,
+    desc
+  }
 
-    public enum Direction { asc, desc }
-    public enum Nulls { first, last }
+  public enum Nulls {
+    first,
+    last
+  }
 
-    public record PrimitiveSplitRule(
-        String path,
-        String delimiter,
-        boolean trim
-    ) {}
+  public record PrimitiveSplitRule(String path, String delimiter, boolean trim) {}
 }
