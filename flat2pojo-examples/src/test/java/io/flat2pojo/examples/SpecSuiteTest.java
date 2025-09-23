@@ -1,7 +1,5 @@
 package io.flat2pojo.examples;
 
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.flat2pojo.core.api.Flat2Pojo;
@@ -9,11 +7,14 @@ import io.flat2pojo.core.config.MappingConfig;
 import io.flat2pojo.core.config.MappingConfigLoader;
 import io.flat2pojo.core.config.ValidationException;
 import io.flat2pojo.examples.domain.ImmutableProductRoot;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class SpecSuiteTest {
   ObjectMapper om;
@@ -150,9 +151,9 @@ class SpecSuiteTest {
         - path: "definitions"
           keyPaths: ["definitions/id/identifier"]
         - path: "definitions/tracker/tasks"
-          keyPaths: ["definitions/id/identifier","definitions/tracker/tasks/taskDate"]
+          keyPaths: ["definitions/tracker/tasks/taskDate"]
         - path: "definitions/tracker/tasks/comments"
-          keyPaths: ["definitions/id/identifier","definitions/tracker/tasks/taskDate","definitions/tracker/tasks/comments/loggedAt"]
+          keyPaths: ["definitions/tracker/tasks/comments/loggedAt"]
     """);
 
     List<Map<String, ?>> rows =
@@ -242,11 +243,11 @@ class SpecSuiteTest {
         - path: "definitions"
           keyPaths: ["definitions/id/identifier"]
         - path: "definitions/tracker/comments"
-          keyPaths: ["definitions/id/identifier","definitions/tracker/comments/loggedAt"]
+          keyPaths: ["definitions/tracker/comments/loggedAt"]
         - path: "definitions/tracker/tasks"
-          keyPaths: ["definitions/id/identifier","definitions/tracker/tasks/taskDate"]
+          keyPaths: ["definitions/tracker/tasks/taskDate"]
         - path: "definitions/tracker/tasks/comments"
-          keyPaths: ["definitions/id/identifier","definitions/tracker/tasks/taskDate","definitions/tracker/tasks/comments/loggedAt"]
+          keyPaths: ["definitions/tracker/tasks/comments/loggedAt"]
     """);
 
     // Build the full 36 cartesian rows for 2 definitions.

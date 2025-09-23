@@ -3,10 +3,11 @@ package io.flat2pojo.examples;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.flat2pojo.core.api.Flat2Pojo;
 import io.flat2pojo.examples.domain.ImmutableProductRoot;
-import java.util.List;
-import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
+import java.util.Map;
 
 class OrderingSuiteTest {
   ObjectMapper om;
@@ -133,7 +134,7 @@ class OrderingSuiteTest {
         - path: "definitions"
           keyPaths: ["definitions/id/identifier"]
         - path: "definitions/tracker/tasks"
-          keyPaths: ["definitions/id/identifier","definitions/tracker/tasks/taskDate"]
+          keyPaths: ["definitions/tracker/tasks/taskDate"]
           orderBy:
             - path: "definitions/tracker/tasks/taskDate"
               direction: "asc"
@@ -198,9 +199,9 @@ class OrderingSuiteTest {
         - path: "definitions"
           keyPaths: ["definitions/id/identifier"]
         - path: "definitions/tracker/tasks"
-          keyPaths: ["definitions/id/identifier","definitions/tracker/tasks/taskDate"]
+          keyPaths: ["definitions/tracker/tasks/taskDate"]
         - path: "definitions/tracker/tasks/comments"
-          keyPaths: ["definitions/id/identifier","definitions/tracker/tasks/taskDate","definitions/tracker/tasks/comments/loggedAt"]
+          keyPaths: ["definitions/tracker/tasks/comments/loggedAt"]
           orderBy:
             - path: "definitions/tracker/tasks/comments/loggedAt"
               direction: "desc"
@@ -373,7 +374,7 @@ class OrderingSuiteTest {
               direction: "asc"
               nulls: "last"
         - path: "definitions/tracker/tasks"
-          keyPaths: ["definitions/id/identifier","definitions/tracker/tasks/taskDate"]
+          keyPaths: ["definitions/tracker/tasks/taskDate"]
           orderBy:
             - path: "definitions/tracker/tasks/taskDate"
               direction: "desc"
