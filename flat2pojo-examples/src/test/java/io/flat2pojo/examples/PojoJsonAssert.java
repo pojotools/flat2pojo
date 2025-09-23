@@ -11,7 +11,7 @@ final class PojoJsonAssert {
   static void assertPojoJsonEquals(ObjectMapper om, String expectedJson, Object pojo) {
     try {
       JsonNode expected = om.readTree(expectedJson);
-      JsonNode actual   = om.valueToTree(pojo);
+      JsonNode actual = om.valueToTree(pojo);
       assertThat(actual).isEqualTo(expected);
     } catch (Exception e) {
       throw new AssertionError("Failed to compare as JSON", e);

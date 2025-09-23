@@ -14,6 +14,7 @@
         <module>flat2pojo-jackson</module>
         <module>flat2pojo-spi</module>
         <module>flat2pojo-examples</module>
+        <module>flat2pojo-benchmarks</module>
     </modules>
 
     <properties>
@@ -27,6 +28,12 @@
         <spotless.version>2.43.0</spotless.version>
         <checkstyle.version>10.12.7</checkstyle.version>
         <spotbugs.version>4.8.3.1</spotbugs.version>
+        <errorprone.version>2.24.1</errorprone.version>
+        <jacoco.version>0.8.11</jacoco.version>
+        <enforcer.version>3.4.1</enforcer.version>
+        <surefire.version>3.2.5</surefire.version>
+        <compiler.version>3.11.0</compiler.version>
+        <jmh.version>1.37</jmh.version>
     </properties>
 
     <dependencyManagement>
@@ -46,14 +53,15 @@
             <plugins>
                 <plugin>
                     <artifactId>maven-compiler-plugin</artifactId>
-                    <version>3.11.0</version>
+                    <version>${compiler.version}</version>
                     <configuration>
                         <release>${maven.compiler.release}</release>
+                        <parameters>true</parameters>
                     </configuration>
                 </plugin>
                 <plugin>
                     <artifactId>maven-surefire-plugin</artifactId>
-                    <version>3.2.5</version>
+                    <version>${surefire.version}</version>
                     <configuration>
                         <useSystemClassLoader>true</useSystemClassLoader>
                     </configuration>
@@ -74,8 +82,18 @@
                     <version>${checkstyle.version}</version>
                     <configuration>
                         <consoleOutput>true</consoleOutput>
-                        <failsOnError>false</failsOnError>
+                        <failsOnError>true</failsOnError>
+                        <violationSeverity>warning</violationSeverity>
                     </configuration>
+                    <executions>
+                        <execution>
+                            <id>checkstyle-validate</id>
+                            <phase>validate</phase>
+                            <goals>
+                                <goal>check</goal>
+                            </goals>
+                        </execution>
+                    </executions>
                 </plugin>
                 <plugin>
                     <groupId>com.github.spotbugs</groupId>
@@ -83,8 +101,81 @@
                     <version>${spotbugs.version}</version>
                     <configuration>
                         <effort>Max</effort>
-                        <threshold>Low</threshold>
+                        <threshold>High</threshold>
+                        <failOnError>true</failOnError>
                     </configuration>
+                    <executions>
+                        <execution>
+                            <id>spotbugs-check</id>
+                            <phase>verify</phase>
+                            <goals>
+                                <goal>check</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+                <plugin>
+                    <groupId>org.jacoco</groupId>
+                    <artifactId>jacoco-maven-plugin</artifactId>
+                    <version>${jacoco.version}</version>
+                    <executions>
+                        <execution>
+                            <goals>
+                                <goal>prepare-agent</goal>
+                            </goals>
+                        </execution>
+                        <execution>
+                            <id>jacoco-report</id>
+                            <phase>test</phase>
+                            <goals>
+                                <goal>report</goal>
+                            </goals>
+                        </execution>
+                        <execution>
+                            <id>jacoco-check</id>
+                            <goals>
+                                <goal>check</goal>
+                            </goals>
+                            <configuration>
+                                <rules>
+                                    <rule>
+                                        <element>BUNDLE</element>
+                                        <limits>
+                                            <limit>
+                                                <counter>INSTRUCTION</counter>
+                                                <value>COVEREDRATIO</value>
+                                                <minimum>0.80</minimum>
+                                            </limit>
+                                        </limits>
+                                    </rule>
+                                </rules>
+                            </configuration>
+                        </execution>
+                    </executions>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-enforcer-plugin</artifactId>
+                    <version>${enforcer.version}</version>
+                    <executions>
+                        <execution>
+                            <id>enforce-maven</id>
+                            <goals>
+                                <goal>enforce</goal>
+                            </goals>
+                            <configuration>
+                                <rules>
+                                    <requireMavenVersion>
+                                        <version>3.8.0</version>
+                                    </requireMavenVersion>
+                                    <requireJavaVersion>
+                                        <version>21</version>
+                                    </requireJavaVersion>
+                                    <dependencyConvergence/>
+                                </rules>
+                            </configuration>
+                        </execution>
+                    </executions>
                 </plugin>
             </plugins>
         </pluginManagement>

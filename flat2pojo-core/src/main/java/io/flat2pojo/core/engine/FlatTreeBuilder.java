@@ -3,94 +3,120 @@ package io.flat2pojo.core.engine;
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.node.*;
 import io.flat2pojo.core.config.MappingConfig;
-import io.flat2pojo.core.paths.PathUtil;
+import io.flat2pojo.core.util.PathOps;
 import java.util.*;
 
 public final class FlatTreeBuilder {
   private final ObjectMapper om;
-  private final MappingConfig cfg;
+  private final Map<String, MappingConfig.PrimitiveSplitRule> splitRulesCache;
+  private final char separatorChar;
+  private final boolean blanksAsNulls;
 
-  public FlatTreeBuilder(ObjectMapper om, MappingConfig cfg) {
-    this.om = om; this.cfg = cfg;
+  public FlatTreeBuilder(final ObjectMapper om, final MappingConfig cfg) {
+    this.om = om;
+    this.separatorChar = cfg.separator().length() == 1 ? cfg.separator().charAt(0) : '/';
+    this.blanksAsNulls = cfg.nullPolicy() != null && cfg.nullPolicy().blanksAsNulls();
+    this.splitRulesCache = buildSplitRulesCache(cfg);
   }
 
-  public ObjectNode buildTreeForRow(Map<String, ?> row) {
-    ObjectNode root = om.createObjectNode();
-    // 1) Expand basic paths to ObjectNodes
-    for (var e : row.entrySet()) {
-      String key = e.getKey();
+  private static Map<String, MappingConfig.PrimitiveSplitRule> buildSplitRulesCache(
+      final MappingConfig cfg) {
+    final Map<String, MappingConfig.PrimitiveSplitRule> cache = new HashMap<>();
+    for (final MappingConfig.PrimitiveSplitRule rule : cfg.primitives()) {
+      cache.put(rule.path(), rule);
+    }
+    return cache;
+  }
+
+  public ObjectNode buildTreeForRow(final Map<String, ?> row) {
+    final ObjectNode root = om.createObjectNode();
+
+    for (final var e : row.entrySet()) {
+      final String key = e.getKey();
       Object raw = e.getValue();
-      // optional blank→null
-      if (raw instanceof String s && cfg.nullPolicy().blanksAsNulls() && s.isBlank()) {
+
+      // Optional blank→null conversion
+      if (raw instanceof String s && blanksAsNulls && s.isBlank()) {
         raw = null;
       }
 
-      List<String> segs = PathUtil.split(key, cfg.separator());
-      ObjectNode cur = root;
-      for (int i = 0; i < segs.size() - 1; i++) {
-        String s = segs.get(i);
-        JsonNode n = cur.get(s);
-
-        final ObjectNode nextObj;
-        if (n instanceof ObjectNode existing) {
-          nextObj = existing;
-        } else {
-          ObjectNode created = om.createObjectNode();
-          cur.set(s, created);
-          nextObj = created;
-        }
-        cur = nextObj;
-      }
-      String last = segs.getLast();
-
-      // primitive split rule?
-      java.util.Optional<MappingConfig.PrimitiveSplitRule> split =
-        cfg.primitives().stream().filter(p -> p.path().equals(key)).findFirst();
-
-      com.fasterxml.jackson.databind.JsonNode valueNode;
-
-      if (split.isPresent() && raw instanceof String str) {
-        // Split string into an array; honor trim + blanksAsNulls
-        String delimiter = java.util.regex.Pattern.quote(split.get().delimiter());
-        boolean trim = split.get().trim();
-
-        com.fasterxml.jackson.databind.node.ArrayNode arr = om.createArrayNode();
-        for (String part : str.split(delimiter, -1)) { // -1 keeps empty trailing parts
-          String val = trim ? part.trim() : part;
-          if (blanksAsNulls() && val.isEmpty()) {
-            arr.add(com.fasterxml.jackson.databind.node.NullNode.getInstance());
-          } else {
-            arr.add(com.fasterxml.jackson.databind.node.TextNode.valueOf(val));
-          }
-        }
-        valueNode = arr;
-      } else {
-        // Plain leaf: collapse "" -> null if policy enabled
-        valueNode = leafNodeFor(raw);
-      }
-
-      cur.set(last, valueNode);
+      // Use PathOps for consistent path traversal
+      final ObjectNode parentNode = PathOps.traverseAndEnsurePath(root, key, separatorChar,
+        this::ensureObject);
+      final String lastSegment = PathOps.getFinalSegment(key, separatorChar);
+      final JsonNode valueNode = createValueNode(key, raw);
+      parentNode.set(lastSegment, valueNode);
     }
 
     return root;
   }
 
-  // at class level (private helpers)
-  private boolean blanksAsNulls() {
-    return cfg.nullPolicy() != null && cfg.nullPolicy().blanksAsNulls();
-  }
+  private JsonNode createValueNode(final String key, final Object rawValue) {
+    final MappingConfig.PrimitiveSplitRule splitRule = splitRulesCache.get(key);
 
-  private com.fasterxml.jackson.databind.JsonNode leafNodeFor(Object raw) {
-    if (raw == null) return com.fasterxml.jackson.databind.node.NullNode.getInstance();
-    if (raw instanceof String s) {
-      String v = s;
-      if (blanksAsNulls() && v.trim().isEmpty()) {
-        return com.fasterxml.jackson.databind.node.NullNode.getInstance();
-      }
-      return com.fasterxml.jackson.databind.node.TextNode.valueOf(v);
+    if (splitRule != null && rawValue instanceof String stringValue) {
+      return createSplitArrayNode(stringValue, splitRule);
+    } else {
+      return createLeafNode(rawValue);
     }
-    // Numbers/booleans/etc.
-    return om.valueToTree(raw);
   }
 
+  private ArrayNode createSplitArrayNode(
+      final String stringValue, final MappingConfig.PrimitiveSplitRule splitRule) {
+    final String delimiter = splitRule.delimiter();
+    final boolean shouldTrim = splitRule.trim();
+
+    final ArrayNode arrayNode = om.createArrayNode();
+    final String[] parts = stringValue.split(java.util.regex.Pattern.quote(delimiter), -1);
+
+    for (final String part : parts) {
+      final String processedValue = shouldTrim ? part.trim() : part;
+      if (blanksAsNulls && processedValue.isEmpty()) {
+        arrayNode.add(NullNode.getInstance());
+      } else {
+        arrayNode.add(TextNode.valueOf(processedValue));
+      }
+    }
+
+    return arrayNode;
+  }
+
+  private JsonNode createLeafNode(final Object rawValue) {
+    if (rawValue == null) {
+      return NullNode.getInstance();
+    }
+
+    if (rawValue instanceof String stringValue) {
+      if (blanksAsNulls && stringValue.trim().isEmpty()) {
+        return NullNode.getInstance();
+      }
+      return TextNode.valueOf(stringValue);
+    }
+
+    // Optimize for common primitive types
+    if (rawValue instanceof Integer intValue) {
+      return IntNode.valueOf(intValue);
+    }
+    if (rawValue instanceof Long longValue) {
+      return LongNode.valueOf(longValue);
+    }
+    if (rawValue instanceof Double doubleValue) {
+      return DoubleNode.valueOf(doubleValue);
+    }
+    if (rawValue instanceof Boolean boolValue) {
+      return BooleanNode.valueOf(boolValue);
+    }
+
+    return om.valueToTree(rawValue);
+  }
+
+  private ObjectNode ensureObject(final ObjectNode parent, final String fieldName) {
+    final JsonNode existing = parent.get(fieldName);
+    if (existing instanceof ObjectNode objectNode) {
+      return objectNode;
+    }
+    final ObjectNode created = om.createObjectNode();
+    parent.set(fieldName, created);
+    return created;
+  }
 }

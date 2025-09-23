@@ -3,11 +3,10 @@ package io.flat2pojo.examples;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.flat2pojo.core.api.Flat2Pojo;
 import io.flat2pojo.examples.domain.ImmutableProductRoot;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import java.util.List;
 import java.util.Map;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 class OrderingSuiteTest {
   ObjectMapper om;
@@ -21,7 +20,9 @@ class OrderingSuiteTest {
 
   @Test
   void ordering01_definitions_name_asc_nullsLast() {
-    var cfg = TestSupport.cfgFromYaml("""
+    var cfg =
+        TestSupport.cfgFromYaml(
+            """
       separator: "/"
       lists:
         - path: "definitions"
@@ -31,13 +32,15 @@ class OrderingSuiteTest {
               direction: "asc"
               nulls: "last"
     """);
-    var rows = List.of(
-      Map.of("definitions/id/identifier","D-2","definitions/name","Zeta"),
-      Map.of("definitions/id/identifier","D-1","definitions/name","Alpha"),
-      Map.of("definitions/id/identifier","D-3")
-    );
+    var rows =
+        List.of(
+            Map.of("definitions/id/identifier", "D-2", "definitions/name", "Zeta"),
+            Map.of("definitions/id/identifier", "D-1", "definitions/name", "Alpha"),
+            Map.of("definitions/id/identifier", "D-3"));
     var out = TestSupport.first(f2p.convertAll(rows, ImmutableProductRoot.class, cfg));
-    PojoJsonAssert.assertPojoJsonEquals(om, """
+    PojoJsonAssert.assertPojoJsonEquals(
+        om,
+        """
       {
         "definitions": [
           { "id": { "identifier": "D-1" }, "name": "Alpha" },
@@ -45,12 +48,15 @@ class OrderingSuiteTest {
           { "id": { "identifier": "D-3" } }
         ]
       }
-    """, out);
+    """,
+        out);
   }
 
   @Test
   void ordering02_definitions_name_desc_nullsFirst() {
-    var cfg = TestSupport.cfgFromYaml("""
+    var cfg =
+        TestSupport.cfgFromYaml(
+            """
       separator: "/"
       lists:
         - path: "definitions"
@@ -60,13 +66,15 @@ class OrderingSuiteTest {
               direction: "desc"
               nulls: "first"
     """);
-    var rows = List.of(
-      Map.of("definitions/id/identifier","D-2","definitions/name","Zeta"),
-      Map.of("definitions/id/identifier","D-1","definitions/name","Alpha"),
-      Map.of("definitions/id/identifier","D-3")
-    );
+    var rows =
+        List.of(
+            Map.of("definitions/id/identifier", "D-2", "definitions/name", "Zeta"),
+            Map.of("definitions/id/identifier", "D-1", "definitions/name", "Alpha"),
+            Map.of("definitions/id/identifier", "D-3"));
     var out = TestSupport.first(f2p.convertAll(rows, ImmutableProductRoot.class, cfg));
-    PojoJsonAssert.assertPojoJsonEquals(om, """
+    PojoJsonAssert.assertPojoJsonEquals(
+        om,
+        """
       {
         "definitions": [
           { "id": { "identifier": "D-3" } },
@@ -74,12 +82,15 @@ class OrderingSuiteTest {
           { "id": { "identifier": "D-1" }, "name": "Alpha" }
         ]
       }
-    """, out);
+    """,
+        out);
   }
 
   @Test
   void ordering03_multi_key() {
-    var cfg = TestSupport.cfgFromYaml("""
+    var cfg =
+        TestSupport.cfgFromYaml(
+            """
       separator: "/"
       lists:
         - path: "definitions"
@@ -92,13 +103,15 @@ class OrderingSuiteTest {
               direction: "desc"
               nulls: "last"
     """);
-    var rows = List.of(
-      Map.of("definitions/id/identifier","D-1","definitions/name","Alpha"),
-      Map.of("definitions/id/identifier","D-3","definitions/name","Alpha"),
-      Map.of("definitions/id/identifier","D-2","definitions/name","Beta")
-    );
+    var rows =
+        List.of(
+            Map.of("definitions/id/identifier", "D-1", "definitions/name", "Alpha"),
+            Map.of("definitions/id/identifier", "D-3", "definitions/name", "Alpha"),
+            Map.of("definitions/id/identifier", "D-2", "definitions/name", "Beta"));
     var out = TestSupport.first(f2p.convertAll(rows, ImmutableProductRoot.class, cfg));
-    PojoJsonAssert.assertPojoJsonEquals(om, """
+    PojoJsonAssert.assertPojoJsonEquals(
+        om,
+        """
       {
         "definitions": [
           { "id": { "identifier": "D-3" }, "name": "Alpha" },
@@ -106,12 +119,15 @@ class OrderingSuiteTest {
           { "id": { "identifier": "D-2" }, "name": "Beta" }
         ]
       }
-    """, out);
+    """,
+        out);
   }
 
   @Test
   void ordering04_child_tasks_taskDate_asc() {
-    var cfg = TestSupport.cfgFromYaml("""
+    var cfg =
+        TestSupport.cfgFromYaml(
+            """
       separator: "/"
       lists:
         - path: "definitions"
@@ -123,13 +139,27 @@ class OrderingSuiteTest {
               direction: "asc"
               nulls: "last"
     """);
-    var rows = List.of(
-      Map.of("definitions/id/identifier","D-1","definitions/tracker/tasks/taskDate","2025-01-03"),
-      Map.of("definitions/id/identifier","D-1","definitions/tracker/tasks/taskDate","2025-01-01"),
-      Map.of("definitions/id/identifier","D-1","definitions/tracker/tasks/taskDate","2025-01-02")
-    );
+    var rows =
+        List.of(
+            Map.of(
+                "definitions/id/identifier",
+                "D-1",
+                "definitions/tracker/tasks/taskDate",
+                "2025-01-03"),
+            Map.of(
+                "definitions/id/identifier",
+                "D-1",
+                "definitions/tracker/tasks/taskDate",
+                "2025-01-01"),
+            Map.of(
+                "definitions/id/identifier",
+                "D-1",
+                "definitions/tracker/tasks/taskDate",
+                "2025-01-02"));
     var out = TestSupport.first(f2p.convertAll(rows, ImmutableProductRoot.class, cfg));
-    PojoJsonAssert.assertPojoJsonEquals(om, """
+    PojoJsonAssert.assertPojoJsonEquals(
+        om,
+        """
       {
         "definitions": [
           {
@@ -154,12 +184,15 @@ class OrderingSuiteTest {
           }
         ]
       }
-    """, out);
+    """,
+        out);
   }
 
   @Test
   void ordering05_grandchild_comments_loggedAt_desc() {
-    var cfg = TestSupport.cfgFromYaml("""
+    var cfg =
+        TestSupport.cfgFromYaml(
+            """
       separator: "/"
       lists:
         - path: "definitions"
@@ -173,13 +206,33 @@ class OrderingSuiteTest {
               direction: "desc"
               nulls: "last"
     """);
-    var rows = List.of(
-      Map.of("definitions/id/identifier","D-1","definitions/tracker/tasks/taskDate","2025-01-01","definitions/tracker/tasks/comments/loggedAt","2025-01-01T00:10:00Z"),
-      Map.of("definitions/id/identifier","D-1","definitions/tracker/tasks/taskDate","2025-01-01","definitions/tracker/tasks/comments/loggedAt","2025-01-01T00:20:00Z"),
-      Map.of("definitions/id/identifier","D-1","definitions/tracker/tasks/taskDate","2025-01-01","definitions/tracker/tasks/comments/loggedAt","2025-01-01T00:05:00Z")
-    );
+    var rows =
+        List.of(
+            Map.of(
+                "definitions/id/identifier",
+                "D-1",
+                "definitions/tracker/tasks/taskDate",
+                "2025-01-01",
+                "definitions/tracker/tasks/comments/loggedAt",
+                "2025-01-01T00:10:00Z"),
+            Map.of(
+                "definitions/id/identifier",
+                "D-1",
+                "definitions/tracker/tasks/taskDate",
+                "2025-01-01",
+                "definitions/tracker/tasks/comments/loggedAt",
+                "2025-01-01T00:20:00Z"),
+            Map.of(
+                "definitions/id/identifier",
+                "D-1",
+                "definitions/tracker/tasks/taskDate",
+                "2025-01-01",
+                "definitions/tracker/tasks/comments/loggedAt",
+                "2025-01-01T00:05:00Z"));
     var out = TestSupport.first(f2p.convertAll(rows, ImmutableProductRoot.class, cfg));
-    PojoJsonAssert.assertPojoJsonEquals(om, """
+    PojoJsonAssert.assertPojoJsonEquals(
+        om,
+        """
       {
         "definitions": [
           {
@@ -200,12 +253,15 @@ class OrderingSuiteTest {
           }
         ]
       }
-    """, out);
+    """,
+        out);
   }
 
   @Test
   void ordering06_missing_sort_keys_nullsLast() {
-    var cfg = TestSupport.cfgFromYaml("""
+    var cfg =
+        TestSupport.cfgFromYaml(
+            """
       separator: "/"
       lists:
         - path: "definitions"
@@ -215,13 +271,15 @@ class OrderingSuiteTest {
               direction: "asc"
               nulls: "last"
     """);
-    var rows = List.of(
-      Map.of("definitions/id/identifier","D-1"),
-      Map.of("definitions/id/identifier","D-2","definitions/name","Bravo"),
-      Map.of("definitions/id/identifier","D-3","definitions/name","Alpha")
-    );
+    var rows =
+        List.of(
+            Map.of("definitions/id/identifier", "D-1"),
+            Map.of("definitions/id/identifier", "D-2", "definitions/name", "Bravo"),
+            Map.of("definitions/id/identifier", "D-3", "definitions/name", "Alpha"));
     var out = TestSupport.first(f2p.convertAll(rows, ImmutableProductRoot.class, cfg));
-    PojoJsonAssert.assertPojoJsonEquals(om, """
+    PojoJsonAssert.assertPojoJsonEquals(
+        om,
+        """
       {
         "definitions": [
           { "id": { "identifier": "D-3" }, "name": "Alpha" },
@@ -229,12 +287,15 @@ class OrderingSuiteTest {
           { "id": { "identifier": "D-1" } }
         ]
       }
-    """, out);
+    """,
+        out);
   }
 
   @Test
   void ordering07_missing_sort_keys_nullsFirst() {
-    var cfg = TestSupport.cfgFromYaml("""
+    var cfg =
+        TestSupport.cfgFromYaml(
+            """
       separator: "/"
       lists:
         - path: "definitions"
@@ -244,13 +305,15 @@ class OrderingSuiteTest {
               direction: "asc"
               nulls: "first"
     """);
-    var rows = List.of(
-      Map.of("definitions/id/identifier","D-1"),
-      Map.of("definitions/id/identifier","D-2","definitions/name","Bravo"),
-      Map.of("definitions/id/identifier","D-3","definitions/name","Alpha")
-    );
+    var rows =
+        List.of(
+            Map.of("definitions/id/identifier", "D-1"),
+            Map.of("definitions/id/identifier", "D-2", "definitions/name", "Bravo"),
+            Map.of("definitions/id/identifier", "D-3", "definitions/name", "Alpha"));
     var out = TestSupport.first(f2p.convertAll(rows, ImmutableProductRoot.class, cfg));
-    PojoJsonAssert.assertPojoJsonEquals(om, """
+    PojoJsonAssert.assertPojoJsonEquals(
+        om,
+        """
       {
         "definitions": [
           { "id": { "identifier": "D-1" } },
@@ -258,12 +321,15 @@ class OrderingSuiteTest {
           { "id": { "identifier": "D-2" }, "name": "Bravo" }
         ]
       }
-    """, out);
+    """,
+        out);
   }
 
   @Test
   void ordering08_out_of_order_arrivals_sorted() {
-    var cfg = TestSupport.cfgFromYaml("""
+    var cfg =
+        TestSupport.cfgFromYaml(
+            """
       separator: "/"
       lists:
         - path: "definitions"
@@ -273,13 +339,15 @@ class OrderingSuiteTest {
               direction: "asc"
               nulls: "last"
     """);
-    var rows = List.of(
-      Map.of("definitions/id/identifier","D-3","definitions/name","Gamma"),
-      Map.of("definitions/id/identifier","D-1","definitions/name","Alpha"),
-      Map.of("definitions/id/identifier","D-2","definitions/name","Beta")
-    );
+    var rows =
+        List.of(
+            Map.of("definitions/id/identifier", "D-3", "definitions/name", "Gamma"),
+            Map.of("definitions/id/identifier", "D-1", "definitions/name", "Alpha"),
+            Map.of("definitions/id/identifier", "D-2", "definitions/name", "Beta"));
     var out = TestSupport.first(f2p.convertAll(rows, ImmutableProductRoot.class, cfg));
-    PojoJsonAssert.assertPojoJsonEquals(om, """
+    PojoJsonAssert.assertPojoJsonEquals(
+        om,
+        """
       {
         "definitions": [
           { "id": { "identifier": "D-1" }, "name": "Alpha" },
@@ -287,12 +355,15 @@ class OrderingSuiteTest {
           { "id": { "identifier": "D-3" }, "name": "Gamma" }
         ]
       }
-    """, out);
+    """,
+        out);
   }
 
   @Test
   void ordering09_parent_and_child_have_ordering() {
-    var cfg = TestSupport.cfgFromYaml("""
+    var cfg =
+        TestSupport.cfgFromYaml(
+            """
       separator: "/"
       lists:
         - path: "definitions"
@@ -308,13 +379,33 @@ class OrderingSuiteTest {
               direction: "desc"
               nulls: "last"
     """);
-    var rows = List.of(
-      Map.of("definitions/id/identifier","D-2","definitions/name","Zeta","definitions/tracker/tasks/taskDate","2025-01-02"),
-      Map.of("definitions/id/identifier","D-1","definitions/name","Alpha","definitions/tracker/tasks/taskDate","2025-01-03"),
-      Map.of("definitions/id/identifier","D-1","definitions/name","Alpha","definitions/tracker/tasks/taskDate","2025-01-01")
-    );
+    var rows =
+        List.of(
+            Map.of(
+                "definitions/id/identifier",
+                "D-2",
+                "definitions/name",
+                "Zeta",
+                "definitions/tracker/tasks/taskDate",
+                "2025-01-02"),
+            Map.of(
+                "definitions/id/identifier",
+                "D-1",
+                "definitions/name",
+                "Alpha",
+                "definitions/tracker/tasks/taskDate",
+                "2025-01-03"),
+            Map.of(
+                "definitions/id/identifier",
+                "D-1",
+                "definitions/name",
+                "Alpha",
+                "definitions/tracker/tasks/taskDate",
+                "2025-01-01"));
     var out = TestSupport.first(f2p.convertAll(rows, ImmutableProductRoot.class, cfg));
-    PojoJsonAssert.assertPojoJsonEquals(om, """
+    PojoJsonAssert.assertPojoJsonEquals(
+        om,
+        """
       {
         "definitions": [
           {
@@ -349,6 +440,7 @@ class OrderingSuiteTest {
           }
         ]
       }
-    """, out);
+    """,
+        out);
   }
 }
