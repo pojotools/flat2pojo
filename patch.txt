@@ -57,3 +57,42 @@ private static void buildHints(String basePtr, JavaType jt, TypeHints hints,
         });
     }
 }
+
+
+private static JavaType resolveTypeWithWildcards(JsonPointer fullPath, TypeHints hints, int baseDepth) {
+    String[] segs = splitPointer(fullPath);
+    if (segs.length == 0) return null;
+    int start = Math.min(baseDepth, segs.length);
+    String[] tail = Arrays.copyOfRange(segs, start, segs.length);
+    if (tail.length == 0) return null;
+
+    // 1) Exact match first
+    JavaType t = hints.resolveExact(JsonPointer.compile(toPointerString(tail)));
+    if (t != null) return t;
+
+    // 2) Wildcard pattern match against all hint keys ( '*' matches exactly one segment )
+    JavaType best = null;
+    int bestScore = -1; // higher = more specific (fewer '*')
+    for (Map.Entry<String, JavaType> e : hints.entries()) {
+        String ptr = e.getKey();
+        String[] pat = splitPointer(JsonPointer.compile(ptr));
+        if (pat.length != tail.length) continue;
+
+        boolean ok = true;
+        int exactCount = 0;
+        for (int i = 0; i < pat.length; i++) {
+            if ("*".equals(pat[i])) continue;
+            if (!pat[i].equals(tail[i])) { ok = false; break; }
+            exactCount++;
+        }
+        if (!ok) continue;
+
+        if (exactCount > bestScore) {
+            bestScore = exactCount;
+            best = e.getValue();
+            if (bestScore == pat.length) break; // perfect exact match
+        }
+    }
+    return best;
+}
+
