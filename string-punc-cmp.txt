@@ -1,0 +1,66 @@
+import java.util.Comparator;
+
+public final class PunctuationQuestionComparator implements Comparator<String> {
+
+  public static final PunctuationQuestionComparator INSTANCE = new PunctuationQuestionComparator();
+
+  private PunctuationQuestionComparator() {}
+
+  @Override
+  public int compare(String a, String b) {
+    if (equalsWithQuestionAsPunctuation(a, b)) {
+      return 0;
+    }
+    // Define a stable ordering when not "equal under rule"
+    // (nulls first, then standard lexicographic).
+    if (a == null && b == null) return 0;
+    if (a == null) return -1;
+    if (b == null) return 1;
+    return a.compareTo(b);
+  }
+
+  /**
+   * Returns true if a and b are the same length and for every index i:
+   *   - a[i] == b[i], OR
+   *   - a[i] == '?' and b[i] is punctuation, OR
+   *   - b[i] == '?' and a[i] is punctuation.
+   *
+   * Nulls are equal only to null.
+   */
+  public static boolean equalsWithQuestionAsPunctuation(String a, String b) {
+    if (a == b) return true;
+    if (a == null || b == null) return false;
+    if (a.length() != b.length()) return false;
+
+    for (int i = 0; i < a.length(); i++) {
+      char ca = a.charAt(i);
+      char cb = b.charAt(i);
+      if (ca == cb) continue;
+
+      boolean aIsQ = ca == '?';
+      boolean bIsQ = cb == '?';
+
+      if (aIsQ && isPunctuation(cb)) continue;
+      if (bIsQ && isPunctuation(ca)) continue;
+
+      return false;
+    }
+    return true;
+  }
+
+  /** Unicode-aware punctuation check (Pc, Pd, Ps, Pe, Pi, Pf, Po). */
+  private static boolean isPunctuation(char ch) {
+    switch (Character.getType(ch)) {
+      case Character.CONNECTOR_PUNCTUATION:      // Pc
+      case Character.DASH_PUNCTUATION:           // Pd
+      case Character.START_PUNCTUATION:          // Ps
+      case Character.END_PUNCTUATION:            // Pe
+      case Character.INITIAL_QUOTE_PUNCTUATION:  // Pi
+      case Character.FINAL_QUOTE_PUNCTUATION:    // Pf
+      case Character.OTHER_PUNCTUATION:          // Po
+        return true;
+      default:
+        return false;
+    }
+  }
+}
