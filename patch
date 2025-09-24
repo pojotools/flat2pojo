@@ -1,0 +1,41 @@
+public static final class StringEquivalences {
+  private StringEquivalences() {}
+
+  /** Equal if, after normalization + mapping any punctuation to '?', both strings match. */
+  public static java.util.function.BiPredicate<com.fasterxml.jackson.databind.JsonNode, com.fasterxml.jackson.databind.JsonNode>
+  punctuationQuestionEquals() {
+    return (a, b) -> {
+      if (a == null || b == null || !a.isTextual() || !b.isTextual()) return false;
+      String s1 = simplify(a.asText());
+      String s2 = simplify(b.asText());
+      // require that at least one side actually contains '?' to avoid masking real punctuation edits
+      boolean anyQ = s1.indexOf('?') >= 0 || s2.indexOf('?') >= 0;
+      return anyQ && s1.equals(s2);
+    };
+  }
+
+  // ---- tiny helpers ----
+  private static String simplify(String s) {
+    // Unicode NFKC normalize, trim + collapse whitespace, map punctuation→'?'
+    s = java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFKC);
+    s = s.trim().replaceAll("\\s+", " ");
+    StringBuilder out = new StringBuilder(s.length());
+    for (int i = 0; i < s.length(); ) {
+      int cp = s.codePointAt(i);
+      out.append(isPunct(cp) ? '?' : Character.toChars(cp));
+      i += Character.charCount(cp);
+    }
+    return out.toString();
+  }
+
+  private static boolean isPunct(int cp) {
+    int t = Character.getType(cp);
+    return t == Character.CONNECTOR_PUNCTUATION
+        || t == Character.DASH_PUNCTUATION
+        || t == Character.START_PUNCTUATION
+        || t == Character.END_PUNCTUATION
+        || t == Character.OTHER_PUNCTUATION
+        || t == Character.INITIAL_QUOTE_PUNCTUATION
+        || t == Character.FINAL_QUOTE_PUNCTUATION;
+  }
+}
