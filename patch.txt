@@ -1,0 +1,59 @@
+private static void buildHints(String basePtr, JavaType jt, TypeHints hints,
+                               ObjectMapper mapper, SerializationConfig cfg, Set<JavaType> seen) {
+    if (jt == null) return;
+    jt = unwrapOptionals(jt, mapper);
+    if (jt == null || seen.contains(jt)) return;
+    seen.add(jt);
+
+    // ✅ 0) Enums are leaf types: record and stop
+    if (jt.isEnumType() || jt.getRawClass().isEnum()) {
+        // Note: the parent already recorded the property path → jt when it discovered the field,
+        // so for non-root cases you don't need to put() again here. It's harmless to be explicit:
+        if (!basePtr.isEmpty()) hints.put(basePtr, jt);
+        return;
+    }
+
+    // 1) Containers
+    if (jt.isContainerType()) {
+        if (jt.isCollectionLikeType()) {
+            JavaType elem = unwrapOptionals(jt.getContentType(), mapper);
+            String elemPtr = basePtr + "/*";
+            hints.put(elemPtr, elem);
+            buildHints(elemPtr, elem, hints, mapper, cfg, seen);
+            return;
+        } else if (jt.isMapLikeType()) {
+            JavaType val = unwrapOptionals(jt.getContentType(), mapper);
+            String valPtr = basePtr + "/*";
+            hints.put(valPtr, val);
+            buildHints(valPtr, val, hints, mapper, cfg, seen);
+            return;
+        }
+    }
+
+    if (jt.isJavaLangObject()) return;
+
+    // 2) Bean properties
+    BeanDescription bd = cfg.introspect(jt);
+    List<BeanPropertyDefinition> props = bd.findProperties();
+    boolean gotAny = false;
+    for (BeanPropertyDefinition prop : props) {
+        String name = prop.getName();
+        JavaType pt = unwrapOptionals(prop.getPrimaryType(), mapper);
+        if (pt == null) continue;
+        gotAny = true;
+        String ptr = basePtr + "/" + escape(name);
+        hints.put(ptr, pt);
+        buildHints(ptr, pt, hints, mapper, cfg, seen);
+    }
+
+    // 3) Immutable interfaces fallback (but NOT for enums)
+    if (!gotAny && jt.isInterface()) {
+        collectInterfaceAccessors(jt.getRawClass(), mapper).forEach((propName, propType) -> {
+            JavaType un = unwrapOptionals(propType, mapper);
+            if (un == null) return;
+            String ptr = basePtr + "/" + escape(propName);
+            hints.put(ptr, un);
+            buildHints(ptr, un, hints, mapper, cfg, seen);
+        });
+    }
+}
