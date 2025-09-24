@@ -1,0 +1,116 @@
+public static BiPredicate<JsonNode, JsonNode> zonedDateTimeTruncatedToMillisEqual() {
+  return (a, b) -> {
+    // Handle nulls quickly
+    if (a == null || b == null || a.isNull() || b.isNull()) return Objects.equals(a, b);
+
+    // If already equal, short-circuit
+    if (Objects.equals(a, b)) return true;
+
+    // Try parse both as time instants, truncate to millis, compare
+    Optional<java.time.Instant> ia = parseToInstant(a);
+    Optional<java.time.Instant> ib = parseToInstant(b);
+    if (ia.isPresent() && ib.isPresent()) {
+      return ia.get().truncatedTo(java.time.temporal.ChronoUnit.MILLIS)
+               .equals(ib.get().truncatedTo(java.time.temporal.ChronoUnit.MILLIS));
+    }
+
+    // Fallback: textual heuristic (keep only first 3 fractional digits)
+    if (a.isTextual() && b.isTextual()) {
+      return truncateIsoMillis(a.asText()).equals(truncateIsoMillis(b.asText()));
+    }
+
+    return false;
+  };
+}
+
+private static Optional<java.time.Instant> parseToInstant(JsonNode n) {
+  try {
+    if (n.isTextual()) {
+      String s = n.asText();
+      // Try ZonedDateTime / OffsetDateTime / Instant in order
+      try { return Optional.of(java.time.ZonedDateTime.parse(s).toInstant()); } catch (Exception ignored) {}
+      try { return Optional.of(java.time.OffsetDateTime.parse(s).toInstant()); } catch (Exception ignored) {}
+      try { return Optional.of(java.time.Instant.parse(s)); } catch (Exception ignored) {}
+    }
+    return Optional.empty();
+  } catch (Exception e) {
+    return Optional.empty();
+  }
+}
+
+/** Keep at most 3 fractional digits in ISO timestamp strings. */
+private static String truncateIsoMillis(String s) {
+  int t = s.indexOf('T'); if (t < 0) return s;
+  int dot = s.indexOf('.', t); if (dot < 0) return s;
+  int end = dot + 1;
+  while (end < s.length() && Character.isDigit(s.charAt(end))) end++;
+  String frac = s.substring(dot + 1, end);
+  if (frac.length() <= 3) return s;
+  return s.substring(0, dot + 1) + frac.substring(0, 3) + s.substring(end);
+}
+
+
+
+/** Treat 0 (numeric or "0") as equivalent to missing/null/empty. */
+public static java.util.function.BiPredicate<com.fasterxml.jackson.databind.JsonNode, com.fasterxml.jackson.databind.JsonNode>
+zeroEqualsMissing() {
+    return (a, b) -> {
+        boolean am = isMissingLike(a);
+        boolean bm = isMissingLike(b);
+        if (am && bm) return true;                 // both absent -> equal
+        if (am) return isZeroLike(b);              // left absent, right 0 -> equal
+        if (bm) return isZeroLike(a);              // right absent, left 0 -> equal
+        // both present -> equal only if both zero-like
+        return isZeroLike(a) && isZeroLike(b);
+    };
+}
+
+private static boolean isMissingLike(com.fasterxml.jackson.databind.JsonNode n) {
+    return n == null || n.isMissingNode() || n.isNull() ||
+           (n.isTextual() && n.asText().trim().isEmpty());
+}
+
+private static boolean isZeroLike(com.fasterxml.jackson.databind.JsonNode n) {
+    if (n == null || n.isNull() || n.isMissingNode()) return false;
+    if (n.isNumber()) return n.decimalValue().compareTo(java.math.BigDecimal.ZERO) == 0;
+    if (n.isTextual()) {
+        String s = n.asText().trim();
+        if (s.isEmpty()) return false;
+        try { return new java.math.BigDecimal(s).compareTo(java.math.BigDecimal.ZERO) == 0; }
+        catch (Exception ignored) { return false; }
+    }
+    return false;
+}
+
+
+private static void walk(JsonNode l, JsonNode r, JsonPointer path, Config cfg, List<Entry> out) {
+    // Ignore gate
+    if (cfg.isIgnored(path)) return;
+
+    boolean lm = (l == null) || l.isMissingNode();
+    boolean rm = (r == null) || r.isMissingNode();
+
+    // Look up a per-path equivalence (we may need it even if one side is missing)
+    Optional<java.util.function.BiPredicate<JsonNode, JsonNode>> eqOpt = cfg.equivalenceFor(path);
+    if (eqOpt.isPresent()) {
+        // Pass through original nodes (may be MissingNode/null) to let the predicate decide
+        if (eqOpt.get().test(l == null ? MissingNode.getInstance() : l,
+                             r == null ? MissingNode.getInstance() : r)) {
+            return; // considered equal by custom rule
+        }
+    }
+
+    // missing/added/removed checks
+    if (lm && !rm) { out.add(new Entry(path.toString(), Kind.ADDED, null, r)); return; }
+    if (rm && !lm) { out.add(new Entry(path.toString(), Kind.REMOVED, l, null)); return; }
+    if (lm && rm) return;
+
+    // Node type change
+    if (l.getNodeType() != r.getNodeType()) {
+        out.add(new Entry(path.toString(), Kind.CHANGED, l, r));
+        return;
+    }
+
+    // (keep the rest of your existing switch/object/array/scalar logic)
+
+
