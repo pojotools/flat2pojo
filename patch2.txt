@@ -1,0 +1,28 @@
+/** 
+ * Treat false, null, missing, or empty as equivalent.
+ * - `null`, missing node, or empty string = false
+ * - literal boolean false = false
+ * - literal boolean true = only equals true
+ */
+public static java.util.function.BiPredicate<com.fasterxml.jackson.databind.JsonNode, com.fasterxml.jackson.databind.JsonNode>
+falseEqualsMissing() {
+    return (a, b) -> {
+        boolean va = isFalseLike(a);
+        boolean vb = isFalseLike(b);
+        return va && vb; // both false-like
+    };
+}
+
+/** Helper: true only for null/missing/empty or literal false */
+private static boolean isFalseLike(JsonNode n) {
+    if (n == null || n.isMissingNode() || n.isNull()) return true;
+    if (n.isBoolean()) return !n.booleanValue();
+    if (n.isTextual()) {
+        String s = n.asText().trim();
+        return s.isEmpty() || s.equalsIgnoreCase("false") || s.equals("0");
+    }
+    if (n.isNumber()) {
+        return n.intValue() == 0;
+    }
+    return false;
+}
