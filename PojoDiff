@@ -1,0 +1,580 @@
+package io.flat2pojo.diff;
+
+import com.fasterxml.jackson.core.JsonPointer;
+import com.fasterxml.jackson.databind.*;
+import com.fasterxml.jackson.databind.introspect.BeanPropertyDefinition;
+import com.fasterxml.jackson.databind.node.*;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZonedDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
+import java.util.function.BiPredicate;
+import java.util.regex.Pattern;
+
+/** Identity-aware, configurable deep diff for POJOs/JsonNodes using Jackson. */
+public final class PojoDiff {
+    private PojoDiff() {}
+
+    // ===============================================================================================
+    // Public API
+    // ===============================================================================================
+
+    public enum Kind { ADDED, REMOVED, CHANGED }
+
+    public static final class Entry {
+        public final String path;      // JSON Pointer
+        public final Kind kind;
+        public final JsonNode oldValue; // null for ADDED
+        public final JsonNode newValue; // null for REMOVED
+        public Entry(String path, Kind kind, JsonNode oldValue, JsonNode newValue) {
+            this.path = path; this.kind = kind; this.oldValue = oldValue; this.newValue = newValue;
+        }
+        @Override public String toString() {
+            return kind + " @ " + path + " : " +
+                    (oldValue==null?"∅":oldValue) + " -> " + (newValue==null?"∅":newValue);
+        }
+    }
+
+    /** Create a new configuration. */
+    public static Config config() { return new Config(); }
+
+    /** Compare two POJOs (same type). Auto-infers type hints from leftPojo type unless disabled. */
+    public static List<Entry> diff(Object leftPojo, Object rightPojo, ObjectMapper mapper, Config cfg) {
+        if (cfg.autoInferTypes && cfg.typeHints == null && leftPojo != null) {
+            cfg.typeHints(inferTypeHints(leftPojo.getClass(), mapper));
+        }
+        JsonNode left = mapper.valueToTree(leftPojo);
+        JsonNode right = mapper.valueToTree(rightPojo);
+        return diff(left, right, cfg);
+    }
+
+    /** Compare two JsonNodes with configuration. */
+    public static List<Entry> diff(JsonNode left, JsonNode right, Config cfg) {
+        JsonNode nl = normalize(left, cfg);
+        JsonNode nr = normalize(right, cfg);
+        List<Entry> out = new ArrayList<>();
+        walk(nl, nr, JsonPointer.compile(""), cfg, out);
+        return out;
+    }
+
+    /**
+     * Compare two lists of ROOT POJOs by an identity field (e.g., "id/identifier").
+     * This is a convenience around wrapping the lists under a synthetic container and adding a list rule at "/__root".
+     */
+    public static <T> List<Entry> diffList(List<T> left, List<T> right, ObjectMapper mapper, Config cfg, String rootIdFieldOrPointer) {
+        // Build synthetic containers
+        ObjectNode lWrap = JsonNodeFactory.instance.objectNode();
+        ObjectNode rWrap = JsonNodeFactory.instance.objectNode();
+        lWrap.set("__root", mapper.valueToTree(left));
+        rWrap.set("__root", mapper.valueToTree(right));
+
+        // Clone config with a temporary list rule for root
+        Config tmp = cfg.copy();
+        tmp.list("/__root", rootIdFieldOrPointer);
+
+        // Infer type hints from element type if helpful
+        if (tmp.autoInferTypes && tmp.typeHints == null) {
+            Class<?> clazz = null;
+            if (left != null && !left.isEmpty() && left.get(0) != null) {
+                clazz = left.get(0).getClass();
+            } else if (right != null && !right.isEmpty() && right.get(0) != null) {
+                clazz = right.get(0).getClass();
+            }
+            if (clazz != null) {
+                tmp.typeHints(inferTypeHints(clazz, mapper));
+            }
+        }
+
+        List<Entry> diffs = diff(lWrap, rWrap, tmp);
+        // Strip the "/__root" prefix from reported paths
+        List<Entry> remapped = new ArrayList<>(diffs.size());
+        for (Entry e : diffs) {
+            String p = e.path;
+            String rp = p.startsWith("/__root") ? p.substring("/__root".length()) : p;
+            remapped.add(new Entry(rp.isEmpty()?"/":rp, e.kind, e.oldValue, e.newValue));
+        }
+        return remapped;
+    }
+
+    // ===============================================================================================
+    // Configuration
+    // ===============================================================================================
+
+    public static final class Config {
+        private final List<ListRule> listRules = new ArrayList<>();
+
+        private final Set<String> ignoredExact = new HashSet<>();
+        private final List<String> ignoredPrefixes = new ArrayList<>();
+        private final List<Pattern> ignoredPatterns = new ArrayList<>();
+
+        private final Map<String, BiPredicate<JsonNode, JsonNode>> equivalencesByExact = new HashMap<>();
+        private final List<PathPredicateEquivalence> equivalencesByPattern = new ArrayList<>();
+
+        // Type comparators + hints
+        private final Map<Class<?>, BiPredicate<JsonNode, JsonNode>> typeComparators = new HashMap<>();
+        private TypeHints typeHints;
+        private boolean autoInferTypes = true;
+
+        // ---- List rules
+        /** Treat the array at {@code arrayPointer} as a map keyed by {@code idFieldOrPointer}. */
+        public Config list(String arrayPointer, String idFieldOrPointer) {
+            listRules.add(new ListRule(arrayPointer, idFieldOrPointer));
+            return this;
+        }
+
+        // ---- Ignores
+        /** Ignore exact JSON Pointer. */
+        public Config ignore(String exactPointer) { ignoredExact.add(exactPointer); return this; }
+        /** Ignore any path with given JSON Pointer prefix. */
+        public Config ignorePrefix(String pointerPrefix) { ignoredPrefixes.add(pointerPrefix); return this; }
+        /** Ignore any path matching regex. */
+        public Config ignorePattern(String regex) { ignoredPatterns.add(Pattern.compile(regex)); return this; }
+        /** Ignore paths using simple glob with '*' and '**'. */
+        public Config ignoreGlob(String glob) { return ignorePattern(globToRegex(glob)); }
+
+        boolean isIgnored(JsonPointer path) {
+            String p = path.toString();
+            if (ignoredExact.contains(p)) return true;
+            for (String pref : ignoredPrefixes) {
+                String prefAdj = pref.endsWith("/") ? pref : pref + "/";
+                if (p.equals(pref) || p.startsWith(prefAdj)) return true;
+            }
+            for (Pattern pattern : ignoredPatterns) {
+                if (pattern.matcher(p).matches()) return true;
+            }
+            return false;
+        }
+
+        // ---- Equivalences
+        public Config equivalent(String exactPointer, BiPredicate<JsonNode, JsonNode> eq) {
+            equivalencesByExact.put(exactPointer, eq); return this;
+        }
+        public Config equivalentPattern(String regex, BiPredicate<JsonNode, JsonNode> eq) {
+            equivalencesByPattern.add(new PathPredicateEquivalence(Pattern.compile(regex), eq)); return this;
+        }
+        public Config equivalentGlob(String glob, BiPredicate<JsonNode, JsonNode> eq) {
+            return equivalentPattern(globToRegex(glob), eq);
+        }
+        Optional<BiPredicate<JsonNode, JsonNode>> equivalenceFor(JsonPointer path) {
+            String p = path.toString();
+            BiPredicate<JsonNode, JsonNode> eq = equivalencesByExact.get(p);
+            if (eq != null) return Optional.of(eq);
+            for (PathPredicateEquivalence e : equivalencesByPattern) {
+                if (e.pattern.matcher(p).matches()) return Optional.of(e.eq);
+            }
+            return Optional.empty();
+        }
+
+        // ---- Type comparators
+        public <T> Config typeEq(Class<T> type, BiPredicate<JsonNode, JsonNode> eq) {
+            typeComparators.put(type, eq); return this;
+        }
+        BiPredicate<JsonNode, JsonNode> comparatorForClass(Class<?> raw) {
+            Class<?> c = raw;
+            while (c != null) {
+                BiPredicate<JsonNode, JsonNode> eq = typeComparators.get(c);
+                if (eq != null) return eq;
+                c = c.getSuperclass();
+            }
+            for (Map.Entry<Class<?>, BiPredicate<JsonNode, JsonNode>> e : typeComparators.entrySet()) {
+                if (e.getKey().isInterface() && e.getKey().isAssignableFrom(raw)) return e.getValue();
+            }
+            return null;
+        }
+        public Config typeHints(TypeHints hints) { this.typeHints = hints; return this; }
+        public Config autoInferTypes(boolean enabled) { this.autoInferTypes = enabled; return this; }
+
+        // Internal access
+        List<ListRule> listRules() { return listRules; }
+        Config copy() {
+            Config c = new Config();
+            c.listRules.addAll(this.listRules);
+            c.ignoredExact.addAll(this.ignoredExact);
+            c.ignoredPrefixes.addAll(this.ignoredPrefixes);
+            c.ignoredPatterns.addAll(this.ignoredPatterns);
+            c.equivalencesByExact.putAll(this.equivalencesByExact);
+            c.equivalencesByPattern.addAll(this.equivalencesByPattern);
+            c.typeComparators.putAll(this.typeComparators);
+            c.typeHints = this.typeHints;
+            c.autoInferTypes = this.autoInferTypes;
+            return c;
+        }
+    }
+
+    private record PathPredicateEquivalence(Pattern pattern, BiPredicate<JsonNode, JsonNode> eq) {}
+
+    // ===============================================================================================
+    // Type hints (map JSON paths to Java types so type comparators can apply)
+    // ===============================================================================================
+
+    public static final class TypeHints {
+        private final Map<String, JavaType> pointerToType = new HashMap<>();
+        public TypeHints put(String jsonPointer, JavaType type) { pointerToType.put(jsonPointer, type); return this; }
+        JavaType resolve(JsonPointer p) { return pointerToType.get(p.toString()); }
+    }
+
+    public static TypeHints inferTypeHints(Class<?> rootType, ObjectMapper mapper) {
+        TypeHints hints = new TypeHints();
+        SerializationConfig cfg = mapper.getSerializationConfig();
+        JavaType root = mapper.constructType(rootType);
+        buildHints("", root, hints, mapper, cfg, new HashSet<>());
+        return hints;
+    }
+
+    private static void buildHints(String basePtr, JavaType jt, TypeHints hints, ObjectMapper mapper,
+                                   SerializationConfig cfg, Set<JavaType> seen) {
+        if (jt == null || seen.contains(jt)) return;
+        seen.add(jt);
+
+        if (jt.isContainerType()) {
+            if (jt.isCollectionLikeType()) {
+                JavaType elem = jt.getContentType();
+                String elemPtr = basePtr + "/*";
+                hints.put(elemPtr, elem);
+                buildHints(elemPtr, elem, hints, mapper, cfg, seen);
+                return;
+            } else if (jt.isMapLikeType()) {
+                JavaType val = jt.getContentType();
+                String valPtr = basePtr + "/*";
+                hints.put(valPtr, val);
+                buildHints(valPtr, val, hints, mapper, cfg, seen);
+                return;
+            }
+        }
+        if (jt.isJavaLangObject()) return;
+
+        BeanDescription bd = cfg.introspect(jt);
+        for (BeanPropertyDefinition prop : bd.findProperties()) {
+            String name = prop.getName();
+            JavaType pt = prop.getPrimaryType();
+            String ptr = basePtr + "/" + escape(name);
+            hints.put(ptr, pt);
+            buildHints(ptr, pt, hints, mapper, cfg, seen);
+        }
+    }
+
+    // ===============================================================================================
+    // List normalization (identity-aware arrays)
+    // ===============================================================================================
+
+    private static final class ListRule {
+        final JsonPointer at;     // where the array sits
+        final String idSpec;      // field name or nested path like "id/identifier"
+        final boolean idIsPointer;
+        ListRule(String pointer, String idFieldOrPointer) {
+            this.at = JsonPointer.compile(pointer);
+            this.idSpec = idFieldOrPointer;
+            this.idIsPointer = idFieldOrPointer.indexOf('/') >= 0;
+        }
+    }
+
+    private static JsonNode normalize(JsonNode root, Config cfg) {
+        return normalizeRecurse(root, JsonPointer.compile(""), cfg);
+    }
+
+    private static JsonNode normalizeRecurse(JsonNode node, JsonPointer here, Config cfg) {
+        if (node == null || node.isNull() || node.isMissingNode()) return MissingNode.getInstance();
+
+        Optional<ListRule> rule = cfg.listRules().stream().filter(r -> here.equals(r.at)).findFirst();
+        if (rule.isPresent() && node.isArray()) {
+            ObjectNode keyed = keyArray((ArrayNode) node, rule.get());
+            // Recurse into keyed object
+            ObjectNode out = JsonNodeFactory.instance.objectNode();
+            Iterator<String> fn = keyed.fieldNames();
+            while (fn.hasNext()) {
+                String k = fn.next();
+                JsonNode child = keyed.get(k);
+                out.set(k, normalizeRecurse(child, here /* same container path */, cfg));
+            }
+            return wrapKeyed(out);
+        }
+
+        if (node.isObject()) {
+            ObjectNode out = JsonNodeFactory.instance.objectNode();
+            Iterator<Map.Entry<String, JsonNode>> it = node.fields();
+            while (it.hasNext()) {
+                Map.Entry<String, JsonNode> e = it.next();
+                JsonPointer childPtr = here.append(segment(e.getKey()));
+                out.set(e.getKey(), normalizeRecurse(e.getValue(), childPtr, cfg));
+            }
+            return out;
+        }
+
+        if (node.isArray()) {
+            ArrayNode out = JsonNodeFactory.instance.arrayNode();
+            for (int i = 0; i < node.size(); i++) {
+                JsonPointer childPtr = here.append(segment(i));
+                out.add(normalizeRecurse(node.get(i), childPtr, cfg));
+            }
+            return out;
+        }
+
+        return node;
+    }
+
+    private static ObjectNode keyArray(ArrayNode arr, ListRule r) {
+        ObjectNode out = JsonNodeFactory.instance.objectNode();
+        for (JsonNode el : arr) {
+            if (!el.isObject()) continue;
+            String key = extractId((ObjectNode) el, r);
+            if (key == null) key = "<null>";
+            out.set(key, el);
+        }
+        return out;
+    }
+
+    private static String extractId(ObjectNode obj, ListRule r) {
+        if (r.idIsPointer) {
+            JsonPointer p = toPointer(r.idSpec);
+            JsonNode n = obj.at(p);
+            return (n == null || n.isMissingNode() || n.isNull()) ? null : n.asText();
+        } else {
+            JsonNode n = obj.get(r.idSpec);
+            return (n == null || n.isNull()) ? null : n.asText();
+        }
+    }
+
+    private static ObjectNode wrapKeyed(ObjectNode keyed) {
+        ObjectNode wrapper = JsonNodeFactory.instance.objectNode();
+        wrapper.set("__keyed__", keyed);
+        return wrapper;
+    }
+    private static boolean isKeyed(JsonNode n) { return n != null && n.isObject() && n.has("__keyed__"); }
+    private static JsonNode unwrapKeyed(JsonNode n) { return isKeyed(n) ? n.get("__keyed__") : n; }
+
+    // ===============================================================================================
+    // Diff walk
+    // ===============================================================================================
+
+    private static void walk(JsonNode l, JsonNode r, JsonPointer path, Config cfg, List<Entry> out) {
+        // 0) Ignore rule check
+        if (cfg.isIgnored(path)) return;
+
+        // 1) Equivalence FIRST (even if one side is null/MissingNode)
+        Optional<BiPredicate<JsonNode, JsonNode>> eqOpt = cfg.equivalenceFor(path);
+        if (eqOpt.isPresent()) {
+            JsonNode ln = (l == null) ? MissingNode.getInstance() : l;
+            JsonNode rn = (r == null) ? MissingNode.getInstance() : r;
+            if (eqOpt.get().test(ln, rn)) return;
+        }
+
+        // 2) Added / Removed
+        boolean lm = (l == null) || l.isMissingNode();
+        boolean rm = (r == null) || r.isMissingNode();
+        if (lm && !rm) { out.add(new Entry(path.toString(), Kind.ADDED, null, r)); return; }
+        if (rm && !lm) { out.add(new Entry(path.toString(), Kind.REMOVED, l, null)); return; }
+        if (lm && rm) return;
+
+        // 3) Node type mismatch (no null checks needed now)
+        if (l.getNodeType() != r.getNodeType()) {
+            // Type-level comparator gets a chance to treat them equal
+            if (typeEqual(l, r, path, cfg)) return;
+            out.add(new Entry(path.toString(), Kind.CHANGED, l, r));
+            return;
+        }
+
+        // 4) Keyed-wrapper handling
+        if (isKeyed(l) || isKeyed(r)) {
+            JsonNode lo = unwrapKeyed(l);
+            JsonNode ro = unwrapKeyed(r);
+            if ((lo != l) ^ (ro != r)) {
+                if (typeEqual(lo, ro, path, cfg)) return;
+                out.add(new Entry(path.toString(), Kind.CHANGED, l, r));
+                return;
+            }
+            l = lo; r = ro;
+        }
+
+        // 5) Switch by node type
+        switch (l.getNodeType()) {
+            case OBJECT -> {
+                Set<String> names = new TreeSet<>();
+                l.fieldNames().forEachRemaining(names::add);
+                r.fieldNames().forEachRemaining(names::add);
+                for (String name : names) {
+                    JsonPointer childPtr = path.append(segment(name));
+                    JsonNode lv = l.get(name);
+                    JsonNode rv = r.get(name);
+                    lv = (lv == null) ? MissingNode.getInstance() : lv;
+                    rv = (rv == null) ? MissingNode.getInstance() : rv;
+                    walk(lv, rv, childPtr, cfg, out);
+                }
+            }
+            case ARRAY -> {
+                int max = Math.max(l.size(), r.size());
+                for (int i = 0; i < max; i++) {
+                    JsonPointer childPtr = path.append(segment(i));
+                    JsonNode lv = i < l.size() ? l.get(i) : MissingNode.getInstance();
+                    JsonNode rv = i < r.size() ? r.get(i) : MissingNode.getInstance();
+                    walk(lv, rv, childPtr, cfg, out);
+                }
+            }
+            default -> {
+                if (!Objects.equals(l, r)) {
+                    // type-level comparator (e.g., ZDT millis, BigDecimal epsilon, String trimmed)
+                    if (typeEqual(l, r, path, cfg)) return;
+                    out.add(new Entry(path.toString(), Kind.CHANGED, l, r));
+                }
+            }
+        }
+    }
+
+    private static boolean typeEqual(JsonNode l, JsonNode r, JsonPointer path, Config cfg) {
+        if (cfg.typeHints == null) return false;
+        JavaType hinted = cfg.typeHints.resolve(path);
+        if (hinted == null) return false;
+        BiPredicate<JsonNode, JsonNode> cmp = cfg.comparatorForClass(hinted.getRawClass());
+        if (cmp == null) return false;
+        JsonNode ln = (l == null) ? MissingNode.getInstance() : l;
+        JsonNode rn = (r == null) ? MissingNode.getInstance() : r;
+        return cmp.test(ln, rn);
+    }
+
+    // ===============================================================================================
+    // Built-in equivalences (handy presets)
+    // ===============================================================================================
+
+    public static final class Equivalences {
+        private Equivalences() {}
+
+        /** Treat 0 (numeric or "0") as equivalent to missing/null/empty string. */
+        public static BiPredicate<JsonNode, JsonNode> zeroEqualsMissing() {
+            return (a, b) -> {
+                boolean am = isMissingLike(a);
+                boolean bm = isMissingLike(b);
+                if (am && bm) return true;
+                if (am) return isZeroLike(b);
+                if (bm) return isZeroLike(a);
+                return isZeroLike(a) && isZeroLike(b);
+            };
+        }
+
+        /** Numbers equal within epsilon (works for numeric strings too). */
+        public static BiPredicate<JsonNode, JsonNode> numericWithin(double epsilon) {
+            return (a, b) -> {
+                Optional<BigDecimal> da = toDecimal(a);
+                Optional<BigDecimal> db = toDecimal(b);
+                if (da.isEmpty() || db.isEmpty()) return false;
+                BigDecimal diff = da.get().subtract(db.get()).abs();
+                return diff.compareTo(BigDecimal.valueOf(epsilon)) <= 0;
+            };
+        }
+
+        /** Case-insensitive textual equality. */
+        public static BiPredicate<JsonNode, JsonNode> caseInsensitive() {
+            return (a, b) -> a.isTextual() && b.isTextual()
+                    ? a.asText().equalsIgnoreCase(b.asText())
+                    : Objects.equals(a, b);
+        }
+
+        /** Equality on strings ignoring surrounding whitespace. */
+        public static BiPredicate<JsonNode, JsonNode> trimmedText() {
+            return (a, b) -> a.isTextual() && b.isTextual()
+                    ? a.asText().trim().equals(b.asText().trim())
+                    : Objects.equals(a, b);
+        }
+
+        /** ZDT/ODT/Instant equal when truncated to millis (string ISO forms). */
+        public static BiPredicate<JsonNode, JsonNode> zonedDateTimeTruncatedToMillisEqual() {
+            return (a, b) -> {
+                Optional<Instant> ia = parseToInstant(a);
+                Optional<Instant> ib = parseToInstant(b);
+                if (ia.isPresent() && ib.isPresent()) {
+                    return ia.get().truncatedTo(ChronoUnit.MILLIS)
+                             .equals(ib.get().truncatedTo(ChronoUnit.MILLIS));
+                }
+                // fallback: textual millisecond trimming
+                if (a.isTextual() && b.isTextual()) {
+                    return truncateIsoMillis(a.asText()).equals(truncateIsoMillis(b.asText()));
+                }
+                return false;
+            };
+        }
+
+        // ---- helpers
+        private static boolean isMissingLike(JsonNode n) {
+            return n == null || n.isMissingNode() || n.isNull()
+                    || (n.isTextual() && n.asText().trim().isEmpty());
+        }
+        private static boolean isZeroLike(JsonNode n) {
+            if (n == null || n.isNull() || n.isMissingNode()) return false;
+            if (n.isNumber()) return n.decimalValue().compareTo(BigDecimal.ZERO) == 0;
+            if (n.isTextual()) {
+                String s = n.asText().trim();
+                if (s.isEmpty()) return false;
+                try { return new BigDecimal(s).compareTo(BigDecimal.ZERO) == 0; }
+                catch (Exception ignored) { return false; }
+            }
+            return false;
+        }
+        private static Optional<BigDecimal> toDecimal(JsonNode n) {
+            try {
+                if (n.isNumber()) return Optional.of(n.decimalValue());
+                if (n.isTextual()) return Optional.of(new BigDecimal(n.asText().trim()));
+                return Optional.empty();
+            } catch (Exception e) { return Optional.empty(); }
+        }
+        private static Optional<Instant> parseToInstant(JsonNode n) {
+            try {
+                if (n == null || n.isNull() || n.isMissingNode() || !n.isTextual()) return Optional.empty();
+                String s = n.asText();
+                try { return Optional.of(ZonedDateTime.parse(s).toInstant()); } catch (Exception ignored) {}
+                try { return Optional.of(OffsetDateTime.parse(s).toInstant()); } catch (Exception ignored) {}
+                try { return Optional.of(Instant.parse(s)); } catch (Exception ignored) {}
+                return Optional.empty();
+            } catch (Exception e) { return Optional.empty(); }
+        }
+        private static String truncateIsoMillis(String s) {
+            int t = s.indexOf('T'); if (t < 0) return s;
+            int dot = s.indexOf('.', t); if (dot < 0) return s;
+            int end = dot + 1;
+            while (end < s.length() && Character.isDigit(s.charAt(end))) end++;
+            String frac = s.substring(dot + 1, end);
+            if (frac.length() <= 3) return s;
+            return s.substring(0, dot + 1) + frac.substring(0, 3) + s.substring(end);
+        }
+    }
+
+    // ===============================================================================================
+    // Helpers
+    // ===============================================================================================
+
+    private static JsonPointer segment(String field) {
+        return JsonPointer.compile("/" + escape(field));
+    }
+    private static JsonPointer segment(int index) {
+        return JsonPointer.compile("/" + index);
+    }
+    private static String escape(String raw) {
+        return raw.replace("~", "~0").replace("/", "~1");
+    }
+    private static JsonPointer toPointer(String pathLike) {
+        if (pathLike.startsWith("/")) return JsonPointer.compile(pathLike);
+        String[] parts = pathLike.split("/");
+        StringBuilder sb = new StringBuilder();
+        for (String p : parts) sb.append('/').append(escape(p));
+        return JsonPointer.compile(sb.toString());
+    }
+
+    private static String globToRegex(String glob) {
+        StringBuilder sb = new StringBuilder();
+        sb.append('^');
+        for (int i = 0; i < glob.length();) {
+            char c = glob.charAt(i);
+            if (c == '*') {
+                boolean dbl = (i + 1 < glob.length() && glob.charAt(i + 1) == '*');
+                if (dbl) { sb.append(".*"); i += 2; }
+                else { sb.append("[^/]*"); i++; }
+            } else {
+                if ("\\.[]{}()+-^$|".indexOf(c) >= 0) sb.append('\\');
+                sb.append(c);
+                i++;
+            }
+        }
+        sb.append('$');
+        return sb.toString();
+    }
+}
