@@ -1,0 +1,68 @@
+public static final class StringEquivalences {
+  private StringEquivalences() {}
+
+  /** Lossy ASCII template compare: map ANY non [A-Za-z0-9 ] to '?', then collapse "???" → "?" and compare. */
+  public static java.util.function.BiPredicate<com.fasterxml.jackson.databind.JsonNode, com.fasterxml.jackson.databind.JsonNode>
+  unicodeLossyQuestionEquals() {
+    return (a, b) -> {
+      if (a == null || b == null || !a.isTextual() || !b.isTextual()) return false;
+
+      String sa = normalize(a.asText());
+      String sb = normalize(b.asText());
+
+      Template ta = toLossyAsciiTemplate(sa);
+      Template tb = toLossyAsciiTemplate(sb);
+
+      // Only treat as equivalent if at least one side actually went lossy or already had '?'
+      boolean anyLossy = ta.changed || tb.changed || sa.indexOf('?') >= 0 || sb.indexOf('?') >= 0;
+      return anyLossy && ta.value.equals(tb.value);
+    };
+  }
+
+  // Keep your existing alias if you wired punctuationQuestionEquals() earlier
+  public static java.util.function.BiPredicate<com.fasterxml.jackson.databind.JsonNode, com.fasterxml.jackson.databind.JsonNode>
+  punctuationQuestionEquals() {
+    return unicodeLossyQuestionEquals();
+  }
+
+  // ---------- helpers ----------
+
+  private static String normalize(String s) {
+    s = java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFKC);
+    return s.trim().replaceAll("\\s+", " ");
+  }
+
+  private static final class Template {
+    final String value; final boolean changed;
+    Template(String v, boolean c) { this.value = v; this.changed = c; }
+  }
+
+  /** Build lossy ASCII template and collapse consecutive '?' into one. */
+  private static Template toLossyAsciiTemplate(String s) {
+    StringBuilder out = new StringBuilder(s.length());
+    boolean changed = false;
+    boolean lastWasQ = false;
+
+    for (int i = 0; i < s.length(); ) {
+      int cp = s.codePointAt(i);
+      boolean keep =
+          cp < 128 && (
+              (cp >= 'A' && cp <= 'Z') ||
+              (cp >= 'a' && cp <= 'z') ||
+              (cp >= '0' && cp <= '9') ||
+              cp == ' ');
+
+      if (keep) {
+        out.append((char) cp);
+        lastWasQ = false;
+      } else {
+        // emit a single '?' for any run of non-ASCII/punct/symbols (handles "..." vs "…")
+        if (!lastWasQ) out.append('?');
+        if (cp != '?') changed = true;
+        lastWasQ = true;
+      }
+      i += Character.charCount(cp);
+    }
+    return new Template(out.toString(), changed);
+  }
+}
