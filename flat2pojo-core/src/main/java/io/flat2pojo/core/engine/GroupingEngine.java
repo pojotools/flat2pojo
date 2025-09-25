@@ -58,7 +58,11 @@ public final class GroupingEngine {
     final List<Object> keyVals = new ArrayList<>(rule.keyPaths().size());
     for (final String keyPath : rule.keyPaths()) {
       final JsonNode v = rowValues.get(keyPath);
-      keyVals.add(v == null ? NullNode.getInstance() : v);
+      if (v == null || v.isNull()) {
+        // Skip list entry creation entirely if any keyPath is null/missing
+        return null;
+      }
+      keyVals.add(v);
     }
     final CompositeKey key = new CompositeKey(keyVals);
 

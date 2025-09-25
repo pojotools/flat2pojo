@@ -99,11 +99,11 @@ public final class Flat2PojoCore implements Flat2Pojo {
     final Map<String, JsonNode> rowValues = flattenObjectNode(rowNode, "");
     final Map<String, ObjectNode> rowElementCache = new LinkedHashMap<>();
 
-    processListRules(rowValues, rowElementCache, root, ge, cfg, configCache);
-    processNonListValues(rowValues, root, cfg, configCache);
+    final Set<String> skippedListPaths = processListRules(rowValues, rowElementCache, root, ge, cfg, configCache);
+    processNonListValues(rowValues, root, cfg, configCache, skippedListPaths);
   }
 
-  private void processListRules(
+  private Set<String> processListRules(
       final Map<String, JsonNode> rowValues,
       final Map<String, ObjectNode> rowElementCache,
       final ObjectNode root,
@@ -111,18 +111,29 @@ public final class Flat2PojoCore implements Flat2Pojo {
       final MappingConfig cfg,
       final ConfigurationCache configCache) {
     final List<MappingConfig.ListRule> listRules = cfg.lists();
+    final Set<String> skippedListPaths = new HashSet<>();
     for (final MappingConfig.ListRule rule : listRules) {
       final String path = rule.path();
+      // Skip if any ancestor list path was skipped
+      if (isUnderAnySkippedPath(path, skippedListPaths, cfg.separator())) {
+        skippedListPaths.add(path);
+        continue;
+      }
 
       final String nearestAncestor = configCache.getParentListPath(path);
       final ObjectNode base = determineBaseObject(nearestAncestor, rowElementCache, root);
       final String relPath = calculateRelativePath(path, nearestAncestor, cfg.separator());
 
       final ObjectNode element = ge.upsertListElementRelative(base, relPath, rowValues, rule);
-      rowElementCache.put(path, element);
-
-      copyListSubtreeValues(rowValues, element, rule, cfg, configCache);
+      if (element != null) {
+        rowElementCache.put(path, element);
+        copyListSubtreeValues(rowValues, element, rule, cfg, configCache);
+      } else {
+        // Track skipped list paths to prevent processing their subtree values
+        skippedListPaths.add(path);
+      }
     }
+    return skippedListPaths;
   }
 
   private ObjectNode determineBaseObject(
@@ -182,14 +193,27 @@ public final class Flat2PojoCore implements Flat2Pojo {
       final Map<String, JsonNode> rowValues,
       final ObjectNode root,
       final MappingConfig cfg,
-      final ConfigurationCache configCache) {
+      final ConfigurationCache configCache,
+      final Set<String> skippedListPaths) {
     final String separator = cfg.separator();
     for (final var entry : rowValues.entrySet()) {
       final String path = entry.getKey();
-      if (!configCache.isListPath(path)) {
+      boolean isListPath = configCache.isListPath(path);
+      boolean inSkippedSubtree = isUnderAnySkippedPath(path, skippedListPaths, separator);
+      if (!isListPath && !inSkippedSubtree) {
         writeValueIntoNode(root, path, entry.getValue(), separator);
       }
     }
+  }
+
+  private boolean isUnderAnySkippedPath(
+      final String path, final Set<String> skippedListPaths, final String separator) {
+    for (final String skippedPath : skippedListPaths) {
+      if (PathOps.isUnder(path, skippedPath, separator)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private <T> T materializeResult(final ObjectNode root, final Class<T> type) {
