@@ -1,0 +1,39 @@
+/** Equal if both numbers round to the same value at the given dp (HALF_UP). */
+public static java.util.function.BiPredicate<com.fasterxml.jackson.databind.JsonNode, com.fasterxml.jackson.databind.JsonNode>
+doublePrecision(int dp) {
+    return doublePrecision(dp, java.math.RoundingMode.HALF_UP);
+}
+
+/** Equal if both numbers round to the same value at the given dp & rounding mode. */
+public static java.util.function.BiPredicate<com.fasterxml.jackson.databind.JsonNode, com.fasterxml.jackson.databind.JsonNode>
+doublePrecision(int dp, java.math.RoundingMode mode) {
+    if (dp < 0) throw new IllegalArgumentException("dp must be >= 0");
+    Objects.requireNonNull(mode, "mode");
+    return (a, b) -> {
+        java.math.BigDecimal da = toBigDecimalOrNull(a);
+        java.math.BigDecimal db = toBigDecimalOrNull(b);
+
+        if (da == null && db == null) return true;   // both missing/null
+        if (da == null || db == null) return false;  // one side missing
+
+        java.math.BigDecimal ra = da.setScale(dp, mode);
+        java.math.BigDecimal rb = db.setScale(dp, mode);
+        return ra.compareTo(rb) == 0;
+    };
+}
+
+// ---- helpers (keep private inside Equivalences) ----
+private static java.math.BigDecimal toBigDecimalOrNull(com.fasterxml.jackson.databind.JsonNode n) {
+    if (n == null || n.isNull() || n.isMissingNode()) return null;
+    try {
+        if (n.isNumber()) return n.decimalValue();
+        if (n.isTextual()) {
+            String s = n.asText().trim();
+            if (s.isEmpty()) return null;
+            return new java.math.BigDecimal(s);
+        }
+        return null;
+    } catch (Exception e) {
+        return null;
+    }
+}
