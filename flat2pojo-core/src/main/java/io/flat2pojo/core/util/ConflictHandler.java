@@ -3,7 +3,9 @@ package io.flat2pojo.core.util;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.flat2pojo.core.config.MappingConfig.ConflictPolicy;
+import io.flat2pojo.spi.Reporter;
 import java.util.Iterator;
+import java.util.Optional;
 
 /**
  * Utilities for handling field conflicts during flat-to-POJO conversion.
@@ -20,6 +22,16 @@ public final class ConflictHandler {
       final JsonNode incoming,
       final ConflictPolicy policy,
       final String absolutePath) {
+    writeScalarWithPolicy(target, fieldName, incoming, policy, absolutePath, Optional.empty());
+  }
+
+  public static void writeScalarWithPolicy(
+      final ObjectNode target,
+      final String fieldName,
+      final JsonNode incoming,
+      final ConflictPolicy policy,
+      final String absolutePath,
+      final Optional<Reporter> reporter) {
     final JsonNode existing = target.get(fieldName);
 
     if (existing == null || existing.isNull()) {
@@ -32,11 +44,17 @@ public final class ConflictHandler {
         if (existing.isValueNode()
             && incoming.isValueNode()
             && !existing.equals(incoming)) {
-          throw new RuntimeException(
-              "Conflict at '" + absolutePath + "': existing=" + existing + ", incoming=" + incoming);
+          final String message = "Conflict at '" + absolutePath + "': existing=" + existing + ", incoming=" + incoming;
+          reporter.ifPresent(r -> r.warn(message));
+          throw new RuntimeException(message);
         }
       }
       case firstWriteWins -> {
+        if (existing.isValueNode()
+            && incoming.isValueNode()
+            && !existing.equals(incoming)) {
+          reporter.ifPresent(r -> r.warn("Field conflict resolved using firstWriteWins policy at '" + absolutePath + "': kept existing=" + existing + ", ignored incoming=" + incoming));
+        }
         return;
       }
       case merge -> {
@@ -44,9 +62,16 @@ public final class ConflictHandler {
             && incoming instanceof ObjectNode incomingObject) {
           deepMerge(existingObject, incomingObject);
           return;
+        } else if (!existing.equals(incoming)) {
+          reporter.ifPresent(r -> r.warn("Cannot merge non-object values at '" + absolutePath + "': existing=" + existing + ", incoming=" + incoming + ". Using lastWriteWins."));
         }
       }
       case lastWriteWins -> {
+        if (existing.isValueNode()
+            && incoming.isValueNode()
+            && !existing.equals(incoming)) {
+          reporter.ifPresent(r -> r.warn("Field conflict resolved using lastWriteWins policy at '" + absolutePath + "': replaced existing=" + existing + " with incoming=" + incoming));
+        }
         // Fall through to overwrite
       }
     }

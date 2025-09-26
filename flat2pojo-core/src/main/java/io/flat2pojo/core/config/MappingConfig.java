@@ -3,6 +3,8 @@ package io.flat2pojo.core.config;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import io.flat2pojo.spi.Reporter;
+import io.flat2pojo.spi.ValuePreprocessor;
 import org.immutables.value.Value;
 import java.util.*;
 
@@ -52,6 +54,16 @@ public abstract class MappingConfig {
   @Value.Default
   public NullPolicy nullPolicy() {
     return new NullPolicy(false);
+  }
+
+  @Value.Default
+  public Optional<Reporter> reporter() {
+    return Optional.empty();
+  }
+
+  @Value.Default
+  public Optional<ValuePreprocessor> valuePreprocessor() {
+    return Optional.empty();
   }
 
   // ======= DERIVED/CACHED FIELDS =======

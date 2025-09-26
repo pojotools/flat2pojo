@@ -22,6 +22,11 @@
             <artifactId>flat2pojo-jackson</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>io.flat2pojo</groupId>
+            <artifactId>flat2pojo-spi</artifactId>
+            <version>${project.version}</version>
+        </dependency>
 
         <!-- Immutables (optional, used in docs/examples) -->
         <dependency>

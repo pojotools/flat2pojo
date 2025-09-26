@@ -95,7 +95,15 @@ public final class Flat2PojoCore implements Flat2Pojo {
       final FlatTreeBuilder tb,
       final MappingConfig cfg,
       final ConfigurationCache configCache) {
-    final ObjectNode rowNode = tb.buildTreeForRow(row);
+    // Apply value preprocessing if configured
+    final Map<String, ?> processedRow;
+    if (cfg.valuePreprocessor().isPresent()) {
+      processedRow = cfg.valuePreprocessor().get().process(row);
+    } else {
+      processedRow = row;
+    }
+
+    final ObjectNode rowNode = tb.buildTreeForRow(processedRow);
     final Map<String, JsonNode> rowValues = flattenObjectNode(rowNode, "");
     final Map<String, ObjectNode> rowElementCache = new LinkedHashMap<>();
 
@@ -117,6 +125,7 @@ public final class Flat2PojoCore implements Flat2Pojo {
       // Skip if any ancestor list path was skipped
       if (isUnderAnySkippedPath(path, skippedListPaths, cfg.separator())) {
         skippedListPaths.add(path);
+        cfg.reporter().ifPresent(r -> r.warn("Skipping list rule '" + path + "' because parent list was skipped due to missing keyPath"));
         continue;
       }
 
@@ -131,6 +140,7 @@ public final class Flat2PojoCore implements Flat2Pojo {
       } else {
         // Track skipped list paths to prevent processing their subtree values
         skippedListPaths.add(path);
+        cfg.reporter().ifPresent(r -> r.warn("Skipping list rule '" + path + "' because keyPath(s) " + rule.keyPaths() + " are missing or null"));
       }
     }
     return skippedListPaths;
@@ -172,7 +182,7 @@ public final class Flat2PojoCore implements Flat2Pojo {
       if (PathOps.isUnder(valuePath, rulePath, separator)) {
         if (!isValueInChildListSubtree(valuePath, childListPrefixes, separator)) {
           final String suffix = PathOps.tailAfter(valuePath, rulePath, separator);
-          writeValueWithPolicy(element, suffix, entry.getValue(), separator, rule.onConflict());
+          writeValueWithPolicy(element, suffix, entry.getValue(), separator, rule.onConflict(), cfg, valuePath);
         }
       }
     }
@@ -388,11 +398,11 @@ public final class Flat2PojoCore implements Flat2Pojo {
 
 
   private void writeValueWithPolicy(
-      final ObjectNode target, final String path, final JsonNode value, final String separator, final ConflictPolicy policy) {
+      final ObjectNode target, final String path, final JsonNode value, final String separator, final ConflictPolicy policy, final MappingConfig cfg, final String absolutePath) {
     if (path.isEmpty()) return;
 
     final ObjectNode parent = navigateToParentNode(target, path, separator);
     final String leafField = getLeafFieldName(path, separator);
-    ConflictHandler.writeScalarWithPolicy(parent, leafField, value, policy, path);
+    ConflictHandler.writeScalarWithPolicy(parent, leafField, value, policy, absolutePath, cfg.reporter());
   }
 }

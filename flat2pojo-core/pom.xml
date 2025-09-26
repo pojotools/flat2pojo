@@ -13,6 +13,11 @@
 
     <dependencies>
         <dependency>
+            <groupId>io.flat2pojo</groupId>
+            <artifactId>flat2pojo-spi</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
         </dependency>
