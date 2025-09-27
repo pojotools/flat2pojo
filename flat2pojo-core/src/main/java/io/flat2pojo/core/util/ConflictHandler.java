@@ -21,15 +21,6 @@ public final class ConflictHandler {
       final String fieldName,
       final JsonNode incoming,
       final ConflictPolicy policy,
-      final String absolutePath) {
-    writeScalarWithPolicy(target, fieldName, incoming, policy, absolutePath, Optional.empty());
-  }
-
-  public static void writeScalarWithPolicy(
-      final ObjectNode target,
-      final String fieldName,
-      final JsonNode incoming,
-      final ConflictPolicy policy,
       final String absolutePath,
       final Optional<Reporter> reporter) {
     final JsonNode existing = target.get(fieldName);
