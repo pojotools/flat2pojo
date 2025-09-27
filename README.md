@@ -32,7 +32,7 @@ Unlike manual transformation logic, flat2pojo uses a **Jackson-first** approach:
 
 ```xml
 <dependency>
-    <groupId>io.flat2pojo</groupId>
+    <groupId>io.github.kyran121</groupId>
     <artifactId>flat2pojo-jackson</artifactId>
     <version>0.1.0-SNAPSHOT</version>
 </dependency>
@@ -41,7 +41,7 @@ Unlike manual transformation logic, flat2pojo uses a **Jackson-first** approach:
 For SPI extensions (optional):
 ```xml
 <dependency>
-    <groupId>io.flat2pojo</groupId>
+    <groupId>io.github.kyran121</groupId>
     <artifactId>flat2pojo-spi</artifactId>
     <version>0.1.0-SNAPSHOT</version>
 </dependency>
