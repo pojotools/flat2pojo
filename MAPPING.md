@@ -1,6 +1,66 @@
 # Mapping Configuration Guide
 
-This document provides detailed information about flat2pojo's mapping configuration system.
+This document provides detailed information about flat2pojo's mapping configuration system, including advanced features like hierarchical grouping, conflict resolution, and extensibility options.
+
+## Root Keys
+
+Root keys control how flat rows are grouped into separate root-level objects. By default, all rows contribute to a single result object. With root keys, you can partition data into multiple objects based on key field values.
+
+### Basic Root Key Usage
+
+```yaml
+rootKeys: ["organizationId"]
+```
+
+**Input Data:**
+```
+organizationId=acme, name=ACME Corp, departments/id=eng, departments/name=Engineering
+organizationId=acme, name=ACME Corp, departments/id=sales, departments/name=Sales
+organizationId=beta, name=Beta LLC, departments/id=dev, departments/name=Development
+```
+
+**Output (3 rows → 2 objects):**
+```json
+[
+  {
+    "organizationId": "acme",
+    "name": "ACME Corp",
+    "departments": [
+      {"id": "eng", "name": "Engineering"},
+      {"id": "sales", "name": "Sales"}
+    ]
+  },
+  {
+    "organizationId": "beta",
+    "name": "Beta LLC",
+    "departments": [
+      {"id": "dev", "name": "Development"}
+    ]
+  }
+]
+```
+
+### Compound Root Keys
+
+Use multiple fields to create compound grouping keys:
+
+```yaml
+rootKeys: ["region", "organizationId"]
+```
+
+**Behavior:**
+- Objects are grouped by the combination of ALL root key values
+- Order of root keys matters for consistent results
+- Missing root key values are treated as `null`
+
+### Root Keys vs List Rules
+
+| Feature | Root Keys | List Rules |
+|---------|-----------|------------|
+| **Purpose** | Group rows into separate root objects | Create nested lists within objects |
+| **Output** | Multiple root-level objects | Single object with nested arrays |
+| **Scope** | Entire conversion result | Specific path within object |
+| **Ordering** | Stable input order | Configurable with `orderBy` |
 
 ## List Rules
 
@@ -303,3 +363,201 @@ nullPolicy:
 ```
 
 This creates a three-level hierarchy: Organizations → Departments → Employees, with proper ordering and conflict resolution at each level.
+
+## Advanced Configuration Options
+
+### Sparse Row Handling
+
+Control how rows with missing list keyPath values are processed:
+
+```yaml
+allowSparseRows: true  # Default: false
+```
+
+**Effect:**
+- `allowSparseRows: false` (default): Rows missing keyPath values are skipped with warnings
+- `allowSparseRows: true`: Allow processing of incomplete rows
+
+**Example:**
+```yaml
+allowSparseRows: true
+lists:
+  - path: "users"
+    keyPaths: ["users/id"]
+```
+
+**Input with missing keyPath:**
+```
+users/name=John, users/email=john@example.com
+users/id=2, users/name=Jane, users/email=jane@example.com
+```
+
+**Result:**
+- With `allowSparseRows: false`: Only Jane's record is processed, warning logged
+- With `allowSparseRows: true`: Both records processed, John gets generated/null ID
+
+### Custom Separators
+
+Configure path separators for different data formats:
+
+```yaml
+separator: "."        # Use dots instead of slashes
+separator: "__"       # Use double underscores
+separator: "->"       # Multi-character separator
+```
+
+**Example with dot notation:**
+```yaml
+separator: "."
+lists:
+  - path: "tasks"
+    keyPaths: ["tasks.id"]
+```
+
+**Input:**
+```
+project.id=1, project.name=Alpha, tasks.id=t1, tasks.title=Setup
+```
+
+### Performance Tuning
+
+```yaml
+# Optimize for performance
+separator: "/"          # Single-character separators are fastest
+allowSparseRows: false  # Reduces processing overhead
+nullPolicy:
+  blanksAsNulls: false  # Skip string trimming/conversion
+```
+
+## Extensibility Configuration
+
+flat2pojo supports Service Provider Interface (SPI) extensions for custom processing:
+
+### Value Preprocessing
+
+Transform input data before mapping:
+
+```yaml
+# In Java code - not YAML configurable
+MappingConfig config = MappingConfig.builder()
+    .valuePreprocessor(Optional.of(customPreprocessor))
+    .build();
+```
+
+**Use Cases:**
+- Data normalization (phone numbers, emails)
+- Value transformation (YES/NO → boolean)
+- Field mapping (legacy_field → new_field)
+- Data validation and cleaning
+
+### Conversion Reporting
+
+Monitor conversion process and capture warnings:
+
+```yaml
+# In Java code - not YAML configurable
+MappingConfig config = MappingConfig.builder()
+    .reporter(Optional.of(customReporter))
+    .build();
+```
+
+**Captured Events:**
+- Missing keyPath warnings
+- Field conflict resolutions
+- Skipped list processing
+- Data quality issues
+
+### Combined SPI Usage
+
+```java
+// Complete monitoring and preprocessing
+MappingConfig config = MappingConfig.builder()
+    .separator("/")
+    .allowSparseRows(false)
+    .valuePreprocessor(Optional.of(dataCleaningPreprocessor))
+    .reporter(Optional.of(auditTrailReporter))
+    .lists(listRules)
+    .nullPolicy(new NullPolicy(true))
+    .build();
+```
+
+## Configuration Best Practices
+
+### 1. Consistent Path Naming
+
+```yaml
+# ✅ Good: Consistent naming convention
+separator: "/"
+lists:
+  - path: "departments"
+    keyPaths: ["departments/id"]
+  - path: "departments/employees"
+    keyPaths: ["departments/employees/id"]
+
+# ❌ Avoid: Mixed conventions
+separator: "/"
+lists:
+  - path: "departments"
+    keyPaths: ["dept_id"]  # Inconsistent with path
+```
+
+### 2. Explicit Conflict Policies
+
+```yaml
+# ✅ Good: Explicit policies for clarity
+lists:
+  - path: "users"
+    keyPaths: ["users/id"]
+    onConflict: lastWriteWins  # Clear intention
+
+# ❌ Unclear: Relying on defaults
+lists:
+  - path: "users"
+    keyPaths: ["users/id"]
+    # onConflict defaults - unclear to readers
+```
+
+### 3. Performance-Conscious Configuration
+
+```yaml
+# For high-throughput scenarios
+separator: "/"              # Single-character is fastest
+allowSparseRows: false      # Reduces validation overhead
+nullPolicy:
+  blanksAsNulls: false      # Skip string processing
+
+lists:
+  - path: "items"
+    keyPaths: ["items/id"]
+    dedupe: false           # Skip deduplication if not needed
+    orderBy: []             # Skip sorting if not required
+```
+
+### 4. Comprehensive Monitoring
+
+```java
+// Production-ready configuration
+List<String> warnings = new ArrayList<>();
+List<String> conflicts = new ArrayList<>();
+
+Reporter detailedReporter = warning -> {
+    if (warning.contains("conflict")) {
+        conflicts.add(warning);
+    } else {
+        warnings.add(warning);
+    }
+    logger.info("Conversion event: {}", warning);
+};
+
+MappingConfig config = MappingConfig.builder()
+    .reporter(Optional.of(detailedReporter))
+    .build();
+
+// After conversion, analyze quality
+if (!warnings.isEmpty()) {
+    logger.warn("Data quality issues: {}", warnings.size());
+}
+if (!conflicts.isEmpty()) {
+    logger.info("Conflicts resolved: {}", conflicts.size());
+}
+```
