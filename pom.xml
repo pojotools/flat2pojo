@@ -34,9 +34,9 @@
     </scm>
 
     <modules>
+        <module>flat2pojo-spi</module>
         <module>flat2pojo-core</module>
         <module>flat2pojo-jackson</module>
-        <module>flat2pojo-spi</module>
         <module>flat2pojo-examples</module>
         <module>flat2pojo-benchmarks</module>
     </modules>

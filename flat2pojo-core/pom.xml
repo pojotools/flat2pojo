@@ -13,7 +13,7 @@
 
     <dependencies>
         <dependency>
-            <groupId>io.flat2pojo</groupId>
+            <groupId>io.github.kyran121</groupId>
             <artifactId>flat2pojo-spi</artifactId>
             <version>${project.version}</version>
         </dependency>
