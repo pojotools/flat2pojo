@@ -76,15 +76,17 @@ gpg --list-secret-keys --keyid-format=long
 5. Updates version to release version
 6. Commits release version
 7. Creates and pushes git tag (e.g., `v1.0.0`)
-8. Deploys to Central Portal using Maven plugin
-9. Updates to next development version
-10. Pushes changes to git
+8. Installs parent POM with release version
+9. Builds and installs dependencies with release version
+10. Deploys to Central Portal using Maven plugin
+11. Updates to next development version
+12. Pushes changes to git
 
 **Key Benefits:**
 - Git tag-based versioning
 - Automatic rollback on failure
 - Uses Central Publishing Maven Plugin 0.9.0+
-- Simplified 5-step process vs. old 9-step process
+- Simplified 7-step process vs. old 9-step process
 
 ## Environment Variables
 

@@ -178,16 +178,34 @@ git tag "v$RELEASE_VERSION" -m "Release version $RELEASE_VERSION"
 git push origin "v$RELEASE_VERSION"
 echo -e "${GREEN}✓ Release tag v$RELEASE_VERSION created and pushed${NC}"
 
-# Step 4: Deploy release using Central Publishing Plugin
-echo -e "${YELLOW}Step 4: Deploying release to Central Portal...${NC}"
-echo -e "${BLUE}Using Central Publishing Maven Plugin with autoPublish...${NC}"
-
-if mvn clean deploy -pl "$MODULE" -P "$PROFILE"; then
-    echo -e "${GREEN}✓ Release deployed successfully!${NC}"
-    RELEASE_SUCCESS=true
-else
-    echo -e "${RED}✗ Release deployment failed${NC}"
+# Step 4: Install parent POM and build dependencies
+echo -e "${YELLOW}Step 4a: Installing parent POM with release version...${NC}"
+if ! mvn clean install -N -q; then
+    echo -e "${RED}Failed to install parent POM with release version!${NC}"
     RELEASE_SUCCESS=false
+else
+    echo -e "${GREEN}✓ Parent POM installed${NC}"
+
+    echo -e "${YELLOW}Step 4b: Building and installing dependencies...${NC}"
+    if ! mvn clean install -pl flat2pojo-spi,flat2pojo-core -q; then
+        echo -e "${RED}Failed to build dependencies with release version!${NC}"
+        RELEASE_SUCCESS=false
+    else
+        echo -e "${GREEN}✓ Dependencies built and installed${NC}"
+
+        # Step 4c: Deploy release using Central Publishing Plugin
+        echo -e "${YELLOW}Step 4c: Deploying release to Central Portal...${NC}"
+        echo -e "${BLUE}Using Central Publishing Maven Plugin with reactor build...${NC}"
+
+        # Deploy with reactor build to ensure all dependencies are available
+        if mvn clean deploy -pl "$MODULE" -am -P "$PROFILE"; then
+            echo -e "${GREEN}✓ Release deployed successfully!${NC}"
+            RELEASE_SUCCESS=true
+        else
+            echo -e "${RED}✗ Release deployment failed${NC}"
+            RELEASE_SUCCESS=false
+        fi
+    fi
 fi
 
 # Step 5: Update to next development version
