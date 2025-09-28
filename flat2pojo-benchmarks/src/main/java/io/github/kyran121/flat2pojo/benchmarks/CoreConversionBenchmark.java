@@ -4,12 +4,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.kyran121.flat2pojo.core.api.Flat2Pojo;
 import io.github.kyran121.flat2pojo.core.config.MappingConfig;
 import io.github.kyran121.flat2pojo.core.impl.Flat2PojoCore;
-import org.openjdk.jmh.annotations.*;
-import org.openjdk.jmh.infra.Blackhole;
-
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import org.openjdk.jmh.annotations.*;
+import org.openjdk.jmh.infra.Blackhole;
 
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.NANOSECONDS)
@@ -30,27 +29,27 @@ public class CoreConversionBenchmark {
     converter = new Flat2PojoCore(new ObjectMapper());
     config = MappingConfig.builder().build();
 
-    simpleRow = Map.of(
-        "name", "John Doe",
-        "age", 30,
-        "email", "john@example.com"
-    );
+    simpleRow =
+        Map.of(
+            "name", "John Doe",
+            "age", 30,
+            "email", "john@example.com");
 
-    nestedRow = Map.of(
-        "user/id", 123,
-        "user/profile/firstName", "Jane",
-        "user/profile/lastName", "Smith",
-        "user/profile/contact/email", "jane@example.com",
-        "user/profile/contact/phone", "+1234567890",
-        "user/settings/theme", "dark",
-        "user/settings/notifications", true
-    );
+    nestedRow =
+        Map.of(
+            "user/id", 123,
+            "user/profile/firstName", "Jane",
+            "user/profile/lastName", "Smith",
+            "user/profile/contact/email", "jane@example.com",
+            "user/profile/contact/phone", "+1234567890",
+            "user/settings/theme", "dark",
+            "user/settings/notifications", true);
 
-    multipleRows = List.of(
-        Map.of("id", 1, "name", "Alice", "department/name", "Engineering"),
-        Map.of("id", 2, "name", "Bob", "department/name", "Marketing"),
-        Map.of("id", 3, "name", "Charlie", "department/name", "Sales")
-    );
+    multipleRows =
+        List.of(
+            Map.of("id", 1, "name", "Alice", "department/name", "Engineering"),
+            Map.of("id", 2, "name", "Bob", "department/name", "Marketing"),
+            Map.of("id", 3, "name", "Charlie", "department/name", "Sales"));
   }
 
   @Benchmark

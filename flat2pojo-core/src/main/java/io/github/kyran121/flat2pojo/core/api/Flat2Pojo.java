@@ -7,8 +7,9 @@ import java.util.stream.Stream;
 /**
  * Core interface for converting flat key-value maps to structured POJOs.
  *
- * <p>This interface provides methods to transform flat data structures (such as those from CSV files,
- * database results, or key-value stores) into nested object hierarchies using declarative configuration.
+ * <p>This interface provides methods to transform flat data structures (such as those from CSV
+ * files, database results, or key-value stores) into nested object hierarchies using declarative
+ * configuration.
  *
  * <p>The conversion process follows a Jackson-first approach: builds an intermediate JsonNode tree
  * structure, then leverages Jackson's powerful type conversion and mapping capabilities to produce
@@ -47,8 +48,8 @@ public interface Flat2Pojo {
   /**
    * Converts rows from an iterator to a stream of POJOs.
    *
-   * <p>This method is useful for processing large datasets that don't fit in memory.
-   * Note that streaming conversion is less efficient than batch processing with {@link #convertAll}.
+   * <p>This method is useful for processing large datasets that don't fit in memory. Note that
+   * streaming conversion is less efficient than batch processing with {@link #convertAll}.
    *
    * @param rows iterator of flat rows
    * @param type the target POJO class

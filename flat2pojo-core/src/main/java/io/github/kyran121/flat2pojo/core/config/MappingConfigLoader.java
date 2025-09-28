@@ -7,14 +7,13 @@ import io.github.kyran121.flat2pojo.core.config.MappingConfig.Nulls;
 import io.github.kyran121.flat2pojo.core.config.MappingConfig.OrderBy;
 import io.github.kyran121.flat2pojo.core.config.MappingConfig.PrimitiveSplitRule;
 import io.github.kyran121.flat2pojo.core.util.PathOps;
-import org.yaml.snakeyaml.Yaml;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.yaml.snakeyaml.Yaml;
 
 @SuppressWarnings("unchecked")
 public final class MappingConfigLoader {
@@ -45,7 +44,8 @@ public final class MappingConfigLoader {
     }
   }
 
-  private static void parsePrimitiveRules(final Map<String, Object> root, final ImmutableMappingConfig.Builder builder) {
+  private static void parsePrimitiveRules(
+      final Map<String, Object> root, final ImmutableMappingConfig.Builder builder) {
     List<Map<String, Object>> primitives = (List<Map<String, Object>>) root.get("primitives");
     if (primitives == null) return;
 
@@ -66,7 +66,8 @@ public final class MappingConfigLoader {
     builder.addPrimitives(new PrimitiveSplitRule(path, delimiter, trim));
   }
 
-  private static void parseListRules(final Map<String, Object> root, final ImmutableMappingConfig.Builder builder) {
+  private static void parseListRules(
+      final Map<String, Object> root, final ImmutableMappingConfig.Builder builder) {
     List<Map<String, Object>> lists = (List<Map<String, Object>>) root.get("lists");
     if (lists == null) return;
 
@@ -119,7 +120,8 @@ public final class MappingConfigLoader {
     return ConflictPolicy.valueOf(policyString.trim());
   }
 
-  private static void parseNullPolicy(final Map<String, Object> root, final ImmutableMappingConfig.Builder builder) {
+  private static void parseNullPolicy(
+      final Map<String, Object> root, final ImmutableMappingConfig.Builder builder) {
     Object nullPolicyObject = root.get("nullPolicy");
     if (!(nullPolicyObject instanceof Map<?, ?> nullPolicyMap)) {
       return;

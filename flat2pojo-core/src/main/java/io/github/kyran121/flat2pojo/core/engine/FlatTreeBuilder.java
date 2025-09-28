@@ -41,8 +41,8 @@ public final class FlatTreeBuilder {
       }
 
       // Use PathOps for consistent path traversal
-      final ObjectNode parentNode = PathOps.traverseAndEnsurePath(root, key, separatorChar,
-        this::ensureObject);
+      final ObjectNode parentNode =
+          PathOps.traverseAndEnsurePath(root, key, separatorChar, this::ensureObject);
       final String lastSegment = PathOps.getFinalSegment(key, separatorChar);
       final JsonNode valueNode = createValueNode(key, raw);
       parentNode.set(lastSegment, valueNode);

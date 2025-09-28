@@ -3,11 +3,10 @@ package io.github.kyran121.flat2pojo.examples;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.kyran121.flat2pojo.core.api.Flat2Pojo;
 import io.github.kyran121.flat2pojo.examples.domain.ImmutableProductRoot;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import java.util.List;
 import java.util.Map;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 class OrderingSuiteTest {
   ObjectMapper om;

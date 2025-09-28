@@ -10,8 +10,8 @@ import java.util.Optional;
 /**
  * Utilities for handling field conflicts during flat-to-POJO conversion.
  *
- * <p>This class provides methods to resolve conflicts when multiple values
- * are assigned to the same field path according to different conflict policies.
+ * <p>This class provides methods to resolve conflicts when multiple values are assigned to the same
+ * field path according to different conflict policies.
  */
 public final class ConflictHandler {
   private ConflictHandler() {}
@@ -32,19 +32,24 @@ public final class ConflictHandler {
 
     switch (policy) {
       case error -> {
-        if (existing.isValueNode()
-            && incoming.isValueNode()
-            && !existing.equals(incoming)) {
-          final String message = "Conflict at '" + absolutePath + "': existing=" + existing + ", incoming=" + incoming;
+        if (existing.isValueNode() && incoming.isValueNode() && !existing.equals(incoming)) {
+          final String message =
+              "Conflict at '" + absolutePath + "': existing=" + existing + ", incoming=" + incoming;
           reporter.ifPresent(r -> r.warn(message));
           throw new RuntimeException(message);
         }
       }
       case firstWriteWins -> {
-        if (existing.isValueNode()
-            && incoming.isValueNode()
-            && !existing.equals(incoming)) {
-          reporter.ifPresent(r -> r.warn("Field conflict resolved using firstWriteWins policy at '" + absolutePath + "': kept existing=" + existing + ", ignored incoming=" + incoming));
+        if (existing.isValueNode() && incoming.isValueNode() && !existing.equals(incoming)) {
+          reporter.ifPresent(
+              r ->
+                  r.warn(
+                      "Field conflict resolved using firstWriteWins policy at '"
+                          + absolutePath
+                          + "': kept existing="
+                          + existing
+                          + ", ignored incoming="
+                          + incoming));
         }
         return;
       }
@@ -54,14 +59,29 @@ public final class ConflictHandler {
           deepMerge(existingObject, incomingObject);
           return;
         } else if (!existing.equals(incoming)) {
-          reporter.ifPresent(r -> r.warn("Cannot merge non-object values at '" + absolutePath + "': existing=" + existing + ", incoming=" + incoming + ". Using lastWriteWins."));
+          reporter.ifPresent(
+              r ->
+                  r.warn(
+                      "Cannot merge non-object values at '"
+                          + absolutePath
+                          + "': existing="
+                          + existing
+                          + ", incoming="
+                          + incoming
+                          + ". Using lastWriteWins."));
         }
       }
       case lastWriteWins -> {
-        if (existing.isValueNode()
-            && incoming.isValueNode()
-            && !existing.equals(incoming)) {
-          reporter.ifPresent(r -> r.warn("Field conflict resolved using lastWriteWins policy at '" + absolutePath + "': replaced existing=" + existing + " with incoming=" + incoming));
+        if (existing.isValueNode() && incoming.isValueNode() && !existing.equals(incoming)) {
+          reporter.ifPresent(
+              r ->
+                  r.warn(
+                      "Field conflict resolved using lastWriteWins policy at '"
+                          + absolutePath
+                          + "': replaced existing="
+                          + existing
+                          + " with incoming="
+                          + incoming));
         }
         // Fall through to overwrite
       }

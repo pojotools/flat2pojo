@@ -45,8 +45,9 @@ public final class GroupingEngine {
       final Map<String, JsonNode> rowValues,
       final MappingConfig.ListRule rule) {
     // Use PathOps for consistent path traversal
-    final ObjectNode parentNode = PathOps.traverseAndEnsurePath(base, relativeListPath, separatorChar,
-        GroupingEngine::ensureObject);
+    final ObjectNode parentNode =
+        PathOps.traverseAndEnsurePath(
+            base, relativeListPath, separatorChar, GroupingEngine::ensureObject);
     final String arrayField = PathOps.getFinalSegment(relativeListPath, separatorChar);
     final ArrayNode arr = parentNode.withArray(arrayField);
 
@@ -101,14 +102,14 @@ public final class GroupingEngine {
     }
   }
 
-  private List<Comparator<ObjectNode>> buildComparatorsForRule(
-      final MappingConfig.ListRule rule) {
+  private List<Comparator<ObjectNode>> buildComparatorsForRule(final MappingConfig.ListRule rule) {
     final String rulePathPrefix = rule.path() + separator;
     final List<Comparator<ObjectNode>> comparatorList = new ArrayList<>();
 
     for (final var orderBy : rule.orderBy()) {
       final String orderPath = orderBy.path();
-      final String relativePath = orderPath.startsWith(rulePathPrefix)
+      final String relativePath =
+          orderPath.startsWith(rulePathPrefix)
               ? orderPath.substring(rulePathPrefix.length())
               : orderPath;
 

@@ -4,20 +4,21 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.kyran121.flat2pojo.core.api.Flat2Pojo;
 import io.github.kyran121.flat2pojo.core.config.MappingConfig;
 import io.github.kyran121.flat2pojo.core.impl.Flat2PojoCore;
-import org.openjdk.jmh.annotations.*;
-import org.openjdk.jmh.infra.Blackhole;
-import org.openjdk.jmh.profile.GCProfiler;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import org.openjdk.jmh.annotations.*;
+import org.openjdk.jmh.infra.Blackhole;
 
 @BenchmarkMode({Mode.AverageTime, Mode.SampleTime})
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
 @State(Scope.Benchmark)
-@Fork(value = 1, warmups = 1, jvmArgs = {"-Xms2g", "-Xmx2g"})
+@Fork(
+    value = 1,
+    warmups = 1,
+    jvmArgs = {"-Xms2g", "-Xmx2g"})
 @Warmup(iterations = 3, time = 2)
 @Measurement(iterations = 5, time = 3)
 public class MemoryAllocationBenchmark {
@@ -35,15 +36,16 @@ public class MemoryAllocationBenchmark {
 
     simpleConfig = MappingConfig.builder().build();
 
-    listConfig = MappingConfig.builder()
-        .addLists(new MappingConfig.ListRule(
-            "orders",
-            List.of("customerId"),
-            List.of(),
-            true,
-            MappingConfig.ConflictPolicy.error
-        ))
-        .build();
+    listConfig =
+        MappingConfig.builder()
+            .addLists(
+                new MappingConfig.ListRule(
+                    "orders",
+                    List.of("customerId"),
+                    List.of(),
+                    true,
+                    MappingConfig.ConflictPolicy.error))
+            .build();
 
     smallDataset = generateDataset(10);
     mediumDataset = generateDataset(100);
@@ -110,17 +112,14 @@ public class MemoryAllocationBenchmark {
 
   @Benchmark
   public void configurationCaching(Blackhole bh) {
-    MappingConfig config = MappingConfig.builder()
-        .separator("/")
-        .allowSparseRows(true)
-        .addLists(new MappingConfig.ListRule(
-            "items",
-            List.of("id"),
-            List.of(),
-            true,
-            MappingConfig.ConflictPolicy.error
-        ))
-        .build();
+    MappingConfig config =
+        MappingConfig.builder()
+            .separator("/")
+            .allowSparseRows(true)
+            .addLists(
+                new MappingConfig.ListRule(
+                    "items", List.of("id"), List.of(), true, MappingConfig.ConflictPolicy.error))
+            .build();
     bh.consume(config);
   }
 

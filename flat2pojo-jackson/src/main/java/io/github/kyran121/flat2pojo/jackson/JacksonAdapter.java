@@ -7,8 +7,8 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 /**
  * Jackson integration utilities for flat2pojo.
  *
- * <p>This class provides pre-configured Jackson ObjectMapper instances and utilities
- * optimized for flat2pojo's conversion process.
+ * <p>This class provides pre-configured Jackson ObjectMapper instances and utilities optimized for
+ * flat2pojo's conversion process.
  */
 public final class JacksonAdapter {
 
@@ -16,11 +16,12 @@ public final class JacksonAdapter {
    * Creates a Jackson ObjectMapper with optimized settings for flat2pojo.
    *
    * <p>The returned mapper is configured with:
+   *
    * <ul>
-   *   <li>JavaTimeModule for java.time support</li>
-   *   <li>ISO-8601 date formatting (not timestamps)</li>
-   *   <li>Case-insensitive enum handling</li>
-   *   <li>Unknown property tolerance</li>
+   *   <li>JavaTimeModule for java.time support
+   *   <li>ISO-8601 date formatting (not timestamps)
+   *   <li>Case-insensitive enum handling
+   *   <li>Unknown property tolerance
    * </ul>
    *
    * @return a pre-configured ObjectMapper instance

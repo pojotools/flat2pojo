@@ -4,14 +4,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.kyran121.flat2pojo.core.api.Flat2Pojo;
 import io.github.kyran121.flat2pojo.core.config.MappingConfig;
 import io.github.kyran121.flat2pojo.core.impl.Flat2PojoCore;
-import org.openjdk.jmh.annotations.*;
-import org.openjdk.jmh.infra.Blackhole;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import org.openjdk.jmh.annotations.*;
+import org.openjdk.jmh.infra.Blackhole;
 
 @BenchmarkMode(Mode.Throughput)
 @OutputTimeUnit(TimeUnit.SECONDS)
@@ -33,52 +32,63 @@ public class RealisticDatasetBenchmark {
   public void setup() {
     converter = new Flat2PojoCore(new ObjectMapper());
 
-    ecommerceConfig = MappingConfig.builder()
-        .separator("/")
-        .addLists(new MappingConfig.ListRule(
-            "orders",
-            List.of("customerId"),
-            List.of(new MappingConfig.OrderBy("orderDate", MappingConfig.Direction.desc, MappingConfig.Nulls.last)),
-            true,
-            MappingConfig.ConflictPolicy.error
-        ))
-        .addLists(new MappingConfig.ListRule(
-            "orders/items",
-            List.of("customerId", "orderId", "productId"),
-            List.of(),
-            true,
-            MappingConfig.ConflictPolicy.lastWriteWins
-        ))
-        .build();
+    ecommerceConfig =
+        MappingConfig.builder()
+            .separator("/")
+            .addLists(
+                new MappingConfig.ListRule(
+                    "orders",
+                    List.of("customerId"),
+                    List.of(
+                        new MappingConfig.OrderBy(
+                            "orderDate", MappingConfig.Direction.desc, MappingConfig.Nulls.last)),
+                    true,
+                    MappingConfig.ConflictPolicy.error))
+            .addLists(
+                new MappingConfig.ListRule(
+                    "orders/items",
+                    List.of("customerId", "orderId", "productId"),
+                    List.of(),
+                    true,
+                    MappingConfig.ConflictPolicy.lastWriteWins))
+            .build();
 
-    crmConfig = MappingConfig.builder()
-        .separator("/")
-        .addLists(new MappingConfig.ListRule(
-            "contacts",
-            List.of("companyId"),
-            List.of(new MappingConfig.OrderBy("lastName", MappingConfig.Direction.asc, MappingConfig.Nulls.last)),
-            true,
-            MappingConfig.ConflictPolicy.merge
-        ))
-        .addLists(new MappingConfig.ListRule(
-            "contacts/activities",
-            List.of("companyId", "contactId"),
-            List.of(new MappingConfig.OrderBy("timestamp", MappingConfig.Direction.desc, MappingConfig.Nulls.last)),
-            true,
-            MappingConfig.ConflictPolicy.lastWriteWins
-        ))
-        .build();
+    crmConfig =
+        MappingConfig.builder()
+            .separator("/")
+            .addLists(
+                new MappingConfig.ListRule(
+                    "contacts",
+                    List.of("companyId"),
+                    List.of(
+                        new MappingConfig.OrderBy(
+                            "lastName", MappingConfig.Direction.asc, MappingConfig.Nulls.last)),
+                    true,
+                    MappingConfig.ConflictPolicy.merge))
+            .addLists(
+                new MappingConfig.ListRule(
+                    "contacts/activities",
+                    List.of("companyId", "contactId"),
+                    List.of(
+                        new MappingConfig.OrderBy(
+                            "timestamp", MappingConfig.Direction.desc, MappingConfig.Nulls.last)),
+                    true,
+                    MappingConfig.ConflictPolicy.lastWriteWins))
+            .build();
 
-    analyticsConfig = MappingConfig.builder()
-        .separator("/")
-        .addLists(new MappingConfig.ListRule(
-            "events",
-            List.of("sessionId"),
-            List.of(new MappingConfig.OrderBy("timestamp", MappingConfig.Direction.asc, MappingConfig.Nulls.first)),
-            false,
-            MappingConfig.ConflictPolicy.error
-        ))
-        .build();
+    analyticsConfig =
+        MappingConfig.builder()
+            .separator("/")
+            .addLists(
+                new MappingConfig.ListRule(
+                    "events",
+                    List.of("sessionId"),
+                    List.of(
+                        new MappingConfig.OrderBy(
+                            "timestamp", MappingConfig.Direction.asc, MappingConfig.Nulls.first)),
+                    false,
+                    MappingConfig.ConflictPolicy.error))
+            .build();
 
     ecommerceData = generateEcommerceDataset();
     crmData = generateCrmDataset();
@@ -140,9 +150,16 @@ public class RealisticDatasetBenchmark {
           row.put("contact/phone", "+1-555-" + String.format("%04d", contactId));
 
           row.put("activityId", (contactId * 100) + activityNum);
-          row.put("activity/type", activityNum % 4 == 0 ? "call" : activityNum % 4 == 1 ? "email" : "meeting");
+          row.put(
+              "activity/type",
+              activityNum % 4 == 0 ? "call" : activityNum % 4 == 1 ? "email" : "meeting");
           row.put("activity/subject", "Activity " + activityNum + " for " + contactId);
-          row.put("activity/timestamp", "2023-" + String.format("%02d", (activityNum % 12) + 1) + "-" + String.format("%02d", (activityNum % 28) + 1));
+          row.put(
+              "activity/timestamp",
+              "2023-"
+                  + String.format("%02d", (activityNum % 12) + 1)
+                  + "-"
+                  + String.format("%02d", (activityNum % 28) + 1));
           row.put("activity/outcome", activityNum % 3 == 0 ? "successful" : "pending");
 
           data.add(row);
@@ -163,7 +180,11 @@ public class RealisticDatasetBenchmark {
         row.put("userId", "user-" + (sessionId % 30));
         row.put("timestamp", System.currentTimeMillis() + (eventNum * 1000));
 
-        row.put("event/type", eventNum % 5 == 0 ? "page_view" : eventNum % 5 == 1 ? "click" : eventNum % 5 == 2 ? "scroll" : "form_submit");
+        row.put(
+            "event/type",
+            eventNum % 5 == 0
+                ? "page_view"
+                : eventNum % 5 == 1 ? "click" : eventNum % 5 == 2 ? "scroll" : "form_submit");
         row.put("event/category", "Category" + (eventNum % 3));
         row.put("event/value", eventNum * 10);
 
@@ -171,9 +192,17 @@ public class RealisticDatasetBenchmark {
         row.put("page/title", "Page " + (eventNum % 10));
         row.put("page/loadTime", 100 + (eventNum % 500));
 
-        row.put("device/type", sessionId % 3 == 0 ? "mobile" : sessionId % 3 == 1 ? "tablet" : "desktop");
-        row.put("device/os", sessionId % 4 == 0 ? "iOS" : sessionId % 4 == 1 ? "Android" : sessionId % 4 == 2 ? "Windows" : "macOS");
-        row.put("device/browser", sessionId % 3 == 0 ? "Chrome" : sessionId % 3 == 1 ? "Safari" : "Firefox");
+        row.put(
+            "device/type",
+            sessionId % 3 == 0 ? "mobile" : sessionId % 3 == 1 ? "tablet" : "desktop");
+        row.put(
+            "device/os",
+            sessionId % 4 == 0
+                ? "iOS"
+                : sessionId % 4 == 1 ? "Android" : sessionId % 4 == 2 ? "Windows" : "macOS");
+        row.put(
+            "device/browser",
+            sessionId % 3 == 0 ? "Chrome" : sessionId % 3 == 1 ? "Safari" : "Firefox");
 
         data.add(row);
       }
@@ -202,9 +231,11 @@ public class RealisticDatasetBenchmark {
 
   @Benchmark
   public void mixedWorkloadProcessing(Blackhole bh) {
-    List<Map> ecommerceResults = converter.convertAll(ecommerceData.subList(0, 100), Map.class, ecommerceConfig);
+    List<Map> ecommerceResults =
+        converter.convertAll(ecommerceData.subList(0, 100), Map.class, ecommerceConfig);
     List<Map> crmResults = converter.convertAll(crmData.subList(0, 100), Map.class, crmConfig);
-    List<Map> analyticsResults = converter.convertAll(analyticsData.subList(0, 100), Map.class, analyticsConfig);
+    List<Map> analyticsResults =
+        converter.convertAll(analyticsData.subList(0, 100), Map.class, analyticsConfig);
 
     bh.consume(ecommerceResults);
     bh.consume(crmResults);

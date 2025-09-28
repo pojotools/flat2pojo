@@ -5,8 +5,8 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import io.github.kyran121.flat2pojo.spi.Reporter;
 import io.github.kyran121.flat2pojo.spi.ValuePreprocessor;
-import org.immutables.value.Value;
 import java.util.*;
+import org.immutables.value.Value;
 
 /**
  * Immutable configuration for flat-to-POJO conversion.

@@ -107,7 +107,8 @@ public final class Flat2PojoCore implements Flat2Pojo {
     final Map<String, JsonNode> rowValues = flattenObjectNode(rowNode, "");
     final Map<String, ObjectNode> rowElementCache = new LinkedHashMap<>();
 
-    final Set<String> skippedListPaths = processListRules(rowValues, rowElementCache, root, ge, cfg, configCache);
+    final Set<String> skippedListPaths =
+        processListRules(rowValues, rowElementCache, root, ge, cfg, configCache);
     processNonListValues(rowValues, root, cfg, configCache, skippedListPaths);
   }
 
@@ -125,7 +126,13 @@ public final class Flat2PojoCore implements Flat2Pojo {
       // Skip if any ancestor list path was skipped
       if (isUnderAnySkippedPath(path, skippedListPaths, cfg.separator())) {
         skippedListPaths.add(path);
-        cfg.reporter().ifPresent(r -> r.warn("Skipping list rule '" + path + "' because parent list was skipped due to missing keyPath"));
+        cfg.reporter()
+            .ifPresent(
+                r ->
+                    r.warn(
+                        "Skipping list rule '"
+                            + path
+                            + "' because parent list was skipped due to missing keyPath"));
         continue;
       }
 
@@ -140,14 +147,24 @@ public final class Flat2PojoCore implements Flat2Pojo {
       } else {
         // Track skipped list paths to prevent processing their subtree values
         skippedListPaths.add(path);
-        cfg.reporter().ifPresent(r -> r.warn("Skipping list rule '" + path + "' because keyPath(s) " + rule.keyPaths() + " are missing or null"));
+        cfg.reporter()
+            .ifPresent(
+                r ->
+                    r.warn(
+                        "Skipping list rule '"
+                            + path
+                            + "' because keyPath(s) "
+                            + rule.keyPaths()
+                            + " are missing or null"));
       }
     }
     return skippedListPaths;
   }
 
   private ObjectNode determineBaseObject(
-      final String nearestAncestor, final Map<String, ObjectNode> rowElementCache, final ObjectNode root) {
+      final String nearestAncestor,
+      final Map<String, ObjectNode> rowElementCache,
+      final ObjectNode root) {
     if (nearestAncestor != null) {
       final ObjectNode base = rowElementCache.get(nearestAncestor);
       if (base == null) {
@@ -159,7 +176,8 @@ public final class Flat2PojoCore implements Flat2Pojo {
     return root;
   }
 
-  private String calculateRelativePath(final String path, final String nearestAncestor, final String separator) {
+  private String calculateRelativePath(
+      final String path, final String nearestAncestor, final String separator) {
     if (nearestAncestor != null) {
       return PathOps.tailAfter(path, nearestAncestor, separator);
     }
@@ -182,7 +200,8 @@ public final class Flat2PojoCore implements Flat2Pojo {
       if (PathOps.isUnder(valuePath, rulePath, separator)) {
         if (!isValueInChildListSubtree(valuePath, childListPrefixes, separator)) {
           final String suffix = PathOps.tailAfter(valuePath, rulePath, separator);
-          writeValueWithPolicy(element, suffix, entry.getValue(), separator, rule.onConflict(), cfg, valuePath);
+          writeValueWithPolicy(
+              element, suffix, entry.getValue(), separator, rule.onConflict(), cfg, valuePath);
         }
       }
     }
@@ -332,7 +351,9 @@ public final class Flat2PojoCore implements Flat2Pojo {
 
   @Override
   public <T> Stream<T> stream(
-      final Iterator<? extends Map<String, ?>> rows, final Class<T> type, final MappingConfig config) {
+      final Iterator<? extends Map<String, ?>> rows,
+      final Class<T> type,
+      final MappingConfig config) {
     final List<Map<String, ?>> list = new ArrayList<>();
     rows.forEachRemaining(list::add);
     return convertAll(list, type, config).stream();
@@ -369,7 +390,8 @@ public final class Flat2PojoCore implements Flat2Pojo {
     parent.set(leafField, value);
   }
 
-  private ObjectNode navigateToParentNode(final ObjectNode target, final String path, final String separator) {
+  private ObjectNode navigateToParentNode(
+      final ObjectNode target, final String path, final String separator) {
     final List<String> segments = PathOps.splitPath(path, separator);
     ObjectNode current = target;
 
@@ -396,13 +418,19 @@ public final class Flat2PojoCore implements Flat2Pojo {
     return newChild;
   }
 
-
   private void writeValueWithPolicy(
-      final ObjectNode target, final String path, final JsonNode value, final String separator, final ConflictPolicy policy, final MappingConfig cfg, final String absolutePath) {
+      final ObjectNode target,
+      final String path,
+      final JsonNode value,
+      final String separator,
+      final ConflictPolicy policy,
+      final MappingConfig cfg,
+      final String absolutePath) {
     if (path.isEmpty()) return;
 
     final ObjectNode parent = navigateToParentNode(target, path, separator);
     final String leafField = getLeafFieldName(path, separator);
-    ConflictHandler.writeScalarWithPolicy(parent, leafField, value, policy, absolutePath, cfg.reporter());
+    ConflictHandler.writeScalarWithPolicy(
+        parent, leafField, value, policy, absolutePath, cfg.reporter());
   }
 }

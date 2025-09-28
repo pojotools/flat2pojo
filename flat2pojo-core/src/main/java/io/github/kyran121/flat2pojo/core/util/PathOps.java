@@ -7,9 +7,9 @@ import java.util.List;
 /**
  * High-performance path manipulation utilities for flat2pojo.
  *
- * <p>This class provides optimized string operations for handling hierarchical paths
- * without the overhead of regular expressions or unnecessary string allocations.
- * All methods are static and thread-safe.
+ * <p>This class provides optimized string operations for handling hierarchical paths without the
+ * overhead of regular expressions or unnecessary string allocations. All methods are static and
+ * thread-safe.
  */
 public final class PathOps {
   private PathOps() {}
@@ -68,8 +68,8 @@ public final class PathOps {
   }
 
   /**
-   * Traverses a path and ensures all intermediate ObjectNodes exist.
-   * Returns the final parent ObjectNode where the last segment should be set.
+   * Traverses a path and ensures all intermediate ObjectNodes exist. Returns the final parent
+   * ObjectNode where the last segment should be set.
    */
   public static ObjectNode traverseAndEnsurePath(
       final ObjectNode root,
@@ -89,17 +89,13 @@ public final class PathOps {
     return current;
   }
 
-  /**
-   * Gets the final segment of a path after the last separator.
-   */
+  /** Gets the final segment of a path after the last separator. */
   public static String getFinalSegment(final String path, final char separatorChar) {
     final int lastSep = path.lastIndexOf(separatorChar);
     return lastSep >= 0 ? path.substring(lastSep + 1) : path;
   }
 
-  /**
-   * Interface for ensuring ObjectNode creation - allows different implementations.
-   */
+  /** Interface for ensuring ObjectNode creation - allows different implementations. */
   @FunctionalInterface
   public interface ObjectNodeEnsurer {
     ObjectNode ensureObject(ObjectNode parent, String fieldName);

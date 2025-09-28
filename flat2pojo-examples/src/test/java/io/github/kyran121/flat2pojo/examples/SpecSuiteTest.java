@@ -1,5 +1,7 @@
 package io.github.kyran121.flat2pojo.examples;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.kyran121.flat2pojo.core.api.Flat2Pojo;
@@ -7,14 +9,11 @@ import io.github.kyran121.flat2pojo.core.config.MappingConfig;
 import io.github.kyran121.flat2pojo.core.config.MappingConfigLoader;
 import io.github.kyran121.flat2pojo.core.config.ValidationException;
 import io.github.kyran121.flat2pojo.examples.domain.ImmutableProductRoot;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 class SpecSuiteTest {
   ObjectMapper om;
@@ -681,8 +680,8 @@ class SpecSuiteTest {
   @Test
   void test17_null_keyPaths_should_skip_list_entries() {
     MappingConfig cfg =
-      TestSupport.cfgFromYaml(
-        """
+        TestSupport.cfgFromYaml(
+            """
             separator: "/"
             allowSparseRows: false
             rootKeys: ["referencedProductId/identifier"]
@@ -697,25 +696,25 @@ class SpecSuiteTest {
 
     // Row where tracker/task has default field values (isUser=false) but null keyPath → skip
     List<Map<String, ?>> rows =
-      List.of(
-        Map.of(
-          "referencedProductId/identifier",
-          "P-1",
-          "definitions/id/identifier",
-          "D-1",
-          "definitions/name",
-          "Definition 1",
-          "definitions/tracker/tasks/isUser",
-          false,
-          "definitions/tracker/tasks/gracePeriod",
-          30));
+        List.of(
+            Map.of(
+                "referencedProductId/identifier",
+                "P-1",
+                "definitions/id/identifier",
+                "D-1",
+                "definitions/name",
+                "Definition 1",
+                "definitions/tracker/tasks/isUser",
+                false,
+                "definitions/tracker/tasks/gracePeriod",
+                30));
     // Note: definitions/tracker/tasks/taskDate is missing (null) → skip the task entry
 
     var out = TestSupport.first(f2p.convertAll(rows, JsonNode.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-      om,
-      """
+        om,
+        """
             {
               "referencedProductId": { "identifier": "P-1" },
               "definitions": [
@@ -727,14 +726,14 @@ class SpecSuiteTest {
               ]
             }
           """,
-      out);
+        out);
   }
 
   @Test
   void test18_mixed_keyPaths_some_present_some_absent() {
     MappingConfig cfg =
-      TestSupport.cfgFromYaml(
-        """
+        TestSupport.cfgFromYaml(
+            """
             separator: "/"
             allowSparseRows: false
             rootKeys: ["referencedProductId/identifier"]
@@ -749,52 +748,49 @@ class SpecSuiteTest {
 
     // Multiple definitions: some with taskDate (creates tasks), some without (no tasks)
     List<Map<String, ?>> rows =
-      List.of(
-        // D-1: Has taskDate -> task entry should be created
-        Map.of(
-          "referencedProductId/identifier", "P-1",
-          "definitions/id/identifier", "D-1",
-          "definitions/name", "Definition 1",
-          "definitions/tracker/tasks/taskDate", "2025-01-01",
-          "definitions/tracker/tasks/isUser", true,
-          "definitions/tracker/tasks/gracePeriod", 15,
-          "definitions/tracker/tasks/comments/loggedAt", "2025-01-01T10:00:00Z",
-          "definitions/tracker/tasks/comments/text", "First comment"
-        ),
-        // D-1: Second task with different date
-        Map.of(
-          "referencedProductId/identifier", "P-1",
-          "definitions/id/identifier", "D-1",
-          "definitions/tracker/tasks/taskDate", "2025-01-02",
-          "definitions/tracker/tasks/isUser", false,
-          "definitions/tracker/tasks/gracePeriod", 30
-        ),
-        // D-2: Missing taskDate -> no task entry should be created, values ignored
-        Map.of(
-          "referencedProductId/identifier", "P-1",
-          "definitions/id/identifier", "D-2",
-          "definitions/name", "Definition 2",
-          "definitions/tracker/tasks/isUser", false,
-          "definitions/tracker/tasks/gracePeriod", 45
-          // Note: taskDate is missing, so this task should be skipped entirely
-        ),
-        // D-3: Has taskDate but missing comment loggedAt -> task created, comment skipped
-        Map.of(
-          "referencedProductId/identifier", "P-1",
-          "definitions/id/identifier", "D-3",
-          "definitions/name", "Definition 3",
-          "definitions/tracker/tasks/taskDate", "2025-01-03",
-          "definitions/tracker/tasks/isUser", true,
-          "definitions/tracker/tasks/comments/text", "Comment without timestamp"
-          // Note: comments/loggedAt is missing, so comment should be skipped
-        )
-      );
+        List.of(
+            // D-1: Has taskDate -> task entry should be created
+            Map.of(
+                "referencedProductId/identifier", "P-1",
+                "definitions/id/identifier", "D-1",
+                "definitions/name", "Definition 1",
+                "definitions/tracker/tasks/taskDate", "2025-01-01",
+                "definitions/tracker/tasks/isUser", true,
+                "definitions/tracker/tasks/gracePeriod", 15,
+                "definitions/tracker/tasks/comments/loggedAt", "2025-01-01T10:00:00Z",
+                "definitions/tracker/tasks/comments/text", "First comment"),
+            // D-1: Second task with different date
+            Map.of(
+                "referencedProductId/identifier", "P-1",
+                "definitions/id/identifier", "D-1",
+                "definitions/tracker/tasks/taskDate", "2025-01-02",
+                "definitions/tracker/tasks/isUser", false,
+                "definitions/tracker/tasks/gracePeriod", 30),
+            // D-2: Missing taskDate -> no task entry should be created, values ignored
+            Map.of(
+                "referencedProductId/identifier", "P-1",
+                "definitions/id/identifier", "D-2",
+                "definitions/name", "Definition 2",
+                "definitions/tracker/tasks/isUser", false,
+                "definitions/tracker/tasks/gracePeriod", 45
+                // Note: taskDate is missing, so this task should be skipped entirely
+                ),
+            // D-3: Has taskDate but missing comment loggedAt -> task created, comment skipped
+            Map.of(
+                "referencedProductId/identifier", "P-1",
+                "definitions/id/identifier", "D-3",
+                "definitions/name", "Definition 3",
+                "definitions/tracker/tasks/taskDate", "2025-01-03",
+                "definitions/tracker/tasks/isUser", true,
+                "definitions/tracker/tasks/comments/text", "Comment without timestamp"
+                // Note: comments/loggedAt is missing, so comment should be skipped
+                ));
 
     var out = TestSupport.first(f2p.convertAll(rows, JsonNode.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-      om,
-      """
+        om,
+        """
             {
               "referencedProductId": { "identifier": "P-1" },
               "definitions": [
@@ -844,14 +840,14 @@ class SpecSuiteTest {
               ]
             }
           """,
-      out);
+        out);
   }
 
   @Test
   void test19_deeply_nested_keyPath_skipping() {
     MappingConfig cfg =
-      TestSupport.cfgFromYaml(
-        """
+        TestSupport.cfgFromYaml(
+            """
             separator: "/"
             allowSparseRows: false
             lists:
@@ -866,38 +862,36 @@ class SpecSuiteTest {
           """);
 
     List<Map<String, ?>> rows =
-      List.of(
-        // Complete hierarchy: definition -> module -> component -> feature
-        Map.of(
-          "definitions/id/identifier", "D-1",
-          "definitions/modules/name", "ModuleA",
-          "definitions/modules/components/id", "C-1",
-          "definitions/modules/components/features/name", "Feature1",
-          "definitions/modules/components/features/enabled", true
-        ),
-        // Missing component id -> component and all features under it should be skipped
-        Map.of(
-          "definitions/id/identifier", "D-2",
-          "definitions/modules/name", "ModuleB",
-          "definitions/modules/components/type", "service",
-          "definitions/modules/components/features/name", "Feature2",
-          "definitions/modules/components/features/enabled", false
-          // Note: components/id is missing -> component entry skipped, feature also skipped
-        ),
-        // Missing module name -> module and everything under it should be skipped
-        Map.of(
-          "definitions/id/identifier", "D-3",
-          "definitions/modules/components/id", "C-3",
-          "definitions/modules/components/features/name", "Feature3"
-          // Note: modules/name is missing -> entire modules subtree skipped
-        )
-      );
+        List.of(
+            // Complete hierarchy: definition -> module -> component -> feature
+            Map.of(
+                "definitions/id/identifier", "D-1",
+                "definitions/modules/name", "ModuleA",
+                "definitions/modules/components/id", "C-1",
+                "definitions/modules/components/features/name", "Feature1",
+                "definitions/modules/components/features/enabled", true),
+            // Missing component id -> component and all features under it should be skipped
+            Map.of(
+                "definitions/id/identifier", "D-2",
+                "definitions/modules/name", "ModuleB",
+                "definitions/modules/components/type", "service",
+                "definitions/modules/components/features/name", "Feature2",
+                "definitions/modules/components/features/enabled", false
+                // Note: components/id is missing -> component entry skipped, feature also skipped
+                ),
+            // Missing module name -> module and everything under it should be skipped
+            Map.of(
+                "definitions/id/identifier", "D-3",
+                "definitions/modules/components/id", "C-3",
+                "definitions/modules/components/features/name", "Feature3"
+                // Note: modules/name is missing -> entire modules subtree skipped
+                ));
 
     var out = TestSupport.first(f2p.convertAll(rows, JsonNode.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-      om,
-      """
+        om,
+        """
             {
               "definitions": [
                 {
@@ -935,6 +929,6 @@ class SpecSuiteTest {
               ]
             }
           """,
-      out);
+        out);
   }
 }

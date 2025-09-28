@@ -7,8 +7,8 @@ import io.github.kyran121.flat2pojo.core.impl.Flat2PojoCore;
 /**
  * Factory for creating {@link Flat2Pojo} instances with Jackson integration.
  *
- * <p>This factory provides the main entry point for obtaining converter instances
- * that work with Jackson {@link ObjectMapper} for POJO serialization and deserialization.
+ * <p>This factory provides the main entry point for obtaining converter instances that work with
+ * Jackson {@link ObjectMapper} for POJO serialization and deserialization.
  */
 public final class Flat2PojoFactory {
   private Flat2PojoFactory() {}
@@ -16,9 +16,9 @@ public final class Flat2PojoFactory {
   /**
    * Creates a new {@link Flat2Pojo} converter using the provided Jackson ObjectMapper.
    *
-   * <p>The ObjectMapper should be configured with appropriate modules and settings
-   * for your use case. Consider using {@link JacksonAdapter#defaultObjectMapper()}
-   * for a pre-configured mapper with sensible defaults.
+   * <p>The ObjectMapper should be configured with appropriate modules and settings for your use
+   * case. Consider using {@link JacksonAdapter#defaultObjectMapper()} for a pre-configured mapper
+   * with sensible defaults.
    *
    * @param om the Jackson ObjectMapper to use for POJO conversion
    * @return a new Flat2Pojo converter instance

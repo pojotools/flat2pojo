@@ -4,6 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.github.kyran121.flat2pojo.core.config.MappingConfig;
 import io.github.kyran121.flat2pojo.core.engine.GroupingEngine;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -15,10 +18,6 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
-
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.NANOSECONDS)
@@ -39,56 +38,53 @@ public class GroupingEngineBenchmark {
   public void setup() {
     objectMapper = new ObjectMapper();
 
-    simpleListRule = new MappingConfig.ListRule(
-        "items",
-        List.of("id"),
-        List.of(),
-        true,
-        MappingConfig.ConflictPolicy.error
-    );
+    simpleListRule =
+        new MappingConfig.ListRule(
+            "items", List.of("id"), List.of(), true, MappingConfig.ConflictPolicy.error);
 
-    nestedListRule = new MappingConfig.ListRule(
-        "users/orders",
-        List.of("userId", "orderId"),
-        List.of(new MappingConfig.OrderBy("timestamp", MappingConfig.Direction.desc, MappingConfig.Nulls.last)),
-        true,
-        MappingConfig.ConflictPolicy.lastWriteWins
-    );
+    nestedListRule =
+        new MappingConfig.ListRule(
+            "users/orders",
+            List.of("userId", "orderId"),
+            List.of(
+                new MappingConfig.OrderBy(
+                    "timestamp", MappingConfig.Direction.desc, MappingConfig.Nulls.last)),
+            true,
+            MappingConfig.ConflictPolicy.lastWriteWins);
 
-    listConfig = MappingConfig.builder()
-        .addLists(simpleListRule)
-        .addLists(nestedListRule)
-        .build();
+    listConfig = MappingConfig.builder().addLists(simpleListRule).addLists(nestedListRule).build();
 
     groupingEngine = new GroupingEngine(objectMapper, listConfig);
     rootNode = objectMapper.createObjectNode();
-
   }
 
   @Benchmark
   public void upsertSimpleListElement(Blackhole bh) {
-    ObjectNode result = groupingEngine.upsertListElementRelative(
-        rootNode,
-        "items",
-        Map.of("id", objectMapper.valueToTree("123"), "name", objectMapper.valueToTree("Product A")),
-        simpleListRule
-    );
+    ObjectNode result =
+        groupingEngine.upsertListElementRelative(
+            rootNode,
+            "items",
+            Map.of(
+                "id",
+                objectMapper.valueToTree("123"),
+                "name",
+                objectMapper.valueToTree("Product A")),
+            simpleListRule);
     bh.consume(result);
   }
 
   @Benchmark
   public void upsertNestedListElement(Blackhole bh) {
-    ObjectNode result = groupingEngine.upsertListElementRelative(
-        rootNode,
-        "users/orders",
-        Map.of(
-            "userId", objectMapper.valueToTree("user-456"),
-            "orderId", objectMapper.valueToTree("order-789"),
-            "timestamp", objectMapper.valueToTree("2023-01-01T12:00:00Z"),
-            "amount", objectMapper.valueToTree("99.99")
-        ),
-        nestedListRule
-    );
+    ObjectNode result =
+        groupingEngine.upsertListElementRelative(
+            rootNode,
+            "users/orders",
+            Map.of(
+                "userId", objectMapper.valueToTree("user-456"),
+                "orderId", objectMapper.valueToTree("order-789"),
+                "timestamp", objectMapper.valueToTree("2023-01-01T12:00:00Z"),
+                "amount", objectMapper.valueToTree("99.99")),
+            nestedListRule);
     bh.consume(result);
   }
 

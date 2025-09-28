@@ -1,12 +1,11 @@
 package io.github.kyran121.flat2pojo.benchmarks;
 
 import io.github.kyran121.flat2pojo.core.util.PathOps;
-import org.openjdk.jmh.annotations.*;
-import org.openjdk.jmh.infra.Blackhole;
-
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import org.openjdk.jmh.annotations.*;
+import org.openjdk.jmh.infra.Blackhole;
 
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.NANOSECONDS)
@@ -26,7 +25,8 @@ public class PathTraversalBenchmark {
     separator = "/";
     shallowPath = "user/name";
     deepPath = "user/profile/contact/address/street";
-    veryDeepPath = "organization/departments/engineering/teams/backend/members/senior/developers/profiles/personal/contact/emergency/primary/phone";
+    veryDeepPath =
+        "organization/departments/engineering/teams/backend/members/senior/developers/profiles/personal/contact/emergency/primary/phone";
   }
 
   @Benchmark
@@ -67,7 +67,8 @@ public class PathTraversalBenchmark {
 
   @Benchmark
   public void isUnderCheckDeep(Blackhole bh) {
-    boolean result = PathOps.isUnder(veryDeepPath, "organization/departments/engineering", separator);
+    boolean result =
+        PathOps.isUnder(veryDeepPath, "organization/departments/engineering", separator);
     bh.consume(result);
   }
 
@@ -79,7 +80,8 @@ public class PathTraversalBenchmark {
 
   @Benchmark
   public void tailAfterDeep(Blackhole bh) {
-    String result = PathOps.tailAfter(veryDeepPath, "organization/departments/engineering/teams", separator);
+    String result =
+        PathOps.tailAfter(veryDeepPath, "organization/departments/engineering/teams", separator);
     bh.consume(result);
   }
 

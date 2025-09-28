@@ -4,14 +4,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.kyran121.flat2pojo.core.api.Flat2Pojo;
 import io.github.kyran121.flat2pojo.core.config.MappingConfig;
 import io.github.kyran121.flat2pojo.core.impl.Flat2PojoCore;
-import org.openjdk.jmh.annotations.*;
-import org.openjdk.jmh.infra.Blackhole;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import org.openjdk.jmh.annotations.*;
+import org.openjdk.jmh.infra.Blackhole;
 
 @BenchmarkMode({Mode.AverageTime, Mode.Throughput})
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
@@ -30,35 +29,40 @@ public class PerformanceRegressionBenchmark {
   public void setup() {
     converter = new Flat2PojoCore(new ObjectMapper());
 
-    standardConfig = MappingConfig.builder()
-        .separator("/")
-        .allowSparseRows(true)
-        .addRootKeys("tenantId")
-        .addLists(new MappingConfig.ListRule(
-            "users",
-            List.of("tenantId"),
-            List.of(new MappingConfig.OrderBy("userId", MappingConfig.Direction.asc, MappingConfig.Nulls.last)),
-            true,
-            MappingConfig.ConflictPolicy.error
-        ))
-        .addLists(new MappingConfig.ListRule(
-            "users/orders",
-            List.of("tenantId", "userId"),
-            List.of(new MappingConfig.OrderBy("orderDate", MappingConfig.Direction.desc, MappingConfig.Nulls.last)),
-            true,
-            MappingConfig.ConflictPolicy.lastWriteWins
-        ))
-        .addLists(new MappingConfig.ListRule(
-            "users/orders/items",
-            List.of("tenantId", "userId", "orderId"),
-            List.of(),
-            true,
-            MappingConfig.ConflictPolicy.merge
-        ))
-        .addPrimitives(new MappingConfig.PrimitiveSplitRule("tags", ",", true))
-        .addPrimitives(new MappingConfig.PrimitiveSplitRule("categories", ";", true))
-        .nullPolicy(new MappingConfig.NullPolicy(true))
-        .build();
+    standardConfig =
+        MappingConfig.builder()
+            .separator("/")
+            .allowSparseRows(true)
+            .addRootKeys("tenantId")
+            .addLists(
+                new MappingConfig.ListRule(
+                    "users",
+                    List.of("tenantId"),
+                    List.of(
+                        new MappingConfig.OrderBy(
+                            "userId", MappingConfig.Direction.asc, MappingConfig.Nulls.last)),
+                    true,
+                    MappingConfig.ConflictPolicy.error))
+            .addLists(
+                new MappingConfig.ListRule(
+                    "users/orders",
+                    List.of("tenantId", "userId"),
+                    List.of(
+                        new MappingConfig.OrderBy(
+                            "orderDate", MappingConfig.Direction.desc, MappingConfig.Nulls.last)),
+                    true,
+                    MappingConfig.ConflictPolicy.lastWriteWins))
+            .addLists(
+                new MappingConfig.ListRule(
+                    "users/orders/items",
+                    List.of("tenantId", "userId", "orderId"),
+                    List.of(),
+                    true,
+                    MappingConfig.ConflictPolicy.merge))
+            .addPrimitives(new MappingConfig.PrimitiveSplitRule("tags", ",", true))
+            .addPrimitives(new MappingConfig.PrimitiveSplitRule("categories", ";", true))
+            .nullPolicy(new MappingConfig.NullPolicy(true))
+            .build();
 
     regressionDataset = generateRegressionDataset();
     singleComplexRow = generateComplexRow();
@@ -81,19 +85,24 @@ public class PerformanceRegressionBenchmark {
             row.put("user/profile/age", 20 + (userId % 50));
             row.put("user/profile/department", "Department " + (userId % 5));
             row.put("user/preferences/theme", userId % 2 == 0 ? "dark" : "light");
-            row.put("user/preferences/language", userId % 3 == 0 ? "en" : userId % 3 == 1 ? "es" : "fr");
+            row.put(
+                "user/preferences/language",
+                userId % 3 == 0 ? "en" : userId % 3 == 1 ? "es" : "fr");
             row.put("user/permissions/role", userId % 4 == 0 ? "admin" : "user");
             row.put("user/permissions/level", userId % 3 + 1);
 
             row.put("orderId", orderId);
             row.put("order/date", "2023-" + String.format("%02d", (orderId % 12) + 1) + "-15");
-            row.put("order/status", orderId % 3 == 0 ? "completed" : orderId % 3 == 1 ? "pending" : "shipped");
+            row.put(
+                "order/status",
+                orderId % 3 == 0 ? "completed" : orderId % 3 == 1 ? "pending" : "shipped");
             row.put("order/total", (orderId * 100.0) + (itemId * 25.0));
             row.put("order/currency", "USD");
             row.put("order/shipping/address/street", orderId + " Main St");
             row.put("order/shipping/address/city", "City" + (orderId % 10));
             row.put("order/shipping/address/state", "State" + (orderId % 5));
-            row.put("order/shipping/address/zipCode", String.format("%05d", 10000 + (orderId * 100)));
+            row.put(
+                "order/shipping/address/zipCode", String.format("%05d", 10000 + (orderId * 100)));
             row.put("order/shipping/method", orderId % 2 == 0 ? "standard" : "express");
 
             row.put("itemId", itemId);
@@ -179,51 +188,55 @@ public class PerformanceRegressionBenchmark {
 
   @Benchmark
   public void regressionSubsetProcessing(Blackhole bh) {
-    List<Map<String, Object>> subset = regressionDataset.subList(0, Math.min(100, regressionDataset.size()));
+    List<Map<String, Object>> subset =
+        regressionDataset.subList(0, Math.min(100, regressionDataset.size()));
     List<Map> results = converter.convertAll(subset, Map.class, standardConfig);
     bh.consume(results);
   }
 
   @Benchmark
   public void regressionStreamProcessing(Blackhole bh) {
-    List<Map> results = converter.stream(
-        regressionDataset.subList(0, Math.min(50, regressionDataset.size())).iterator(),
-        Map.class,
-        standardConfig
-    ).toList();
+    List<Map> results =
+        converter.stream(
+                regressionDataset.subList(0, Math.min(50, regressionDataset.size())).iterator(),
+                Map.class,
+                standardConfig)
+            .toList();
     bh.consume(results);
   }
 
   @Benchmark
   public void regressionConfigValidation(Blackhole bh) {
-    MappingConfig complexConfig = MappingConfig.builder()
-        .separator("/")
-        .allowSparseRows(true)
-        .addRootKeys("tenantId")
-        .addLists(new MappingConfig.ListRule(
-            "users",
-            List.of("tenantId"),
-            List.of(),
-            true,
-            MappingConfig.ConflictPolicy.error
-        ))
-        .addLists(new MappingConfig.ListRule(
-            "users/orders",
-            List.of("tenantId", "userId"),
-            List.of(),
-            true,
-            MappingConfig.ConflictPolicy.lastWriteWins
-        ))
-        .addLists(new MappingConfig.ListRule(
-            "users/orders/items",
-            List.of("tenantId", "userId", "orderId"),
-            List.of(),
-            true,
-            MappingConfig.ConflictPolicy.merge
-        ))
-        .build();
+    MappingConfig complexConfig =
+        MappingConfig.builder()
+            .separator("/")
+            .allowSparseRows(true)
+            .addRootKeys("tenantId")
+            .addLists(
+                new MappingConfig.ListRule(
+                    "users",
+                    List.of("tenantId"),
+                    List.of(),
+                    true,
+                    MappingConfig.ConflictPolicy.error))
+            .addLists(
+                new MappingConfig.ListRule(
+                    "users/orders",
+                    List.of("tenantId", "userId"),
+                    List.of(),
+                    true,
+                    MappingConfig.ConflictPolicy.lastWriteWins))
+            .addLists(
+                new MappingConfig.ListRule(
+                    "users/orders/items",
+                    List.of("tenantId", "userId", "orderId"),
+                    List.of(),
+                    true,
+                    MappingConfig.ConflictPolicy.merge))
+            .build();
 
-    List<Map<String, Object>> sampleData = regressionDataset.subList(0, Math.min(10, regressionDataset.size()));
+    List<Map<String, Object>> sampleData =
+        regressionDataset.subList(0, Math.min(10, regressionDataset.size()));
     List<Map> results = converter.convertAll(sampleData, Map.class, complexConfig);
     bh.consume(results);
   }

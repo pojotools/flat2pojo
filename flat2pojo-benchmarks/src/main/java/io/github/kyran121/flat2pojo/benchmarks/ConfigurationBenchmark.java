@@ -2,11 +2,10 @@ package io.github.kyran121.flat2pojo.benchmarks;
 
 import io.github.kyran121.flat2pojo.core.config.MappingConfig;
 import io.github.kyran121.flat2pojo.core.config.MappingConfigLoader;
-import org.openjdk.jmh.annotations.*;
-import org.openjdk.jmh.infra.Blackhole;
-
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import org.openjdk.jmh.annotations.*;
+import org.openjdk.jmh.infra.Blackhole;
 
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.NANOSECONDS)
@@ -28,7 +27,8 @@ public class ConfigurationBenchmark {
         allowSparseRows: true
         """;
 
-    complexYaml = """
+    complexYaml =
+        """
         separator: "/"
         allowSparseRows: true
         rootKeys:
@@ -56,7 +56,8 @@ public class ConfigurationBenchmark {
           blanksAsNulls: true
         """;
 
-    enterpriseYaml = """
+    enterpriseYaml =
+        """
         separator: "/"
         allowSparseRows: false
         rootKeys:
@@ -119,17 +120,14 @@ public class ConfigurationBenchmark {
           blanksAsNulls: true
         """;
 
-    prebuiltConfig = MappingConfig.builder()
-        .separator("/")
-        .allowSparseRows(true)
-        .addLists(new MappingConfig.ListRule(
-            "items",
-            List.of("id"),
-            List.of(),
-            true,
-            MappingConfig.ConflictPolicy.error
-        ))
-        .build();
+    prebuiltConfig =
+        MappingConfig.builder()
+            .separator("/")
+            .allowSparseRows(true)
+            .addLists(
+                new MappingConfig.ListRule(
+                    "items", List.of("id"), List.of(), true, MappingConfig.ConflictPolicy.error))
+            .build();
   }
 
   @Benchmark
@@ -152,28 +150,31 @@ public class ConfigurationBenchmark {
 
   @Benchmark
   public void buildConfigProgrammatically(Blackhole bh) {
-    MappingConfig config = MappingConfig.builder()
-        .separator("/")
-        .allowSparseRows(true)
-        .addRootKeys("tenantId")
-        .addRootKeys("regionId")
-        .addLists(new MappingConfig.ListRule(
-            "orders",
-            List.of("customerId"),
-            List.of(new MappingConfig.OrderBy("orderDate", MappingConfig.Direction.desc, MappingConfig.Nulls.last)),
-            true,
-            MappingConfig.ConflictPolicy.error
-        ))
-        .addLists(new MappingConfig.ListRule(
-            "orders/items",
-            List.of("customerId", "orderId", "productId"),
-            List.of(),
-            true,
-            MappingConfig.ConflictPolicy.lastWriteWins
-        ))
-        .addPrimitives(new MappingConfig.PrimitiveSplitRule("tags", ",", true))
-        .nullPolicy(new MappingConfig.NullPolicy(true))
-        .build();
+    MappingConfig config =
+        MappingConfig.builder()
+            .separator("/")
+            .allowSparseRows(true)
+            .addRootKeys("tenantId")
+            .addRootKeys("regionId")
+            .addLists(
+                new MappingConfig.ListRule(
+                    "orders",
+                    List.of("customerId"),
+                    List.of(
+                        new MappingConfig.OrderBy(
+                            "orderDate", MappingConfig.Direction.desc, MappingConfig.Nulls.last)),
+                    true,
+                    MappingConfig.ConflictPolicy.error))
+            .addLists(
+                new MappingConfig.ListRule(
+                    "orders/items",
+                    List.of("customerId", "orderId", "productId"),
+                    List.of(),
+                    true,
+                    MappingConfig.ConflictPolicy.lastWriteWins))
+            .addPrimitives(new MappingConfig.PrimitiveSplitRule("tags", ",", true))
+            .nullPolicy(new MappingConfig.NullPolicy(true))
+            .build();
     bh.consume(config);
   }
 
@@ -196,10 +197,7 @@ public class ConfigurationBenchmark {
 
   @Benchmark
   public void createImmutableConfig(Blackhole bh) {
-    MappingConfig config = MappingConfig.builder()
-        .separator(".")
-        .allowSparseRows(false)
-        .build();
+    MappingConfig config = MappingConfig.builder().separator(".").allowSparseRows(false).build();
     bh.consume(config);
   }
 
