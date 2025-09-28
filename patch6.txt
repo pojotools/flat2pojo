@@ -1,0 +1,48 @@
+/** Treat null/missing as equal to the empty value(s) you choose. */
+public static java.util.function.BiPredicate<com.fasterxml.jackson.databind.JsonNode, com.fasterxml.jackson.databind.JsonNode>
+nullEqualsEmpty(boolean blankStrings, boolean containers, boolean binaryZero) {
+    return (a, b) -> isNullOrEmptyLike(a, blankStrings, containers, binaryZero)
+                  && isNullOrEmptyLike(b, blankStrings, containers, binaryZero);
+}
+
+/** Null/missing ≡ empty string (""), optionally whitespace-only if you want .trim() behavior. */
+public static java.util.function.BiPredicate<com.fasterxml.jackson.databind.JsonNode, com.fasterxml.jackson.databind.JsonNode>
+nullEqualsEmptyString() {
+    return nullEqualsEmpty(/*blankStrings=*/true, /*containers=*/false, /*binaryZero=*/false);
+}
+
+/** Null/missing ≡ empty array or empty object. */
+public static java.util.function.BiPredicate<com.fasterxml.jackson.databind.JsonNode, com.fasterxml.jackson.databind.JsonNode>
+nullEqualsEmptyContainer() {
+    return nullEqualsEmpty(/*blankStrings=*/false, /*containers=*/true, /*binaryZero=*/false);
+}
+
+/** Null/missing ≡ empty string/blank, empty array/object, or zero-length binary. */
+public static java.util.function.BiPredicate<com.fasterxml.jackson.databind.JsonNode, com.fasterxml.jackson.databind.JsonNode>
+nullEqualsEmptyAny() {
+    return nullEqualsEmpty(/*blankStrings=*/true, /*containers=*/true, /*binaryZero=*/true);
+}
+
+// -------- helpers (keep them private inside Equivalences) --------
+
+private static boolean isNullOrEmptyLike(com.fasterxml.jackson.databind.JsonNode n,
+                                         boolean blankStrings, boolean containers, boolean binaryZero) {
+    if (n == null || n.isNull() || n.isMissingNode()) return true;
+
+    if (blankStrings && n.isTextual()) {
+        String s = n.asText();
+        return s.isEmpty() || s.trim().isEmpty();
+    }
+
+    if (containers) {
+        if (n.isArray())  return n.size() == 0;
+        if (n.isObject()) return n.size() == 0;
+    }
+
+    if (binaryZero && n.isBinary()) {
+        try { return n.binaryValue() != null && n.binaryValue().length == 0; }
+        catch (Exception ignored) { return false; }
+    }
+
+    return false;
+}
