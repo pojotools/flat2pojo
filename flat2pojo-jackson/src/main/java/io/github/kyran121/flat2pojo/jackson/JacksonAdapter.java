@@ -12,6 +12,10 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
  */
 public final class JacksonAdapter {
 
+  private JacksonAdapter() {
+    throw new UnsupportedOperationException("Utility class");
+  }
+
   /**
    * Creates a Jackson ObjectMapper with optimized settings for flat2pojo.
    *

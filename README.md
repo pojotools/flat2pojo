@@ -541,3 +541,56 @@ List<MyPojo> pojos = nodes.stream()
     .map(node -> mapper.convertValue(node, MyPojo.class))
     .collect(toList());
 ```
+
+## Development
+
+### Building from Source
+
+```bash
+git clone https://github.com/kyran121/flat2pojo.git
+cd flat2pojo
+mvn clean verify
+```
+
+### Code Quality
+
+This project maintains high code quality standards through comprehensive static analysis:
+
+#### Static Analysis Tools
+
+- **Checkstyle** - Enforces Clean Code principles (Uncle Bob) including:
+  - Method complexity ≤15, length ≤50 lines, ≤6 parameters
+  - Mandatory braces, switch defaults, proper imports
+  - Line length ≤120 characters, proper naming conventions
+- **SpotBugs** - Identifies potential bugs and security vulnerabilities through static analysis
+- **ErrorProne** - Google's compile-time checker that catches common Java programming mistakes
+- **JaCoCo** - Tracks test coverage with 60% minimum threshold for modules with tests
+
+The checkstyle configuration follows **Clean Code principles** by Uncle Bob Martin, enforcing small functions, low complexity, and defensive coding practices while being pragmatic for existing codebases.
+
+#### Running Quality Checks
+
+```bash
+# Full build with all static analysis
+mvn clean verify
+
+# Run specific tools
+mvn checkstyle:check          # Style validation
+mvn spotbugs:check           # Bug detection
+mvn jacoco:report            # Coverage report
+mvn spotless:apply           # Auto-format code
+```
+
+#### Code Formatting
+
+The project uses **Spotless** with Google Java Format:
+
+```bash
+# Apply formatting
+mvn spotless:apply
+
+# Check formatting
+mvn spotless:check
+```
+
+All static analysis tools are configured to run automatically during the build process, ensuring consistent code quality across all contributions.

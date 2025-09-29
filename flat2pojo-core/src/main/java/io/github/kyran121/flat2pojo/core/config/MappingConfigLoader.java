@@ -47,7 +47,9 @@ public final class MappingConfigLoader {
   private static void parsePrimitiveRules(
       final Map<String, Object> root, final ImmutableMappingConfig.Builder builder) {
     List<Map<String, Object>> primitives = (List<Map<String, Object>>) root.get("primitives");
-    if (primitives == null) return;
+    if (primitives == null) {
+      return;
+    }
 
     for (Map<String, Object> primitive : primitives) {
       parseSinglePrimitiveRule(primitive, builder);
@@ -57,7 +59,9 @@ public final class MappingConfigLoader {
   private static void parseSinglePrimitiveRule(
       final Map<String, Object> primitive, final ImmutableMappingConfig.Builder builder) {
     Map<String, Object> split = (Map<String, Object>) primitive.get("split");
-    if (split == null) return;
+    if (split == null) {
+      return;
+    }
 
     String path = (String) primitive.get("path");
     String delimiter = (String) split.getOrDefault("delimiter", ",");
@@ -69,7 +73,9 @@ public final class MappingConfigLoader {
   private static void parseListRules(
       final Map<String, Object> root, final ImmutableMappingConfig.Builder builder) {
     List<Map<String, Object>> lists = (List<Map<String, Object>>) root.get("lists");
-    if (lists == null) return;
+    if (lists == null) {
+      return;
+    }
 
     for (Map<String, Object> listRule : lists) {
       parseSingleListRule(listRule, builder);

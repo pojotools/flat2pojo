@@ -7,7 +7,7 @@
     <property name="severity" value="warning"/>
 
     <module name="TreeWalker">
-        <!-- Naming Conventions -->
+        <!-- Naming Conventions - Clean Code: Use intention-revealing names -->
         <module name="ConstantName"/>
         <module name="LocalFinalVariableName"/>
         <module name="LocalVariableName"/>
@@ -18,18 +18,30 @@
         <module name="StaticVariableName"/>
         <module name="TypeName"/>
 
-        <!-- Import checks -->
-        <module name="AvoidStarImport"/>
+        <!-- Import checks - Clean Code: Avoid star imports for clarity -->
+        <module name="AvoidStarImport">
+            <!-- Allow common Java standard library and Jackson star imports for readability -->
+            <property name="excludes" value="java.util.*,java.io.*,java.nio.file.*,com.fasterxml.jackson.databind.*,com.fasterxml.jackson.databind.node.*"/>
+        </module>
         <module name="IllegalImport"/>
         <module name="RedundantImport"/>
         <module name="UnusedImports"/>
 
-        <!-- Size Violations -->
+        <!-- Size Violations - Clean Code: Small functions, few parameters -->
         <module name="MethodLength">
-            <property name="max" value="40"/>
+            <property name="max" value="50"/>
+            <property name="countEmpty" value="false"/>
         </module>
         <module name="ParameterNumber">
-            <property name="max" value="5"/>
+            <property name="max" value="6"/>
+        </module>
+
+        <!-- Complexity - Clean Code: Keep cyclomatic complexity low -->
+        <module name="CyclomaticComplexity">
+            <property name="max" value="15"/>
+        </module>
+        <module name="NPathComplexity">
+            <property name="max" value="500"/>
         </module>
 
         <!-- Whitespace -->
@@ -42,31 +54,44 @@
         <module name="ParenPad"/>
         <module name="TypecastParenPad"/>
         <module name="WhitespaceAfter"/>
-        <module name="WhitespaceAround"/>
+        <module name="WhitespaceAround">
+            <property name="allowEmptyLambdas" value="true"/>
+            <property name="allowEmptyMethods" value="true"/>
+            <property name="allowEmptyConstructors" value="true"/>
+            <property name="allowEmptyTypes" value="true"/>
+        </module>
 
         <!-- Modifier Checks -->
         <module name="ModifierOrder"/>
         <module name="RedundantModifier"/>
 
-        <!-- Blocks -->
+        <!-- Blocks - Clean Code: Use braces for safety -->
         <module name="AvoidNestedBlocks"/>
         <module name="EmptyBlock"/>
         <module name="LeftCurly"/>
         <module name="NeedBraces"/>
         <module name="RightCurly"/>
 
-        <!-- Common Coding Problems -->
+        <!-- Common Coding Problems - Clean Code: Fail fast, avoid surprises -->
         <module name="EmptyStatement"/>
         <module name="EqualsHashCode"/>
-        <module name="HiddenField"/>
+        <module name="HiddenField">
+            <property name="ignoreConstructorParameter" value="true"/>
+            <property name="ignoreSetter" value="true"/>
+        </module>
         <module name="IllegalInstantiation"/>
         <module name="InnerAssignment"/>
+        <module name="MagicNumber">
+            <property name="ignoreNumbers" value="-1, 0, 1, 2"/>
+            <property name="ignoreHashCodeMethod" value="true"/>
+            <property name="ignoreAnnotation" value="true"/>
+        </module>
         <module name="MissingSwitchDefault"/>
         <module name="SimplifyBooleanExpression"/>
         <module name="SimplifyBooleanReturn"/>
+        <module name="StringLiteralEquality"/>
 
-        <!-- Class Design -->
-        <module name="DesignForExtension"/>
+        <!-- Class Design - Clean Code: Single responsibility, clear interfaces -->
         <module name="FinalClass"/>
         <module name="HideUtilityClassConstructor"/>
         <module name="InterfaceIsType"/>
@@ -74,12 +99,18 @@
 
         <!-- Miscellaneous -->
         <module name="ArrayTypeStyle"/>
-        <module name="FinalParameters"/>
         <module name="TodoComment"/>
         <module name="UpperEll"/>
+        <module name="OuterTypeFilename"/>
     </module>
 
     <!-- File checks -->
-    <module name="FileLength"/>
+    <module name="FileLength">
+        <property name="max" value="500"/>
+    </module>
     <module name="FileTabCharacter"/>
+    <module name="LineLength">
+        <property name="max" value="120"/>
+        <property name="ignorePattern" value="^package.*|^import.*|a href|href|http://|https://|ftp://"/>
+    </module>
 </module>

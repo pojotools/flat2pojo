@@ -43,6 +43,7 @@ public final class ArrayBucket {
       case merge -> {
         mergeOnlyAbsentFields(existing, candidate);
       }
+      default -> throw new IllegalArgumentException("Unknown conflict policy: " + policy);
     }
   }
 
@@ -118,7 +119,9 @@ public final class ArrayBucket {
   public ArrayNode asArray(
       com.fasterxml.jackson.databind.ObjectMapper om, List<Comparator<ObjectNode>> comps) {
     ArrayNode arr = om.createArrayNode();
-    for (ObjectNode n : ordered(comps)) arr.add(n);
+    for (ObjectNode n : ordered(comps)) {
+      arr.add(n);
+    }
     return arr;
   }
 }

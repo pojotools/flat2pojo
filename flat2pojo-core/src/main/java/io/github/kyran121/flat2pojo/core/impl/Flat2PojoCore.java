@@ -200,8 +200,8 @@ public final class Flat2PojoCore implements Flat2Pojo {
       if (PathOps.isUnder(valuePath, rulePath, separator)) {
         if (!isValueInChildListSubtree(valuePath, childListPrefixes, separator)) {
           final String suffix = PathOps.tailAfter(valuePath, rulePath, separator);
-          writeValueWithPolicy(
-              element, suffix, entry.getValue(), separator, rule.onConflict(), cfg, valuePath);
+          writeValueWithPolicy(element, new WriteContext(
+              suffix, entry.getValue(), separator, rule.onConflict(), cfg, valuePath));
         }
       }
     }
@@ -383,7 +383,9 @@ public final class Flat2PojoCore implements Flat2Pojo {
 
   private void writeValueIntoNode(
       final ObjectNode target, final String path, final JsonNode value, final String separator) {
-    if (path.isEmpty()) return;
+    if (path.isEmpty()) {
+      return;
+    }
 
     final ObjectNode parent = navigateToParentNode(target, path, separator);
     final String leafField = getLeafFieldName(path, separator);
@@ -418,19 +420,23 @@ public final class Flat2PojoCore implements Flat2Pojo {
     return newChild;
   }
 
-  private void writeValueWithPolicy(
-      final ObjectNode target,
-      final String path,
-      final JsonNode value,
-      final String separator,
-      final ConflictPolicy policy,
-      final MappingConfig cfg,
-      final String absolutePath) {
-    if (path.isEmpty()) return;
+  private record WriteContext(
+      String path,
+      JsonNode value,
+      String separator,
+      ConflictPolicy policy,
+      MappingConfig cfg,
+      String absolutePath) {}
 
-    final ObjectNode parent = navigateToParentNode(target, path, separator);
-    final String leafField = getLeafFieldName(path, separator);
+  private void writeValueWithPolicy(final ObjectNode target, final WriteContext context) {
+    if (context.path().isEmpty()) {
+      return;
+    }
+
+    final ObjectNode parent = navigateToParentNode(target, context.path(), context.separator());
+    final String leafField = getLeafFieldName(context.path(), context.separator());
     ConflictHandler.writeScalarWithPolicy(
-        parent, leafField, value, policy, absolutePath, cfg.reporter());
+        parent, leafField, context.value(), context.policy(),
+        context.absolutePath(), context.cfg().reporter());
   }
 }

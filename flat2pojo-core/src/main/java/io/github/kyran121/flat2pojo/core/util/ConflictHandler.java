@@ -31,63 +31,77 @@ public final class ConflictHandler {
     }
 
     switch (policy) {
-      case error -> {
-        if (existing.isValueNode() && incoming.isValueNode() && !existing.equals(incoming)) {
-          final String message =
-              "Conflict at '" + absolutePath + "': existing=" + existing + ", incoming=" + incoming;
-          reporter.ifPresent(r -> r.warn(message));
-          throw new RuntimeException(message);
-        }
-      }
+      case error -> handleErrorPolicy(existing, incoming, absolutePath, reporter);
       case firstWriteWins -> {
-        if (existing.isValueNode() && incoming.isValueNode() && !existing.equals(incoming)) {
-          reporter.ifPresent(
-              r ->
-                  r.warn(
-                      "Field conflict resolved using firstWriteWins policy at '"
-                          + absolutePath
-                          + "': kept existing="
-                          + existing
-                          + ", ignored incoming="
-                          + incoming));
-        }
+        handleFirstWriteWinsPolicy(existing, incoming, absolutePath, reporter);
         return;
       }
       case merge -> {
-        if (existing instanceof ObjectNode existingObject
-            && incoming instanceof ObjectNode incomingObject) {
-          deepMerge(existingObject, incomingObject);
+        if (handleMergePolicy(existing, incoming, absolutePath, reporter)) {
           return;
-        } else if (!existing.equals(incoming)) {
-          reporter.ifPresent(
-              r ->
-                  r.warn(
-                      "Cannot merge non-object values at '"
-                          + absolutePath
-                          + "': existing="
-                          + existing
-                          + ", incoming="
-                          + incoming
-                          + ". Using lastWriteWins."));
         }
       }
-      case lastWriteWins -> {
-        if (existing.isValueNode() && incoming.isValueNode() && !existing.equals(incoming)) {
-          reporter.ifPresent(
-              r ->
-                  r.warn(
-                      "Field conflict resolved using lastWriteWins policy at '"
-                          + absolutePath
-                          + "': replaced existing="
-                          + existing
-                          + " with incoming="
-                          + incoming));
-        }
-        // Fall through to overwrite
-      }
+      case lastWriteWins -> handleLastWriteWinsPolicy(existing, incoming, absolutePath, reporter);
+      default -> throw new IllegalArgumentException("Unknown conflict policy: " + policy);
     }
 
     target.set(fieldName, incoming);
+  }
+
+  private static void handleErrorPolicy(
+      final JsonNode existing,
+      final JsonNode incoming,
+      final String absolutePath,
+      final Optional<Reporter> reporter) {
+    if (hasValueConflict(existing, incoming)) {
+      final String message =
+          "Conflict at '" + absolutePath + "': existing=" + existing + ", incoming=" + incoming;
+      reporter.ifPresent(r -> r.warn(message));
+      throw new RuntimeException(message);
+    }
+  }
+
+  private static void handleFirstWriteWinsPolicy(
+      final JsonNode existing,
+      final JsonNode incoming,
+      final String absolutePath,
+      final Optional<Reporter> reporter) {
+    if (hasValueConflict(existing, incoming)) {
+      reporter.ifPresent(
+          r -> r.warn("Field conflict resolved using firstWriteWins policy at '"
+              + absolutePath + "': kept existing=" + existing + ", ignored incoming=" + incoming));
+    }
+  }
+
+  private static boolean handleMergePolicy(
+      final JsonNode existing,
+      final JsonNode incoming,
+      final String absolutePath,
+      final Optional<Reporter> reporter) {
+    if (existing instanceof ObjectNode existingObject
+        && incoming instanceof ObjectNode incomingObject) {
+      deepMerge(existingObject, incomingObject);
+      return true;
+    } else if (!existing.equals(incoming)) {
+      reporter.ifPresent(r -> r.warn("Cannot merge non-object values at '" + absolutePath
+          + "': existing=" + existing + ", incoming=" + incoming + ". Using lastWriteWins."));
+    }
+    return false;
+  }
+
+  private static void handleLastWriteWinsPolicy(
+      final JsonNode existing,
+      final JsonNode incoming,
+      final String absolutePath,
+      final Optional<Reporter> reporter) {
+    if (hasValueConflict(existing, incoming)) {
+      reporter.ifPresent(r -> r.warn("Field conflict resolved using lastWriteWins policy at '"
+          + absolutePath + "': replaced existing=" + existing + " with incoming=" + incoming));
+    }
+  }
+
+  private static boolean hasValueConflict(final JsonNode existing, final JsonNode incoming) {
+    return existing.isValueNode() && incoming.isValueNode() && !existing.equals(incoming);
   }
 
   public static void deepMerge(final ObjectNode target, final ObjectNode source) {

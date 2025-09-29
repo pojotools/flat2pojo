@@ -51,6 +51,24 @@
 
     <build>
         <plugins>
+            <!-- Disable checkstyle for benchmarks module -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+                <configuration>
+                    <skip>true</skip>
+                </configuration>
+            </plugin>
+
+            <!-- Disable spotbugs for benchmarks module -->
+            <plugin>
+                <groupId>com.github.spotbugs</groupId>
+                <artifactId>spotbugs-maven-plugin</artifactId>
+                <configuration>
+                    <skip>true</skip>
+                </configuration>
+            </plugin>
+
             <!-- JMH benchmark plugin -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
