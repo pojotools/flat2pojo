@@ -765,7 +765,7 @@ public class ConversionDebugService {
         </encoder>
     </appender>
 
-    <logger name="io.github.kyran121.flat2pojo" level="INFO" additivity="false">
+    <logger name="io.github.pojotools.flat2pojo" level="INFO" additivity="false">
         <appender-ref ref="FLAT2POJO"/>
     </logger>
 

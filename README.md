@@ -32,7 +32,7 @@ Unlike manual transformation logic, flat2pojo uses a **Jackson-first** approach:
 
 ```xml
 <dependency>
-    <groupId>io.github.kyran121</groupId>
+    <groupId>io.github.pojotools</groupId>
     <artifactId>flat2pojo-jackson</artifactId>
     <version>0.1.0-SNAPSHOT</version>
 </dependency>
@@ -41,7 +41,7 @@ Unlike manual transformation logic, flat2pojo uses a **Jackson-first** approach:
 For SPI extensions (optional):
 ```xml
 <dependency>
-    <groupId>io.github.kyran121</groupId>
+    <groupId>io.github.pojotools</groupId>
     <artifactId>flat2pojo-spi</artifactId>
     <version>0.1.0-SNAPSHOT</version>
 </dependency>
@@ -260,7 +260,7 @@ flat2pojo provides Service Provider Interfaces (SPI) for custom processing and m
 Transform input data before conversion:
 
 ```java
-import io.github.kyran121.flat2pojo.spi.ValuePreprocessor;
+import io.github.pojotools.flat2pojo.spi.ValuePreprocessor;
 
 // Convert YES/NO to boolean values
 ValuePreprocessor preprocessor = row -> {
@@ -288,7 +288,7 @@ MappingConfig config = MappingConfig.builder()
 Monitor conversion process and capture warnings:
 
 ```java
-import io.github.kyran121.flat2pojo.spi.Reporter;
+import io.github.pojotools.flat2pojo.spi.Reporter;
 
 // Capture all warnings
 List<String> warnings = new ArrayList<>();

@@ -5,7 +5,7 @@ Modern simplified release workflow for flat2pojo using Sonatype Central Portal.
 ## Prerequisites (One-time setup)
 
 1. **Central Portal Account**: Register at [central.sonatype.com](https://central.sonatype.com)
-2. **Namespace**: Claim your namespace (e.g., `io.github.kyran121`)
+2. **Namespace**: Claim your namespace (e.g., `io.github.pojotools`)
 3. **GPG Key**: Generate and upload to key servers
 4. **Maven Settings**: Configure `~/.m2/settings.xml` with environment variables
 5. **Enable SNAPSHOTS**: Enable SNAPSHOT publishing for your namespace in Central Portal
@@ -136,12 +136,12 @@ The modern workflow uses `central-publishing-maven-plugin` version 0.9.0+ which:
 ## Verification
 
 ### SNAPSHOT Releases
-- **Central Portal**: https://central.sonatype.com/repository/maven-snapshots/io/github/kyran121/
+- **Central Portal**: https://central.sonatype.com/repository/maven-snapshots/io/github/pojotools/
 - **Deployment Logs**: https://central.sonatype.com/publishing/deployments
 
 ### Production Releases
-- **Maven Central Search**: https://search.maven.org/search?q=g:io.github.kyran121
-- **Central Portal**: https://central.sonatype.com/artifact/io.github.kyran121/flat2pojo-jackson
+- **Maven Central Search**: https://search.maven.org/search?q=g:io.github.pojotools
+- **Central Portal**: https://central.sonatype.com/artifact/io.github.pojotools/flat2pojo-jackson
 - **Deployment Logs**: https://central.sonatype.com/publishing/deployments
 
 ## Migration from Legacy OSSRH

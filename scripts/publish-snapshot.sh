@@ -125,12 +125,12 @@ if mvn clean deploy -pl "$MODULE" -P "$PROFILE"; then
     echo -e "${GREEN}✓ SNAPSHOT published successfully!${NC}"
     echo
     echo -e "${BLUE}SNAPSHOT Information:${NC}"
-    echo "  Group ID: io.github.kyran121"
+    echo "  Group ID: io.github.pojotools"
     echo "  Artifact ID: $MODULE"
     echo "  Version: $CURRENT_VERSION"
     echo
     echo -e "${BLUE}Repository URL:${NC}"
-    echo "  https://central.sonatype.com/repository/maven-snapshots/io/github/kyran121/$MODULE/"
+    echo "  https://central.sonatype.com/repository/maven-snapshots/io/github/pojotools/$MODULE/"
     echo
     echo -e "${BLUE}Monitoring:${NC}"
     echo "  Central Portal: https://central.sonatype.com/publishing/deployments"
@@ -148,7 +148,7 @@ if mvn clean deploy -pl "$MODULE" -P "$PROFILE"; then
     echo "  </repositories>"
     echo
     echo "  <dependency>"
-    echo "    <groupId>io.github.kyran121</groupId>"
+    echo "    <groupId>io.github.pojotools</groupId>"
     echo "    <artifactId>$MODULE</artifactId>"
     echo "    <version>$CURRENT_VERSION</version>"
     echo "  </dependency>"

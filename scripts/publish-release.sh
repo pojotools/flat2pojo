@@ -238,19 +238,19 @@ echo
 echo -e "${GREEN}🎉 Release $RELEASE_VERSION published successfully!${NC}"
 echo
 echo -e "${BLUE}Release Information:${NC}"
-echo "  Group ID: io.github.kyran121"
+echo "  Group ID: io.github.pojotools"
 echo "  Artifact ID: $MODULE"
 echo "  Version: $RELEASE_VERSION"
 echo "  Git tag: v$RELEASE_VERSION"
 echo
 echo -e "${BLUE}Monitoring URLs:${NC}"
 echo "  Central Portal Deployments: https://central.sonatype.com/publishing/deployments"
-echo "  Maven Central Search: https://search.maven.org/search?q=g:io.github.kyran121"
-echo "  Artifact Page: https://central.sonatype.com/artifact/io.github.kyran121/$MODULE/$RELEASE_VERSION"
+echo "  Maven Central Search: https://search.maven.org/search?q=g:io.github.pojotools"
+echo "  Artifact Page: https://central.sonatype.com/artifact/io.github.pojotools/$MODULE/$RELEASE_VERSION"
 echo
 echo -e "${BLUE}Usage in other projects:${NC}"
 echo "  <dependency>"
-echo "    <groupId>io.github.kyran121</groupId>"
+echo "    <groupId>io.github.pojotools</groupId>"
 echo "    <artifactId>$MODULE</artifactId>"
 echo "    <version>$RELEASE_VERSION</version>"
 echo "  </dependency>"
