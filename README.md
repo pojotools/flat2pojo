@@ -564,7 +564,10 @@ This project maintains high code quality standards through comprehensive static 
   - Line length ≤120 characters, proper naming conventions
 - **SpotBugs** - Identifies potential bugs and security vulnerabilities through static analysis
 - **ErrorProne** - Google's compile-time checker that catches common Java programming mistakes
-- **JaCoCo** - Tracks test coverage with 60% minimum threshold for modules with tests
+- **JaCoCo** - Tracks test coverage across modules with 60% minimum threshold
+  - Cross-module coverage aggregation via dedicated `flat2pojo-coverage` module
+  - Tests in `flat2pojo-examples` exercise code in `flat2pojo-core` and `flat2pojo-jackson`
+  - HTML reports available at `flat2pojo-coverage/target/site/jacoco-aggregate/index.html`
 
 The checkstyle configuration follows **Clean Code principles** by Uncle Bob Martin, enforcing small functions, low complexity, and defensive coding practices while being pragmatic for existing codebases.
 
@@ -579,6 +582,9 @@ mvn checkstyle:check          # Style validation
 mvn spotbugs:check           # Bug detection
 mvn jacoco:report            # Coverage report
 mvn spotless:apply           # Auto-format code
+
+# View aggregated coverage report
+open flat2pojo-coverage/target/site/jacoco-aggregate/index.html
 ```
 
 #### Code Formatting

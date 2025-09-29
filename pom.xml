@@ -39,6 +39,7 @@
         <module>flat2pojo-jackson</module>
         <module>flat2pojo-examples</module>
         <module>flat2pojo-benchmarks</module>
+        <module>flat2pojo-coverage</module>
     </modules>
 
     <properties>
@@ -196,27 +197,6 @@
                             <goals>
                                 <goal>report</goal>
                             </goals>
-                        </execution>
-                        <execution>
-                            <id>jacoco-check</id>
-                            <goals>
-                                <goal>check</goal>
-                            </goals>
-                            <configuration>
-                                <rules>
-                                    <rule>
-                                        <element>BUNDLE</element>
-                                        <limits>
-                                            <limit>
-                                                <counter>INSTRUCTION</counter>
-                                                <value>COVEREDRATIO</value>
-                                                <minimum>0.80</minimum>
-                                            </limit>
-                                        </limits>
-                                    </rule>
-                                </rules>
-                                <haltOnFailure>false</haltOnFailure>
-                            </configuration>
                         </execution>
                     </executions>
                 </plugin>
