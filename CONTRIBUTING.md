@@ -6,7 +6,7 @@ Thanks for your interest in contributing! Here's how to get started.
 
 ```bash
 # Clone and build
-git clone https://github.com/kyran121/flat2pojo.git
+git clone https://github.com/pojotools/flat2pojo.git
 cd flat2pojo
 mvn clean test
 

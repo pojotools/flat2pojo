@@ -547,7 +547,7 @@ List<MyPojo> pojos = nodes.stream()
 ### Building from Source
 
 ```bash
-git clone https://github.com/kyran121/flat2pojo.git
+git clone https://github.com/pojotools/flat2pojo.git
 cd flat2pojo
 mvn clean verify
 ```

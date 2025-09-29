@@ -9,7 +9,7 @@
     <packaging>pom</packaging>
     <name>flat2pojo</name>
     <description>A high-performance Java library for converting flat key-value structures to nested POJOs</description>
-    <url>https://github.com/kyran121/flat2pojo</url>
+    <url>https://github.com/pojotools/flat2pojo</url>
 
     <licenses>
         <license>
@@ -28,9 +28,9 @@
     </developers>
 
     <scm>
-        <connection>scm:git:git://github.com/kyran121/flat2pojo.git</connection>
-        <developerConnection>scm:git:ssh://github.com/kyran121/flat2pojo.git</developerConnection>
-        <url>https://github.com/kyran121/flat2pojo</url>
+        <connection>scm:git:git://github.com/pojotools/flat2pojo.git</connection>
+        <developerConnection>scm:git:ssh://github.com/pojotools/flat2pojo.git</developerConnection>
+        <url>https://github.com/pojotools/flat2pojo</url>
     </scm>
 
     <modules>
