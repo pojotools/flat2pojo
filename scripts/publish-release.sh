@@ -178,6 +178,23 @@ git tag "v$RELEASE_VERSION" -m "Release version $RELEASE_VERSION"
 git push origin "v$RELEASE_VERSION"
 echo -e "${GREEN}✓ Release tag v$RELEASE_VERSION created and pushed${NC}"
 
+# Step 3b: Update README.md with new release version
+echo -e "${YELLOW}Step 3b: Updating README.md with new release version...${NC}"
+if [[ -x "./scripts/update-readme-version.sh" ]]; then
+    ./scripts/update-readme-version.sh > /dev/null 2>&1 || true
+    # Commit the README update
+    if ! git diff --quiet README.md; then
+        git add README.md
+        git commit -m "Update README.md with release version $RELEASE_VERSION"
+        git push origin main
+        echo -e "${GREEN}✓ README.md updated and committed with version $RELEASE_VERSION${NC}"
+    else
+        echo -e "${GREEN}✓ README.md already up to date${NC}"
+    fi
+else
+    echo -e "${YELLOW}⚠ README update script not found or not executable${NC}"
+fi
+
 # Step 4: Install parent POM and build dependencies
 echo -e "${YELLOW}Step 4a: Installing parent POM with release version...${NC}"
 if ! mvn clean install -N -q; then
@@ -223,14 +240,43 @@ if [[ "$RELEASE_SUCCESS" == "true" ]]; then
     git push origin main
 
     echo -e "${GREEN}✓ Next development version: $NEXT_DEV_VERSION${NC}"
+
+    # Step 6: Clean up
+    echo -e "${YELLOW}Step 6: Cleaning up...${NC}"
+
+    # Clean up Maven versions backup files
+    find . -name "*.versionsBackup" -delete 2>/dev/null || true
+    echo -e "${GREEN}✓ Cleaned up Maven versions backup files${NC}"
 else
     echo -e "${YELLOW}Rolling back due to deployment failure...${NC}"
-    # Reset to before the release commit
-    git reset --hard HEAD~1
+
+    # Count commits made since starting release process
+    # We need to roll back: 1) release version commit, 2) README update commit (if made)
+    COMMITS_TO_ROLLBACK=1
+
+    # Check if README was updated (look for recent README commit)
+    if git log --oneline -2 | grep -q "Update README.md with release version"; then
+        COMMITS_TO_ROLLBACK=2
+        echo -e "${YELLOW}Rolling back README update commit as well...${NC}"
+    fi
+
+    # Reset to before the release commits
+    git reset --hard HEAD~$COMMITS_TO_ROLLBACK
+
+    # Delete the release tag
     git tag -d "v$RELEASE_VERSION" 2>/dev/null || true
     git push origin ":refs/tags/v$RELEASE_VERSION" 2>/dev/null || true
+
+    # Force push to revert the commits on remote
+    git push --force-with-lease origin main
+
+    # Revert Maven version changes
     mvn versions:revert -q 2>/dev/null || true
-    echo -e "${RED}Release rolled back${NC}"
+
+    # Clean up any backup files created during the failed release
+    find . -name "*.versionsBackup" -delete 2>/dev/null || true
+
+    echo -e "${RED}Release rolled back (reverted $COMMITS_TO_ROLLBACK commit(s))${NC}"
     exit 1
 fi
 
