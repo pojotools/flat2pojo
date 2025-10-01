@@ -1,7 +1,5 @@
 package io.github.pojotools.flat2pojo.examples;
 
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.pojotools.flat2pojo.core.api.Flat2Pojo;
@@ -9,11 +7,14 @@ import io.github.pojotools.flat2pojo.core.config.MappingConfig;
 import io.github.pojotools.flat2pojo.core.config.MappingConfigLoader;
 import io.github.pojotools.flat2pojo.core.config.ValidationException;
 import io.github.pojotools.flat2pojo.examples.domain.ImmutableProductRoot;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class SpecSuiteTest {
   ObjectMapper om;
@@ -929,6 +930,557 @@ class SpecSuiteTest {
               ]
             }
           """,
+        out);
+  }
+
+  @Test
+  void test20_conflict_policy_firstWriteWins() {
+    MappingConfig cfg =
+        TestSupport.cfgFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists:
+              - path: "definitions"
+                keyPaths: ["definitions/id/identifier"]
+                dedupe: true
+                onConflict: "firstWriteWins"
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of("definitions/id/identifier", "D-1", "definitions/name", "FirstName"),
+            Map.of("definitions/id/identifier", "D-1", "definitions/name", "SecondName"));
+
+    var out = TestSupport.first(f2p.convertAll(rows, ImmutableProductRoot.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        om,
+        """
+        {
+          "definitions": [
+            { "id": { "identifier": "D-1" }, "name": "FirstName" }
+          ]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test21_primitive_types_and_blanks_as_nulls() {
+    MappingConfig cfg =
+        TestSupport.cfgFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            nullPolicy: { blanksAsNulls: true }
+            lists: []
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of(
+                "numbers/longField", 9223372036854775807L,
+                "numbers/doubleField", 3.14159,
+                "text/blankField", "   ",
+                "text/emptyField", "",
+                "text/validField", "value"));
+
+    JsonNode out = TestSupport.first(f2p.convertAll(rows, JsonNode.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        om,
+        """
+        {
+          "numbers": {
+            "longField": 9223372036854775807,
+            "doubleField": 3.14159
+          },
+          "text": {
+            "blankField": null,
+            "emptyField": null,
+            "validField": "value"
+          }
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test22_primitive_split_with_blanks() {
+    MappingConfig cfg =
+        TestSupport.cfgFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            nullPolicy: { blanksAsNulls: true }
+            lists:
+              - path: "definitions"
+                keyPaths: ["definitions/id/identifier"]
+            primitives:
+              - path: "definitions/tags"
+                split: { delimiter: ",", trim: true }
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of(
+                "definitions/id/identifier", "D-1",
+                "definitions/tags", "tag1, , tag3,"));
+
+    var out = TestSupport.first(f2p.convertAll(rows, JsonNode.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        om,
+        """
+        {
+          "definitions": [
+            {
+              "id": { "identifier": "D-1" },
+              "tags": ["tag1", null, "tag3", null]
+            }
+          ]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test23_complex_separator_and_deep_paths() {
+    MappingConfig cfg =
+        TestSupport.cfgFromYaml(
+            """
+            separator: "::"
+            allowSparseRows: false
+            lists: []
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of(
+                "root::deeply::nested::field", "value",
+                "simple", "noSeparator",
+                "a::b::c::d::e::f", "veryDeep"));
+
+    JsonNode out = TestSupport.first(f2p.convertAll(rows, JsonNode.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        om,
+        """
+        {
+          "root": {
+            "deeply": {
+              "nested": {
+                "field": "value"
+              }
+            }
+          },
+          "simple": "noSeparator",
+          "a": {
+            "b": {
+              "c": {
+                "d": {
+                  "e": {
+                    "f": "veryDeep"
+                  }
+                }
+              }
+            }
+          }
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test24_merge_conflict_with_incompatible_types() {
+    MappingConfig cfg =
+        TestSupport.cfgFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists:
+              - path: "definitions"
+                keyPaths: ["definitions/id/identifier"]
+                dedupe: true
+                onConflict: "merge"
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of("definitions/id/identifier", "D-1", "definitions/conflictField", "stringValue"),
+            Map.of("definitions/id/identifier", "D-1", "definitions/conflictField", 123));
+
+    var out = TestSupport.first(f2p.convertAll(rows, JsonNode.class, cfg));
+
+    // When types are incompatible, merge should fall back to lastWriteWins
+    PojoJsonAssert.assertPojoJsonEquals(
+        om,
+        """
+        {
+          "definitions": [
+            {
+              "id": { "identifier": "D-1" },
+              "conflictField": 123
+            }
+          ]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test25_deep_merge_nested_objects() {
+    MappingConfig cfg =
+        TestSupport.cfgFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists:
+              - path: "definitions"
+                keyPaths: ["definitions/id/identifier"]
+                dedupe: true
+                onConflict: "merge"
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of(
+                "definitions/id/identifier", "D-1",
+                "definitions/metadata/field1", "value1"),
+            Map.of(
+                "definitions/id/identifier", "D-1",
+                "definitions/metadata/field2", "value2"));
+
+    var out = TestSupport.first(f2p.convertAll(rows, JsonNode.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        om,
+        """
+        {
+          "definitions": [
+            {
+              "id": { "identifier": "D-1" },
+              "metadata": {
+                "field1": "value1",
+                "field2": "value2"
+              }
+            }
+          ]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test26_ordering_with_cache_hit() {
+    MappingConfig cfg =
+        TestSupport.cfgFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists:
+              - path: "definitions"
+                keyPaths: ["definitions/id/identifier"]
+                orderBy:
+                  - path: "definitions/priority"
+                    direction: "desc"
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of("definitions/id/identifier", "D-1", "definitions/priority", 1),
+            Map.of("definitions/id/identifier", "D-2", "definitions/priority", 3),
+            Map.of("definitions/id/identifier", "D-3", "definitions/priority", 2));
+
+    // Convert multiple times to trigger cache hit scenarios
+    var out1 = TestSupport.first(f2p.convertAll(rows, JsonNode.class, cfg));
+    var out2 = TestSupport.first(f2p.convertAll(rows, JsonNode.class, cfg));
+
+    String expectedJson = """
+        {
+          "definitions": [
+            { "id": { "identifier": "D-2" }, "priority": 3 },
+            { "id": { "identifier": "D-3" }, "priority": 2 },
+            { "id": { "identifier": "D-1" }, "priority": 1 }
+          ]
+        }
+        """;
+
+    // Both conversions should produce identical results (cache works correctly)
+    PojoJsonAssert.assertPojoJsonEquals(om, expectedJson, out1);
+    PojoJsonAssert.assertPojoJsonEquals(om, expectedJson, out2);
+  }
+
+  @Test
+  void test27_order_by_nulls_handling() {
+    MappingConfig cfg =
+        TestSupport.cfgFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists:
+              - path: "definitions"
+                keyPaths: ["definitions/id/identifier"]
+                orderBy:
+                  - path: "definitions/priority"
+                    direction: "asc"
+                    nulls: "first"
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of("definitions/id/identifier", "D-1", "definitions/priority", 2),
+            Map.of("definitions/id/identifier", "D-2"),  // null priority
+            Map.of("definitions/id/identifier", "D-3", "definitions/priority", 1));
+
+    var out = TestSupport.first(f2p.convertAll(rows, JsonNode.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        om,
+        """
+        {
+          "definitions": [
+            { "id": { "identifier": "D-2" } },
+            { "id": { "identifier": "D-3" }, "priority": 1 },
+            { "id": { "identifier": "D-1" }, "priority": 2 }
+          ]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test28_multiple_field_conflicts_and_iterations() {
+    MappingConfig cfg =
+        TestSupport.cfgFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists:
+              - path: "definitions"
+                keyPaths: ["definitions/id/identifier"]
+                dedupe: true
+                onConflict: "merge"
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of(
+                "definitions/id/identifier", "D-1",
+                "definitions/field1", "value1",
+                "definitions/field2", "value2",
+                "definitions/field3", "value3",
+                "definitions/nested/subfield1", "sub1",
+                "definitions/nested/subfield2", "sub2"),
+            Map.of(
+                "definitions/id/identifier", "D-1",
+                "definitions/field4", "value4",
+                "definitions/field5", "value5",
+                "definitions/field6", "value6",
+                "definitions/nested/subfield3", "sub3",
+                "definitions/nested/subfield4", "sub4"));
+
+    var out = TestSupport.first(f2p.convertAll(rows, JsonNode.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        om,
+        """
+        {
+          "definitions": [
+            {
+              "id": { "identifier": "D-1" },
+              "field1": "value1",
+              "field2": "value2",
+              "field3": "value3",
+              "field4": "value4",
+              "field5": "value5",
+              "field6": "value6",
+              "nested": {
+                "subfield1": "sub1",
+                "subfield2": "sub2",
+                "subfield3": "sub3",
+                "subfield4": "sub4"
+              }
+            }
+          ]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test29_null_and_empty_handling_edge_cases() {
+    MappingConfig cfg =
+        TestSupport.cfgFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: true
+            nullPolicy: { blanksAsNulls: true }
+            lists:
+              - path: "definitions"
+                keyPaths: ["definitions/id/identifier"]
+          """);
+
+    // Use Map.of() carefully - it doesn't accept null values
+    List<Map<String, ?>> rows = List.of(
+        Map.of("definitions/id/identifier", "D-1"),
+        Map.of("definitions/id/identifier", "D-2", "definitions/emptyField", ""),
+        Map.of("definitions/id/identifier", "D-4", "definitions/blankField", "   "));
+
+    var out = TestSupport.first(f2p.convertAll(rows, JsonNode.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        om,
+        """
+        {
+          "definitions": [
+            { "id": { "identifier": "D-1" } },
+            { "id": { "identifier": "D-2" }, "emptyField": null },
+            { "id": { "identifier": "D-4" }, "blankField": null }
+          ]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test30_complex_path_traversal_edge_cases() {
+    MappingConfig cfg =
+        TestSupport.cfgFromYaml(
+            """
+            separator: "::"
+            allowSparseRows: false
+            lists:
+              - path: "items"
+                keyPaths: ["items::id"]
+            primitives:
+              - path: "items::tags"
+                split: { delimiter: "|", trim: true }
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of(
+                "items::id", "item1",
+                "items::name", "First Item",
+                "items::tags", "tag1|tag2|tag3",
+                "level1::field1", "value1"),
+            Map.of(
+                "items::id", "item2",
+                "items::name", "Second Item",
+                "items::tags", "tagA|  tagB  |tagC",
+                "level1::field2", "value2"));
+
+    var out = TestSupport.first(f2p.convertAll(rows, JsonNode.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        om,
+        """
+        {
+          "items": [
+            {
+              "id": "item1",
+              "name": "First Item",
+              "tags": ["tag1", "tag2", "tag3"]
+            },
+            {
+              "id": "item2",
+              "name": "Second Item",
+              "tags": ["tagA", "tagB", "tagC"]
+            }
+          ],
+          "level1": {
+            "field1": "value1",
+            "field2": "value2"
+          }
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test31_multiple_comparator_edge_cases() {
+    MappingConfig cfg =
+        TestSupport.cfgFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists:
+              - path: "definitions"
+                keyPaths: ["definitions/id/identifier"]
+                orderBy:
+                  - path: "definitions/category"
+                    direction: "asc"
+                    nulls: "last"
+                  - path: "definitions/priority"
+                    direction: "desc"
+                    nulls: "first"
+                  - path: "definitions/name"
+                    direction: "asc"
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of("definitions/id/identifier", "D-1", "definitions/category", "B", "definitions/priority", 1, "definitions/name", "Beta"),
+            Map.of("definitions/id/identifier", "D-2", "definitions/category", "A", "definitions/name", "Alpha"),
+            Map.of("definitions/id/identifier", "D-3", "definitions/category", "A", "definitions/priority", 3, "definitions/name", "Gamma"),
+            Map.of("definitions/id/identifier", "D-4", "definitions/category", "A", "definitions/priority", 3, "definitions/name", "Delta"),
+            Map.of("definitions/id/identifier", "D-5", "definitions/name", "Epsilon"));
+
+    var out = TestSupport.first(f2p.convertAll(rows, JsonNode.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        om,
+        """
+        {
+          "definitions": [
+            { "id": { "identifier": "D-2" }, "category": "A", "name": "Alpha" },
+            { "id": { "identifier": "D-4" }, "category": "A", "priority": 3, "name": "Delta" },
+            { "id": { "identifier": "D-3" }, "category": "A", "priority": 3, "name": "Gamma" },
+            { "id": { "identifier": "D-1" }, "category": "B", "priority": 1, "name": "Beta" },
+            { "id": { "identifier": "D-5" }, "name": "Epsilon" }
+          ]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test32_empty_and_single_element_lists() {
+    MappingConfig cfg =
+        TestSupport.cfgFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists:
+              - path: "definitions"
+                keyPaths: ["definitions/id/identifier"]
+                orderBy:
+                  - path: "definitions/priority"
+                    direction: "desc"
+          """);
+
+    // Test with single element and empty results to hit edge cases
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of("definitions/id/identifier", "D-1", "definitions/priority", 5),
+            Map.of("other/field", "ignored"));  // This won't create a definition
+
+    var out = TestSupport.first(f2p.convertAll(rows, JsonNode.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        om,
+        """
+        {
+          "definitions": [
+            { "id": { "identifier": "D-1" }, "priority": 5 }
+          ],
+          "other": {
+            "field": "ignored"
+          }
+        }
+        """,
         out);
   }
 }
