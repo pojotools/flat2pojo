@@ -5,8 +5,15 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import io.github.pojotools.flat2pojo.spi.Reporter;
 import io.github.pojotools.flat2pojo.spi.ValuePreprocessor;
-import java.util.*;
 import org.immutables.value.Value;
+
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 
 /**
  * Immutable configuration for flat-to-POJO conversion.
@@ -104,24 +111,45 @@ public abstract class MappingConfig {
   }
 
   private Map<String, Set<String>> precomputeChildListPrefixes() {
+    final List<ListRule> rules = lists();
+    if (rules.isEmpty()) {
+      return Map.of();
+    }
+
     final Map<String, Set<String>> prefixMap = new HashMap<>();
     final String sep = separator();
 
-    for (final ListRule rule : lists()) {
-      final String rulePath = rule.path();
-      final Set<String> childPrefixes = new HashSet<>();
+    // Sort rules by path length (shorter first) to optimize parent-child detection
+    // This allows us to build the map in a single pass: O(n log n) instead of O(n²)
+    final List<String> sortedPaths =
+        rules.stream().map(ListRule::path).sorted(Comparator.comparingInt(String::length)).toList();
 
-      for (final ListRule otherRule : lists()) {
-        final String otherPath = otherRule.path();
-        if (!otherPath.equals(rulePath) && otherPath.startsWith(rulePath + sep)) {
-          childPrefixes.add(otherPath + sep);
-        }
-      }
-
-      prefixMap.put(rulePath, Set.copyOf(childPrefixes));
+    for (final String rulePath : sortedPaths) {
+      prefixMap.put(rulePath, new HashSet<>());
     }
 
-    return Map.copyOf(prefixMap);
+    // For each path, check only previously seen (shorter) paths as potential parents
+    for (int i = 0; i < sortedPaths.size(); i++) {
+      final String childPath = sortedPaths.get(i);
+      final String childPrefix = childPath + sep;
+
+      // Check all shorter paths (potential ancestors)
+      for (int j = 0; j < i; j++) {
+        final String potentialParent = sortedPaths.get(j);
+        if (childPath.startsWith(potentialParent + sep)) {
+          // Add this child to its parent's set
+          prefixMap.get(potentialParent).add(childPrefix);
+        }
+      }
+    }
+
+    // Make sets immutable
+    final Map<String, Set<String>> immutableMap = new HashMap<>();
+    for (final var entry : prefixMap.entrySet()) {
+      immutableMap.put(entry.getKey(), Set.copyOf(entry.getValue()));
+    }
+
+    return Map.copyOf(immutableMap);
   }
 
   // ======= VALUE TYPES =======

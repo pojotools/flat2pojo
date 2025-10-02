@@ -143,7 +143,7 @@ public final class Flat2PojoCore implements Flat2Pojo {
       final ObjectNode element = ge.upsertListElementRelative(base, relPath, rowValues, rule);
       if (element != null) {
         rowElementCache.put(path, element);
-        copyListSubtreeValues(rowValues, element, rule, cfg, configCache);
+        copyListSubtreeValues(rowValues, element, rule, cfg);
       } else {
         // Track skipped list paths to prevent processing their subtree values
         skippedListPaths.add(path);
@@ -188,21 +188,19 @@ public final class Flat2PojoCore implements Flat2Pojo {
       final Map<String, JsonNode> rowValues,
       final ObjectNode element,
       final MappingConfig.ListRule rule,
-      final MappingConfig cfg,
-      final ConfigurationCache configCache) {
+      final MappingConfig cfg) {
     final String rulePath = rule.path();
     final String separator = cfg.separator();
-    final Set<String> childListPrefixes = configCache.getChildListPrefixes(rulePath);
+    final Set<String> childListPrefixes = cfg.getChildListPrefixes(rulePath);
 
     for (final var entry : rowValues.entrySet()) {
       final String valuePath = entry.getKey();
 
-      if (PathOps.isUnder(valuePath, rulePath, separator)) {
-        if (!isValueInChildListSubtree(valuePath, childListPrefixes, separator)) {
-          final String suffix = PathOps.tailAfter(valuePath, rulePath, separator);
-          writeValueWithPolicy(element, new WriteContext(
-              suffix, entry.getValue(), separator, rule.onConflict(), cfg, valuePath));
-        }
+      if (PathOps.isUnder(valuePath, rulePath, separator)
+          && !isValueInChildListSubtree(valuePath, childListPrefixes, separator)) {
+        final String suffix = PathOps.tailAfter(valuePath, rulePath, separator);
+        writeValueWithPolicy(element, new WriteContext(
+            suffix, entry.getValue(), separator, rule.onConflict(), cfg, valuePath));
       }
     }
   }
@@ -261,7 +259,6 @@ public final class Flat2PojoCore implements Flat2Pojo {
 
   private static final class ConfigurationCache {
     private final Map<String, String> parentListPaths = new HashMap<>();
-    private final Map<String, Set<String>> childListPrefixes = new HashMap<>();
     private final Set<String> allListPaths;
     private final String separator;
     private final char separatorChar;
@@ -271,7 +268,6 @@ public final class Flat2PojoCore implements Flat2Pojo {
       this.separatorChar = separator.length() == 1 ? separator.charAt(0) : '/';
       this.allListPaths = buildListPathsSet(cfg);
       precomputeParentRelationships(cfg);
-      precomputeChildListPrefixes(cfg);
     }
 
     private Set<String> buildListPathsSet(final MappingConfig cfg) {
@@ -312,28 +308,8 @@ public final class Flat2PojoCore implements Flat2Pojo {
       }
     }
 
-    private void precomputeChildListPrefixes(final MappingConfig cfg) {
-      for (final var rule : cfg.lists()) {
-        final String rulePath = rule.path();
-        final Set<String> childPrefixes = new HashSet<>();
-
-        for (final var otherRule : cfg.lists()) {
-          final String otherPath = otherRule.path();
-          if (!otherPath.equals(rulePath) && PathOps.isUnder(otherPath, rulePath, separator)) {
-            childPrefixes.add(otherPath + separator);
-          }
-        }
-
-        childListPrefixes.put(rulePath, childPrefixes);
-      }
-    }
-
     String getParentListPath(final String listPath) {
       return parentListPaths.get(listPath);
-    }
-
-    Set<String> getChildListPrefixes(final String listPath) {
-      return childListPrefixes.getOrDefault(listPath, Set.of());
     }
 
     boolean isListPath(final String path) {
@@ -436,7 +412,11 @@ public final class Flat2PojoCore implements Flat2Pojo {
     final ObjectNode parent = navigateToParentNode(target, context.path(), context.separator());
     final String leafField = getLeafFieldName(context.path(), context.separator());
     ConflictHandler.writeScalarWithPolicy(
-        parent, leafField, context.value(), context.policy(),
-        context.absolutePath(), context.cfg().reporter());
+        parent,
+        leafField,
+        context.value(),
+        context.policy(),
+        context.absolutePath(),
+        context.cfg().reporter().orElse(null));
   }
 }

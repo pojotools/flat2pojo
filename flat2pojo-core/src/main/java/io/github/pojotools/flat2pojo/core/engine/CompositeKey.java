@@ -13,13 +13,7 @@ public final class CompositeKey {
 
   @Override
   public boolean equals(Object o) {
-    if (this == o) {
-      return true;
-    }
-    if (!(o instanceof CompositeKey k)) {
-      return false;
-    }
-    return values.equals(k.values);
+    return this == o || (o instanceof CompositeKey k && values.equals(k.values));
   }
 
   @Override

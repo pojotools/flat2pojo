@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.github.pojotools.flat2pojo.core.config.MappingConfig.ConflictPolicy;
 import io.github.pojotools.flat2pojo.spi.Reporter;
 import java.util.Iterator;
-import java.util.Optional;
 
 /**
  * Utilities for handling field conflicts during flat-to-POJO conversion.
@@ -22,7 +21,7 @@ public final class ConflictHandler {
       final JsonNode incoming,
       final ConflictPolicy policy,
       final String absolutePath,
-      final Optional<Reporter> reporter) {
+      final Reporter reporter) {
     final JsonNode existing = target.get(fieldName);
 
     if (existing == null || existing.isNull()) {
@@ -52,11 +51,13 @@ public final class ConflictHandler {
       final JsonNode existing,
       final JsonNode incoming,
       final String absolutePath,
-      final Optional<Reporter> reporter) {
+      final Reporter reporter) {
     if (hasValueConflict(existing, incoming)) {
       final String message =
           "Conflict at '" + absolutePath + "': existing=" + existing + ", incoming=" + incoming;
-      reporter.ifPresent(r -> r.warn(message));
+      if (reporter != null) {
+        reporter.warn(message);
+      }
       throw new RuntimeException(message);
     }
   }
@@ -65,11 +66,15 @@ public final class ConflictHandler {
       final JsonNode existing,
       final JsonNode incoming,
       final String absolutePath,
-      final Optional<Reporter> reporter) {
-    if (hasValueConflict(existing, incoming)) {
-      reporter.ifPresent(
-          r -> r.warn("Field conflict resolved using firstWriteWins policy at '"
-              + absolutePath + "': kept existing=" + existing + ", ignored incoming=" + incoming));
+      final Reporter reporter) {
+    if (hasValueConflict(existing, incoming) && reporter != null) {
+      reporter.warn(
+          "Field conflict resolved using firstWriteWins policy at '"
+              + absolutePath
+              + "': kept existing="
+              + existing
+              + ", ignored incoming="
+              + incoming);
     }
   }
 
@@ -77,14 +82,20 @@ public final class ConflictHandler {
       final JsonNode existing,
       final JsonNode incoming,
       final String absolutePath,
-      final Optional<Reporter> reporter) {
+      final Reporter reporter) {
     if (existing instanceof ObjectNode existingObject
         && incoming instanceof ObjectNode incomingObject) {
       deepMerge(existingObject, incomingObject);
       return true;
-    } else if (!existing.equals(incoming)) {
-      reporter.ifPresent(r -> r.warn("Cannot merge non-object values at '" + absolutePath
-          + "': existing=" + existing + ", incoming=" + incoming + ". Using lastWriteWins."));
+    } else if (!existing.equals(incoming) && reporter != null) {
+      reporter.warn(
+          "Cannot merge non-object values at '"
+              + absolutePath
+              + "': existing="
+              + existing
+              + ", incoming="
+              + incoming
+              + ". Using lastWriteWins.");
     }
     return false;
   }
@@ -93,10 +104,15 @@ public final class ConflictHandler {
       final JsonNode existing,
       final JsonNode incoming,
       final String absolutePath,
-      final Optional<Reporter> reporter) {
-    if (hasValueConflict(existing, incoming)) {
-      reporter.ifPresent(r -> r.warn("Field conflict resolved using lastWriteWins policy at '"
-          + absolutePath + "': replaced existing=" + existing + " with incoming=" + incoming));
+      final Reporter reporter) {
+    if (hasValueConflict(existing, incoming) && reporter != null) {
+      reporter.warn(
+          "Field conflict resolved using lastWriteWins policy at '"
+              + absolutePath
+              + "': replaced existing="
+              + existing
+              + " with incoming="
+              + incoming);
     }
   }
 

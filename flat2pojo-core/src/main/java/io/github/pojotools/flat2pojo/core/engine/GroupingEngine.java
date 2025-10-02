@@ -128,11 +128,11 @@ public final class GroupingEngine {
       final JsonNode valueA = findValueAtPath(nodeA, relativePath);
       final JsonNode valueB = findValueAtPath(nodeB, relativePath);
 
-      final boolean isANull = (valueA == null || valueA.isNull());
-      final boolean isBNull = (valueB == null || valueB.isNull());
+      final boolean isANull = valueA == null || valueA.isNull();
+      final boolean isBNull = valueB == null || valueB.isNull();
 
       if (isANull != isBNull) {
-        return nullsFirst ? (isANull ? -1 : 1) : (isANull ? 1 : -1);
+        return nullsFirst ? (isANull ? -1 : 1) : isANull ? 1 : -1;
       }
 
       if (isANull && isBNull) {

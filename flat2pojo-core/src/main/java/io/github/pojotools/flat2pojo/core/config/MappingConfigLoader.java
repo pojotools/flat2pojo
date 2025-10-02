@@ -141,10 +141,8 @@ public final class MappingConfigLoader {
     if (blanksAsNullsValue instanceof Boolean booleanValue) {
       return booleanValue;
     }
-    if (blanksAsNullsValue != null) {
-      return Boolean.parseBoolean(String.valueOf(blanksAsNullsValue));
-    }
-    return false;
+    return blanksAsNullsValue != null
+        && Boolean.parseBoolean(String.valueOf(blanksAsNullsValue));
   }
 
   public static void validateHierarchy(final MappingConfig cfg) {
@@ -196,15 +194,14 @@ public final class MappingConfigLoader {
       String path = rule.path();
       String nearestAncestor = findNearestListAncestor(path);
 
-      if (nearestAncestor != null) {
-        if (declarationOrder.get(nearestAncestor) > declarationOrder.get(path)) {
-          throw new ValidationException(
-              "List '"
-                  + path
-                  + "' must be declared after its parent list '"
-                  + nearestAncestor
-                  + "'");
-        }
+      if (nearestAncestor != null
+          && declarationOrder.get(nearestAncestor) > declarationOrder.get(path)) {
+        throw new ValidationException(
+            "List '"
+                + path
+                + "' must be declared after its parent list '"
+                + nearestAncestor
+                + "'");
       }
     }
 

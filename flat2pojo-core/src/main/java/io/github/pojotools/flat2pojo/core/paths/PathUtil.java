@@ -56,9 +56,6 @@ public final class PathUtil {
   }
 
   public static boolean isPrefixOf(String prefix, String path, String separator) {
-    if (prefix.equals(path)) {
-      return true;
-    }
-    return path.startsWith(prefix + separator);
+    return prefix.equals(path) || path.startsWith(prefix + separator);
   }
 }
