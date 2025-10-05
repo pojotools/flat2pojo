@@ -1,7 +1,7 @@
 package io.github.pojotools.flat2pojo.core.util;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -13,10 +13,6 @@ import java.util.List;
  */
 public final class PathOps {
   private PathOps() {}
-
-  public static int nextSep(final String s, final int from, final char sepCh) {
-    return s.indexOf(sepCh, from);
-  }
 
   public static String tailAfter(final String s, final String prefix, final String sep) {
     if (!s.startsWith(prefix)) {
@@ -36,68 +32,93 @@ public final class PathOps {
     return path.equals(prefix) || path.startsWith(prefix + sep);
   }
 
-  public static List<String> splitPath(final String path, final char sepCh) {
-    final List<String> segments = new ArrayList<>();
-    int start = 0;
-    int sepIndex;
-    while ((sepIndex = nextSep(path, start, sepCh)) >= 0) {
-      segments.add(path.substring(start, sepIndex));
-      start = sepIndex + 1;
-    }
-    if (start < path.length()) {
-      segments.add(path.substring(start));
-    }
-    return segments;
-  }
-
   public static List<String> splitPath(final String path, final String separator) {
-    if (separator.length() == 1) {
-      return splitPath(path, separator.charAt(0));
-    }
-    final List<String> segments = new ArrayList<>();
-    int start = 0;
-    int sepIndex;
-    while ((sepIndex = path.indexOf(separator, start)) >= 0) {
-      segments.add(path.substring(start, sepIndex));
-      start = sepIndex + separator.length();
-    }
-    if (start < path.length()) {
-      segments.add(path.substring(start));
-    }
-    return segments;
+    return List.of(path.split(java.util.regex.Pattern.quote(separator), -1));
   }
 
   /**
    * Traverses a path and ensures all intermediate ObjectNodes exist. Returns the final parent
-   * ObjectNode where the last segment should be set.
+   * ObjectNode where the last segment should be set. Supports multi-character separators.
    */
   public static ObjectNode traverseAndEnsurePath(
       final ObjectNode root,
       final String path,
-      final char separatorChar,
+      final String separator,
       final ObjectNodeEnsurer ensurer) {
     ObjectNode current = root;
     int start = 0;
     int sepIndex;
 
-    while ((sepIndex = nextSep(path, start, separatorChar)) >= 0) {
+    while ((sepIndex = path.indexOf(separator, start)) >= 0) {
       final String segment = path.substring(start, sepIndex);
       current = ensurer.ensureObject(current, segment);
-      start = sepIndex + 1;
+      start = sepIndex + separator.length();
     }
 
     return current;
   }
 
   /** Gets the final segment of a path after the last separator. */
-  public static String getFinalSegment(final String path, final char separatorChar) {
-    final int lastSep = path.lastIndexOf(separatorChar);
-    return lastSep >= 0 ? path.substring(lastSep + 1) : path;
+  public static String getFinalSegment(final String path, final String separator) {
+    final int lastSep = path.lastIndexOf(separator);
+    return lastSep >= 0 ? path.substring(lastSep + separator.length()) : path;
   }
 
   /** Interface for ensuring ObjectNode creation - allows different implementations. */
   @FunctionalInterface
   public interface ObjectNodeEnsurer {
     ObjectNode ensureObject(ObjectNode parent, String fieldName);
+  }
+
+  /** Standard implementation of ensureObject - consolidated from 3 duplicates. */
+  public static ObjectNode ensureObject(final ObjectNode parent, final String fieldName) {
+    final JsonNode existing = parent.get(fieldName);
+    if (existing instanceof ObjectNode objectNode) {
+      return objectNode;
+    }
+    // If field doesn't exist or is not an ObjectNode, create/replace with ObjectNode
+    final ObjectNode created = parent.objectNode();
+    parent.set(fieldName, created);
+    return created;
+  }
+
+  /**
+   * Finds the nearest parent path from a set of candidate paths by iterating backwards.
+   * Returns the longest prefix of the given path that exists in the candidates set.
+   *
+   * @param path the path to find a parent for
+   * @param candidates set of potential parent paths
+   * @param separator the path separator
+   * @return the nearest parent path, or null if none found
+   */
+  public static String findParentPath(
+      final String path, final java.util.Set<String> candidates, final String separator) {
+    int lastSepIndex = path.lastIndexOf(separator);
+    while (lastSepIndex > 0) {
+      final String prefix = path.substring(0, lastSepIndex);
+      if (candidates.contains(prefix)) {
+        return prefix;
+      }
+      lastSepIndex = prefix.lastIndexOf(separator);
+    }
+    return null;
+  }
+
+  /**
+   * Checks if a path is under any of the candidate paths.
+   *
+   * @param path the path to check
+   * @param candidates collection of potential parent paths
+   * @param separator the path separator
+   * @return true if path is under any candidate, false otherwise
+   */
+  public static boolean isUnderAny(
+      final String path, final java.util.Collection<String> candidates, final String separator) {
+    for (final String candidate : candidates) {
+      if (isUnder(path, candidate, separator)) {
+        return true;
+      }
+    }
+    return false;
   }
 }

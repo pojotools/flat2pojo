@@ -112,7 +112,7 @@ class SpecSuiteTest {
       rootKeys: ["referencedProductId/identifier"]
       lists:
         - path: "definitions"
-          keyPaths: ["definitions/id/identifier"]
+          keyPaths: ["id/identifier"]
     """);
 
     List<Map<String, ?>> rows =
@@ -149,11 +149,11 @@ class SpecSuiteTest {
       rootKeys: ["referencedProductId/identifier"]
       lists:
         - path: "definitions"
-          keyPaths: ["definitions/id/identifier"]
+          keyPaths: ["id/identifier"]
         - path: "definitions/tracker/tasks"
-          keyPaths: ["definitions/tracker/tasks/taskDate"]
+          keyPaths: ["taskDate"]
         - path: "definitions/tracker/tasks/comments"
-          keyPaths: ["definitions/tracker/tasks/comments/loggedAt"]
+          keyPaths: ["loggedAt"]
     """);
 
     List<Map<String, ?>> rows =
@@ -241,13 +241,13 @@ class SpecSuiteTest {
       rootKeys: ["referencedProductId/identifier"]
       lists:
         - path: "definitions"
-          keyPaths: ["definitions/id/identifier"]
+          keyPaths: ["id/identifier"]
         - path: "definitions/tracker/comments"
-          keyPaths: ["definitions/tracker/comments/loggedAt"]
+          keyPaths: ["loggedAt"]
         - path: "definitions/tracker/tasks"
-          keyPaths: ["definitions/tracker/tasks/taskDate"]
+          keyPaths: ["taskDate"]
         - path: "definitions/tracker/tasks/comments"
-          keyPaths: ["definitions/tracker/tasks/comments/loggedAt"]
+          keyPaths: ["loggedAt"]
     """);
 
     // Build the full 36 cartesian rows for 2 definitions.
@@ -368,7 +368,7 @@ class SpecSuiteTest {
       allowSparseRows: false
       lists:
         - path: "definitions"
-          keyPaths: ["definitions/id/identifier"]
+          keyPaths: ["id/identifier"]
       primitives:
         - path: "definitions/schedule/weekdays"
           split: { delimiter: ",", trim: true }
@@ -437,9 +437,9 @@ class SpecSuiteTest {
       allowSparseRows: false
       lists:
         - path: "definitions"
-          keyPaths: ["definitions/id/identifier"]
+          keyPaths: ["id/identifier"]
           orderBy:
-            - path: "definitions/name"
+            - path: "name"
               direction: "asc"
               nulls: "last"
     """);
@@ -475,7 +475,7 @@ class SpecSuiteTest {
       allowSparseRows: false
       lists:
         - path: "definitions"
-          keyPaths: ["definitions/id/identifier"]
+          keyPaths: ["id/identifier"]
           dedupe: true
           onConflict: "merge"
     """);
@@ -512,7 +512,7 @@ class SpecSuiteTest {
       allowSparseRows: false
       lists:
         - path: "definitions"
-          keyPaths: ["definitions/id/identifier"]
+          keyPaths: ["id/identifier"]
           dedupe: true
           onConflict: "lastWriteWins"
     """);
@@ -545,7 +545,7 @@ class SpecSuiteTest {
       allowSparseRows: false
       lists:
         - path: "definitions"
-          keyPaths: ["definitions/id/identifier"]
+          keyPaths: ["id/identifier"]
           dedupe: true
           onConflict: "error"
     """);
@@ -634,7 +634,7 @@ class SpecSuiteTest {
       rootKeys: ["referencedProductId/identifier"]
       lists:
         - path: "definitions"
-          keyPaths: ["definitions/id/identifier"]
+          keyPaths: ["id/identifier"]
     """);
 
     List<Map<String, ?>> rows =
@@ -688,11 +688,11 @@ class SpecSuiteTest {
             rootKeys: ["referencedProductId/identifier"]
             lists:
               - path: "definitions"
-                keyPaths: ["definitions/id/identifier"]
+                keyPaths: ["id/identifier"]
               - path: "definitions/tracker/tasks"
-                keyPaths: ["definitions/tracker/tasks/taskDate"]
+                keyPaths: ["taskDate"]
               - path: "definitions/tracker/tasks/comments"
-                keyPaths: ["definitions/tracker/tasks/comments/loggedAt"]
+                keyPaths: ["loggedAt"]
           """);
 
     // Row where tracker/task has default field values (isUser=false) but null keyPath → skip
@@ -740,11 +740,11 @@ class SpecSuiteTest {
             rootKeys: ["referencedProductId/identifier"]
             lists:
               - path: "definitions"
-                keyPaths: ["definitions/id/identifier"]
+                keyPaths: ["id/identifier"]
               - path: "definitions/tracker/tasks"
-                keyPaths: ["definitions/tracker/tasks/taskDate"]
+                keyPaths: ["taskDate"]
               - path: "definitions/tracker/tasks/comments"
-                keyPaths: ["definitions/tracker/tasks/comments/loggedAt"]
+                keyPaths: ["loggedAt"]
           """);
 
     // Multiple definitions: some with taskDate (creates tasks), some without (no tasks)
@@ -853,13 +853,13 @@ class SpecSuiteTest {
             allowSparseRows: false
             lists:
               - path: "definitions"
-                keyPaths: ["definitions/id/identifier"]
+                keyPaths: ["id/identifier"]
               - path: "definitions/modules"
-                keyPaths: ["definitions/modules/name"]
+                keyPaths: ["name"]
               - path: "definitions/modules/components"
-                keyPaths: ["definitions/modules/components/id"]
+                keyPaths: ["id"]
               - path: "definitions/modules/components/features"
-                keyPaths: ["definitions/modules/components/features/name"]
+                keyPaths: ["name"]
           """);
 
     List<Map<String, ?>> rows =
@@ -942,7 +942,7 @@ class SpecSuiteTest {
             allowSparseRows: false
             lists:
               - path: "definitions"
-                keyPaths: ["definitions/id/identifier"]
+                keyPaths: ["id/identifier"]
                 dedupe: true
                 onConflict: "firstWriteWins"
           """);
@@ -1016,7 +1016,7 @@ class SpecSuiteTest {
             nullPolicy: { blanksAsNulls: true }
             lists:
               - path: "definitions"
-                keyPaths: ["definitions/id/identifier"]
+                keyPaths: ["id/identifier"]
             primitives:
               - path: "definitions/tags"
                 split: { delimiter: ",", trim: true }
@@ -1101,7 +1101,7 @@ class SpecSuiteTest {
             allowSparseRows: false
             lists:
               - path: "definitions"
-                keyPaths: ["definitions/id/identifier"]
+                keyPaths: ["id/identifier"]
                 dedupe: true
                 onConflict: "merge"
           """);
@@ -1138,7 +1138,7 @@ class SpecSuiteTest {
             allowSparseRows: false
             lists:
               - path: "definitions"
-                keyPaths: ["definitions/id/identifier"]
+                keyPaths: ["id/identifier"]
                 dedupe: true
                 onConflict: "merge"
           """);
@@ -1181,9 +1181,9 @@ class SpecSuiteTest {
             allowSparseRows: false
             lists:
               - path: "definitions"
-                keyPaths: ["definitions/id/identifier"]
+                keyPaths: ["id/identifier"]
                 orderBy:
-                  - path: "definitions/priority"
+                  - path: "priority"
                     direction: "desc"
           """);
 
@@ -1221,9 +1221,9 @@ class SpecSuiteTest {
             allowSparseRows: false
             lists:
               - path: "definitions"
-                keyPaths: ["definitions/id/identifier"]
+                keyPaths: ["id/identifier"]
                 orderBy:
-                  - path: "definitions/priority"
+                  - path: "priority"
                     direction: "asc"
                     nulls: "first"
           """);
@@ -1259,7 +1259,7 @@ class SpecSuiteTest {
             allowSparseRows: false
             lists:
               - path: "definitions"
-                keyPaths: ["definitions/id/identifier"]
+                keyPaths: ["id/identifier"]
                 dedupe: true
                 onConflict: "merge"
           """);
@@ -1319,7 +1319,7 @@ class SpecSuiteTest {
             nullPolicy: { blanksAsNulls: true }
             lists:
               - path: "definitions"
-                keyPaths: ["definitions/id/identifier"]
+                keyPaths: ["id/identifier"]
           """);
 
     // Use Map.of() carefully - it doesn't accept null values
@@ -1353,7 +1353,7 @@ class SpecSuiteTest {
             allowSparseRows: false
             lists:
               - path: "items"
-                keyPaths: ["items::id"]
+                keyPaths: ["id"]
             primitives:
               - path: "items::tags"
                 split: { delimiter: "|", trim: true }
@@ -1408,15 +1408,15 @@ class SpecSuiteTest {
             allowSparseRows: false
             lists:
               - path: "definitions"
-                keyPaths: ["definitions/id/identifier"]
+                keyPaths: ["id/identifier"]
                 orderBy:
-                  - path: "definitions/category"
+                  - path: "category"
                     direction: "asc"
                     nulls: "last"
-                  - path: "definitions/priority"
+                  - path: "priority"
                     direction: "desc"
                     nulls: "first"
-                  - path: "definitions/name"
+                  - path: "name"
                     direction: "asc"
           """);
 
@@ -1455,9 +1455,9 @@ class SpecSuiteTest {
             allowSparseRows: false
             lists:
               - path: "definitions"
-                keyPaths: ["definitions/id/identifier"]
+                keyPaths: ["id/identifier"]
                 orderBy:
-                  - path: "definitions/priority"
+                  - path: "priority"
                     direction: "desc"
           """);
 

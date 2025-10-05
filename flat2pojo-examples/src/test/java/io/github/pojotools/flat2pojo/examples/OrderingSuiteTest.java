@@ -26,9 +26,9 @@ class OrderingSuiteTest {
       separator: "/"
       lists:
         - path: "definitions"
-          keyPaths: ["definitions/id/identifier"]
+          keyPaths: ["id/identifier"]
           orderBy:
-            - path: "definitions/name"
+            - path: "name"
               direction: "asc"
               nulls: "last"
     """);
@@ -60,9 +60,9 @@ class OrderingSuiteTest {
       separator: "/"
       lists:
         - path: "definitions"
-          keyPaths: ["definitions/id/identifier"]
+          keyPaths: ["id/identifier"]
           orderBy:
-            - path: "definitions/name"
+            - path: "name"
               direction: "desc"
               nulls: "first"
     """);
@@ -94,12 +94,12 @@ class OrderingSuiteTest {
       separator: "/"
       lists:
         - path: "definitions"
-          keyPaths: ["definitions/id/identifier"]
+          keyPaths: ["id/identifier"]
           orderBy:
-            - path: "definitions/name"
+            - path: "name"
               direction: "asc"
               nulls: "last"
-            - path: "definitions/id/identifier"
+            - path: "id/identifier"
               direction: "desc"
               nulls: "last"
     """);
@@ -131,11 +131,11 @@ class OrderingSuiteTest {
       separator: "/"
       lists:
         - path: "definitions"
-          keyPaths: ["definitions/id/identifier"]
+          keyPaths: ["id/identifier"]
         - path: "definitions/tracker/tasks"
-          keyPaths: ["definitions/tracker/tasks/taskDate"]
+          keyPaths: ["taskDate"]
           orderBy:
-            - path: "definitions/tracker/tasks/taskDate"
+            - path: "taskDate"
               direction: "asc"
               nulls: "last"
     """);
@@ -196,13 +196,13 @@ class OrderingSuiteTest {
       separator: "/"
       lists:
         - path: "definitions"
-          keyPaths: ["definitions/id/identifier"]
+          keyPaths: ["id/identifier"]
         - path: "definitions/tracker/tasks"
-          keyPaths: ["definitions/tracker/tasks/taskDate"]
+          keyPaths: ["taskDate"]
         - path: "definitions/tracker/tasks/comments"
-          keyPaths: ["definitions/tracker/tasks/comments/loggedAt"]
+          keyPaths: ["loggedAt"]
           orderBy:
-            - path: "definitions/tracker/tasks/comments/loggedAt"
+            - path: "loggedAt"
               direction: "desc"
               nulls: "last"
     """);
@@ -265,9 +265,9 @@ class OrderingSuiteTest {
       separator: "/"
       lists:
         - path: "definitions"
-          keyPaths: ["definitions/id/identifier"]
+          keyPaths: ["id/identifier"]
           orderBy:
-            - path: "definitions/name"
+            - path: "name"
               direction: "asc"
               nulls: "last"
     """);
@@ -299,9 +299,9 @@ class OrderingSuiteTest {
       separator: "/"
       lists:
         - path: "definitions"
-          keyPaths: ["definitions/id/identifier"]
+          keyPaths: ["id/identifier"]
           orderBy:
-            - path: "definitions/name"
+            - path: "name"
               direction: "asc"
               nulls: "first"
     """);
@@ -333,9 +333,9 @@ class OrderingSuiteTest {
       separator: "/"
       lists:
         - path: "definitions"
-          keyPaths: ["definitions/id/identifier"]
+          keyPaths: ["id/identifier"]
           orderBy:
-            - path: "definitions/name"
+            - path: "name"
               direction: "asc"
               nulls: "last"
     """);
@@ -367,15 +367,15 @@ class OrderingSuiteTest {
       separator: "/"
       lists:
         - path: "definitions"
-          keyPaths: ["definitions/id/identifier"]
+          keyPaths: ["id/identifier"]
           orderBy:
-            - path: "definitions/name"
+            - path: "name"
               direction: "asc"
               nulls: "last"
         - path: "definitions/tracker/tasks"
-          keyPaths: ["definitions/tracker/tasks/taskDate"]
+          keyPaths: ["taskDate"]
           orderBy:
-            - path: "definitions/tracker/tasks/taskDate"
+            - path: "taskDate"
               direction: "desc"
               nulls: "last"
     """);

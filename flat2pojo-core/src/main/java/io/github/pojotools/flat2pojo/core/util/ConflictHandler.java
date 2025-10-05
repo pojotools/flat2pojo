@@ -2,8 +2,6 @@ package io.github.pojotools.flat2pojo.core.util;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import io.github.pojotools.flat2pojo.core.config.MappingConfig.ConflictPolicy;
-import io.github.pojotools.flat2pojo.spi.Reporter;
 import java.util.Iterator;
 
 /**
@@ -19,9 +17,7 @@ public final class ConflictHandler {
       final ObjectNode target,
       final String fieldName,
       final JsonNode incoming,
-      final ConflictPolicy policy,
-      final String absolutePath,
-      final Reporter reporter) {
+      final ConflictContext context) {
     final JsonNode existing = target.get(fieldName);
 
     if (existing == null || existing.isNull()) {
@@ -29,35 +25,41 @@ public final class ConflictHandler {
       return;
     }
 
-    switch (policy) {
-      case error -> handleErrorPolicy(existing, incoming, absolutePath, reporter);
-      case firstWriteWins -> {
-        handleFirstWriteWinsPolicy(existing, incoming, absolutePath, reporter);
-        return;
-      }
-      case merge -> {
-        if (handleMergePolicy(existing, incoming, absolutePath, reporter)) {
-          return;
-        }
-      }
-      case lastWriteWins -> handleLastWriteWinsPolicy(existing, incoming, absolutePath, reporter);
-      default -> throw new IllegalArgumentException("Unknown conflict policy: " + policy);
+    final boolean shouldWrite = applyPolicy(existing, incoming, context);
+    if (shouldWrite) {
+      target.set(fieldName, incoming);
     }
+  }
 
-    target.set(fieldName, incoming);
+  private static boolean applyPolicy(
+      final JsonNode existing,
+      final JsonNode incoming,
+      final ConflictContext context) {
+    return switch (context.policy()) {
+      case error -> {
+        handleErrorPolicy(existing, incoming, context);
+        yield true;
+      }
+      case firstWriteWins -> {
+        handleFirstWriteWinsPolicy(existing, incoming, context);
+        yield false;
+      }
+      case merge -> handleMergePolicy(existing, incoming, context);
+      case lastWriteWins -> {
+        handleLastWriteWinsPolicy(existing, incoming, context);
+        yield true;
+      }
+    };
   }
 
   private static void handleErrorPolicy(
       final JsonNode existing,
       final JsonNode incoming,
-      final String absolutePath,
-      final Reporter reporter) {
+      final ConflictContext context) {
     if (hasValueConflict(existing, incoming)) {
       final String message =
-          "Conflict at '" + absolutePath + "': existing=" + existing + ", incoming=" + incoming;
-      if (reporter != null) {
-        reporter.warn(message);
-      }
+          "Conflict at '" + context.absolutePath() + "': existing=" + existing + ", incoming=" + incoming;
+      context.reporterOptional().ifPresent(r -> r.warn(message));
       throw new RuntimeException(message);
     }
   }
@@ -65,54 +67,51 @@ public final class ConflictHandler {
   private static void handleFirstWriteWinsPolicy(
       final JsonNode existing,
       final JsonNode incoming,
-      final String absolutePath,
-      final Reporter reporter) {
-    if (hasValueConflict(existing, incoming) && reporter != null) {
-      reporter.warn(
+      final ConflictContext context) {
+    if (hasValueConflict(existing, incoming)) {
+      context.reporterOptional().ifPresent(r -> r.warn(
           "Field conflict resolved using firstWriteWins policy at '"
-              + absolutePath
+              + context.absolutePath()
               + "': kept existing="
               + existing
               + ", ignored incoming="
-              + incoming);
+              + incoming));
     }
   }
 
   private static boolean handleMergePolicy(
       final JsonNode existing,
       final JsonNode incoming,
-      final String absolutePath,
-      final Reporter reporter) {
+      final ConflictContext context) {
     if (existing instanceof ObjectNode existingObject
         && incoming instanceof ObjectNode incomingObject) {
       deepMerge(existingObject, incomingObject);
-      return true;
-    } else if (!existing.equals(incoming) && reporter != null) {
-      reporter.warn(
+      return false; // Don't write, already merged in place
+    } else if (!existing.equals(incoming)) {
+      context.reporterOptional().ifPresent(r -> r.warn(
           "Cannot merge non-object values at '"
-              + absolutePath
+              + context.absolutePath()
               + "': existing="
               + existing
               + ", incoming="
               + incoming
-              + ". Using lastWriteWins.");
+              + ". Using lastWriteWins."));
     }
-    return false;
+    return true; // Write for non-objects (fallback to lastWriteWins)
   }
 
   private static void handleLastWriteWinsPolicy(
       final JsonNode existing,
       final JsonNode incoming,
-      final String absolutePath,
-      final Reporter reporter) {
-    if (hasValueConflict(existing, incoming) && reporter != null) {
-      reporter.warn(
+      final ConflictContext context) {
+    if (hasValueConflict(existing, incoming)) {
+      context.reporterOptional().ifPresent(r -> r.warn(
           "Field conflict resolved using lastWriteWins policy at '"
-              + absolutePath
+              + context.absolutePath()
               + "': replaced existing="
               + existing
               + " with incoming="
-              + incoming);
+              + incoming));
     }
   }
 

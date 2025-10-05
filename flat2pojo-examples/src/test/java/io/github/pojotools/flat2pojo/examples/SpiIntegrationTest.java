@@ -85,13 +85,13 @@ class SpiIntegrationTest {
                 List.of(
                     new MappingConfig.ListRule(
                         "definitions",
-                        List.of("definitions/id/identifier"),
+                        List.of("id/identifier"),
                         List.of(),
                         false,
                         MappingConfig.ConflictPolicy.error),
                     new MappingConfig.ListRule(
                         "definitions/tracker/tasks",
-                        List.of("definitions/tracker/tasks/taskDate"),
+                        List.of("taskDate"),
                         List.of(),
                         false,
                         MappingConfig.ConflictPolicy.error)))
@@ -113,7 +113,7 @@ class SpiIntegrationTest {
     assertThat(warnings).hasSize(1);
     assertThat(warnings.getFirst()).contains("Skipping list rule 'definitions/tracker/tasks'");
     assertThat(warnings.getFirst())
-        .contains("keyPath(s) [definitions/tracker/tasks/taskDate] are missing or null");
+        .contains("keyPath(s) [taskDate] are missing or null");
 
     // Check that the result has empty tasks array
     PojoJsonAssert.assertPojoJsonEquals(
@@ -147,7 +147,7 @@ class SpiIntegrationTest {
                 List.of(
                     new MappingConfig.ListRule(
                         "definitions",
-                        List.of("definitions/id/identifier"),
+                        List.of("id/identifier"),
                         List.of(),
                         true,
                         MappingConfig.ConflictPolicy.lastWriteWins)))
@@ -217,7 +217,7 @@ class SpiIntegrationTest {
                 List.of(
                     new MappingConfig.ListRule(
                         "items",
-                        List.of("items/id"),
+                        List.of("id"),
                         List.of(),
                         false,
                         MappingConfig.ConflictPolicy.error)))

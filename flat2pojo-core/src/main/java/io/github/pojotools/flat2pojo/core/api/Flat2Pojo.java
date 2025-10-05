@@ -27,8 +27,22 @@ public interface Flat2Pojo {
    * @param config the mapping configuration
    * @param <T> the target type
    * @return the converted POJO, or null if the input is empty
+   * @deprecated Use {@link #convertOptional(Map, Class, MappingConfig)} to avoid null returns
    */
   <T> T convert(Map<String, ?> flatRow, Class<T> type, MappingConfig config);
+
+  /**
+   * Converts a single flat row to a POJO, wrapped in Optional.
+   *
+   * <p>Prefer this method over {@link #convert(Map, Class, MappingConfig)} to avoid null handling.
+   *
+   * @param flatRow the flat key-value map to convert
+   * @param type the target POJO class
+   * @param config the mapping configuration
+   * @param <T> the target type
+   * @return Optional containing the converted POJO, or Optional.empty() if the input produces no result
+   */
+  <T> Optional<T> convertOptional(Map<String, ?> flatRow, Class<T> type, MappingConfig config);
 
   /**
    * Converts multiple flat rows to a list of POJOs with grouping and hierarchical structure.

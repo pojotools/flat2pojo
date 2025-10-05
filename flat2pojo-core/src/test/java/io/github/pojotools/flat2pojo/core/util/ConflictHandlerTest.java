@@ -33,13 +33,17 @@ class ConflictHandlerTest {
     }
   }
 
+  private ConflictContext context(ConflictPolicy policy, String path, Reporter reporter) {
+    return new ConflictContext(policy, path, reporter);
+  }
+
   @Test
   void writeScalarWithPolicy_whenNoExistingValue_setsValue() {
     ObjectNode target = om.createObjectNode();
 
     ConflictHandler.writeScalarWithPolicy(
-        target, "name", om.getNodeFactory().textNode("Alice"), ConflictPolicy.error, "path/name",
-        null);
+        target, "name", om.getNodeFactory().textNode("Alice"),
+        context(ConflictPolicy.error, "path/name", null));
 
     assertThat(target.get("name").asText()).isEqualTo("Alice");
   }
@@ -50,8 +54,8 @@ class ConflictHandlerTest {
     target.putNull("name");
 
     ConflictHandler.writeScalarWithPolicy(
-        target, "name", om.getNodeFactory().textNode("Alice"), ConflictPolicy.error, "path/name",
-        null);
+        target, "name", om.getNodeFactory().textNode("Alice"),
+        context(ConflictPolicy.error, "path/name", null));
 
     assertThat(target.get("name").asText()).isEqualTo("Alice");
   }
@@ -62,8 +66,8 @@ class ConflictHandlerTest {
     target.put("name", "Alice");
 
     assertThatThrownBy(() -> ConflictHandler.writeScalarWithPolicy(
-        target, "name", om.getNodeFactory().textNode("Bob"), ConflictPolicy.error, "path/name",
-        reporter))
+        target, "name", om.getNodeFactory().textNode("Bob"),
+        context(ConflictPolicy.error, "path/name", reporter)))
         .isInstanceOf(RuntimeException.class)
         .hasMessageContaining("Conflict at 'path/name'")
         .hasMessageContaining("Alice")
@@ -79,8 +83,8 @@ class ConflictHandlerTest {
     target.put("name", "Alice");
 
     ConflictHandler.writeScalarWithPolicy(
-        target, "name", om.getNodeFactory().textNode("Alice"), ConflictPolicy.error, "path/name",
-        null);
+        target, "name", om.getNodeFactory().textNode("Alice"),
+        context(ConflictPolicy.error, "path/name", null));
 
     assertThat(target.get("name").asText()).isEqualTo("Alice");
   }
@@ -91,8 +95,8 @@ class ConflictHandlerTest {
     target.put("name", "Alice");
 
     ConflictHandler.writeScalarWithPolicy(
-        target, "name", om.getNodeFactory().textNode("Bob"), ConflictPolicy.firstWriteWins,
-        "path/name", reporter);
+        target, "name", om.getNodeFactory().textNode("Bob"),
+        context(ConflictPolicy.firstWriteWins, "path/name", reporter));
 
     assertThat(target.get("name").asText()).isEqualTo("Alice");
     assertThat(reporter.warnings).hasSize(1);
@@ -105,8 +109,8 @@ class ConflictHandlerTest {
     target.put("name", "Alice");
 
     ConflictHandler.writeScalarWithPolicy(
-        target, "name", om.getNodeFactory().textNode("Alice"), ConflictPolicy.firstWriteWins,
-        "path/name", reporter);
+        target, "name", om.getNodeFactory().textNode("Alice"),
+        context(ConflictPolicy.firstWriteWins, "path/name", reporter));
 
     assertThat(target.get("name").asText()).isEqualTo("Alice");
     assertThat(reporter.warnings).isEmpty();
@@ -118,8 +122,8 @@ class ConflictHandlerTest {
     target.put("name", "Alice");
 
     ConflictHandler.writeScalarWithPolicy(
-        target, "name", om.getNodeFactory().textNode("Bob"), ConflictPolicy.lastWriteWins,
-        "path/name", reporter);
+        target, "name", om.getNodeFactory().textNode("Bob"),
+        context(ConflictPolicy.lastWriteWins, "path/name", reporter));
 
     assertThat(target.get("name").asText()).isEqualTo("Bob");
     assertThat(reporter.warnings).hasSize(1);
@@ -137,8 +141,8 @@ class ConflictHandlerTest {
     incomingObject.put("field2", "value2");
 
     ConflictHandler.writeScalarWithPolicy(
-        target, "nested", incomingObject, ConflictPolicy.merge, "path/nested",
-        reporter);
+        target, "nested", incomingObject,
+        context(ConflictPolicy.merge, "path/nested", reporter));
 
     ObjectNode result = (ObjectNode) target.get("nested");
     assertThat(result.get("field1").asText()).isEqualTo("value1");
@@ -151,8 +155,8 @@ class ConflictHandlerTest {
     target.put("name", "Alice");
 
     ConflictHandler.writeScalarWithPolicy(
-        target, "name", om.getNodeFactory().textNode("Bob"), ConflictPolicy.merge, "path/name",
-        reporter);
+        target, "name", om.getNodeFactory().textNode("Bob"),
+        context(ConflictPolicy.merge, "path/name", reporter));
 
     assertThat(target.get("name").asText()).isEqualTo("Bob");
     assertThat(reporter.warnings).hasSize(1);
@@ -165,8 +169,8 @@ class ConflictHandlerTest {
     target.put("name", "Alice");
 
     ConflictHandler.writeScalarWithPolicy(
-        target, "name", om.getNodeFactory().textNode("Alice"), ConflictPolicy.merge, "path/name",
-        reporter);
+        target, "name", om.getNodeFactory().textNode("Alice"),
+        context(ConflictPolicy.merge, "path/name", reporter));
 
     assertThat(target.get("name").asText()).isEqualTo("Alice");
     assertThat(reporter.warnings).isEmpty();

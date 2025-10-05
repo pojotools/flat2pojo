@@ -3,7 +3,6 @@ package io.github.pojotools.flat2pojo.core.engine;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import io.github.pojotools.flat2pojo.core.config.MappingConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -11,7 +10,6 @@ import java.util.Comparator;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class ArrayBucketTest {
 
@@ -37,105 +35,27 @@ class ArrayBucketTest {
   @Test
   void upsert_withNewKey_insertsNode() {
     CompositeKey k = key("id1");
-    ObjectNode node = createNode("name", "Alice");
+    ObjectNode node = om.createObjectNode();
 
-    ObjectNode result = bucket.upsert(k, node, MappingConfig.ConflictPolicy.error);
+    ObjectNode result = bucket.upsert(k, node);
 
     assertThat(result).isSameAs(node);
     assertThat(bucket.ordered(List.of())).containsExactly(node);
   }
 
   @Test
-  void upsert_withErrorPolicy_whenNoConflict_mergesFields() {
+  void upsert_withExistingKey_returnsExistingNode() {
     CompositeKey k = key("id1");
-    ObjectNode node1 = createNode("name", "Alice");
-    ObjectNode node2 = createNode("age", "30");
+    ObjectNode first = om.createObjectNode();
+    first.put("name", "Alice");
 
-    bucket.upsert(k, node1, MappingConfig.ConflictPolicy.error);
-    ObjectNode result = bucket.upsert(k, node2, MappingConfig.ConflictPolicy.error);
+    bucket.upsert(k, first);
 
-    assertThat(result).isSameAs(node1);
+    ObjectNode second = om.createObjectNode();
+    ObjectNode result = bucket.upsert(k, second);
+
+    assertThat(result).isSameAs(first);
     assertThat(result.get("name").asText()).isEqualTo("Alice");
-    assertThat(result.get("age").asText()).isEqualTo("30");
-  }
-
-  @Test
-  void upsert_withErrorPolicy_whenConflictExists_throwsException() {
-    CompositeKey k = key("id1");
-    ObjectNode node1 = createNode("name", "Alice");
-    ObjectNode node2 = createNode("name", "Bob");
-
-    bucket.upsert(k, node1, MappingConfig.ConflictPolicy.error);
-
-    assertThatThrownBy(() -> bucket.upsert(k, node2, MappingConfig.ConflictPolicy.error))
-        .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("Conflict on field 'name'")
-        .hasMessageContaining("Alice")
-        .hasMessageContaining("Bob");
-  }
-
-  @Test
-  void upsert_withLastWriteWinsPolicy_overwritesExistingFields() {
-    CompositeKey k = key("id1");
-    ObjectNode node1 = createNode("name", "Alice");
-    ObjectNode node2 = createNode("name", "Bob");
-
-    bucket.upsert(k, node1, MappingConfig.ConflictPolicy.lastWriteWins);
-    ObjectNode result = bucket.upsert(k, node2, MappingConfig.ConflictPolicy.lastWriteWins);
-
-    assertThat(result).isSameAs(node1);
-    assertThat(result.get("name").asText()).isEqualTo("Bob");
-  }
-
-  @Test
-  void upsert_withLastWriteWinsPolicy_mergesNewFieldsAndOverwritesExisting() {
-    CompositeKey k = key("id1");
-    ObjectNode node1 = om.createObjectNode();
-    node1.put("name", "Alice");
-    node1.put("age", "30");
-
-    ObjectNode node2 = om.createObjectNode();
-    node2.put("name", "Bob");
-    node2.put("city", "NYC");
-
-    bucket.upsert(k, node1, MappingConfig.ConflictPolicy.lastWriteWins);
-    ObjectNode result = bucket.upsert(k, node2, MappingConfig.ConflictPolicy.lastWriteWins);
-
-    assertThat(result.get("name").asText()).isEqualTo("Bob");
-    assertThat(result.get("age").asText()).isEqualTo("30");
-    assertThat(result.get("city").asText()).isEqualTo("NYC");
-  }
-
-  @Test
-  void upsert_withFirstWriteWinsPolicy_keepsExistingValues() {
-    CompositeKey k = key("id1");
-    ObjectNode node1 = createNode("name", "Alice");
-    ObjectNode node2 = createNode("name", "Bob");
-
-    bucket.upsert(k, node1, MappingConfig.ConflictPolicy.firstWriteWins);
-    ObjectNode result = bucket.upsert(k, node2, MappingConfig.ConflictPolicy.firstWriteWins);
-
-    assertThat(result).isSameAs(node1);
-    assertThat(result.get("name").asText()).isEqualTo("Alice");
-  }
-
-  @Test
-  void upsert_withMergePolicy_mergesOnlyAbsentFields() {
-    CompositeKey k = key("id1");
-    ObjectNode node1 = om.createObjectNode();
-    node1.put("name", "Alice");
-    node1.put("age", "30");
-
-    ObjectNode node2 = om.createObjectNode();
-    node2.put("name", "Bob");
-    node2.put("city", "NYC");
-
-    bucket.upsert(k, node1, MappingConfig.ConflictPolicy.merge);
-    ObjectNode result = bucket.upsert(k, node2, MappingConfig.ConflictPolicy.merge);
-
-    assertThat(result.get("name").asText()).isEqualTo("Alice");
-    assertThat(result.get("age").asText()).isEqualTo("30");
-    assertThat(result.get("city").asText()).isEqualTo("NYC");
   }
 
   @Test
@@ -144,9 +64,9 @@ class ArrayBucketTest {
     ObjectNode node2 = createNode("id", "1");
     ObjectNode node3 = createNode("id", "2");
 
-    bucket.upsert(key("k3"), node1, MappingConfig.ConflictPolicy.error);
-    bucket.upsert(key("k1"), node2, MappingConfig.ConflictPolicy.error);
-    bucket.upsert(key("k2"), node3, MappingConfig.ConflictPolicy.error);
+    bucket.upsert(key("k3"), node1);
+    bucket.upsert(key("k1"), node2);
+    bucket.upsert(key("k2"), node3);
 
     List<ObjectNode> result = bucket.ordered(List.of());
 
@@ -159,9 +79,9 @@ class ArrayBucketTest {
     ObjectNode node2 = createNode("priority", "1");
     ObjectNode node3 = createNode("priority", "2");
 
-    bucket.upsert(key("k1"), node1, MappingConfig.ConflictPolicy.error);
-    bucket.upsert(key("k2"), node2, MappingConfig.ConflictPolicy.error);
-    bucket.upsert(key("k3"), node3, MappingConfig.ConflictPolicy.error);
+    bucket.upsert(key("k1"), node1);
+    bucket.upsert(key("k2"), node2);
+    bucket.upsert(key("k3"), node3);
 
     Comparator<ObjectNode> comparator = Comparator.comparing(n -> n.get("priority").asInt());
     List<ObjectNode> result = bucket.ordered(List.of(comparator));
@@ -172,7 +92,7 @@ class ArrayBucketTest {
   @Test
   void ordered_withCaching_returnsCachedResultOnSecondCall() {
     ObjectNode node = createNode("id", "1");
-    bucket.upsert(key("k1"), node, MappingConfig.ConflictPolicy.error);
+    bucket.upsert(key("k1"), node);
 
     Comparator<ObjectNode> comparator = Comparator.comparing(n -> n.get("id").asText());
     List<ObjectNode> result1 = bucket.ordered(List.of(comparator));
@@ -186,12 +106,12 @@ class ArrayBucketTest {
     ObjectNode node1 = createNode("id", "1");
     ObjectNode node2 = createNode("id", "2");
 
-    bucket.upsert(key("k1"), node1, MappingConfig.ConflictPolicy.error);
+    bucket.upsert(key("k1"), node1);
 
     Comparator<ObjectNode> comparator = Comparator.comparing(n -> n.get("id").asText());
     List<ObjectNode> result1 = bucket.ordered(List.of(comparator));
 
-    bucket.upsert(key("k2"), node2, MappingConfig.ConflictPolicy.error);
+    bucket.upsert(key("k2"), node2);
     List<ObjectNode> result2 = bucket.ordered(List.of(comparator));
 
     assertThat(result1).hasSize(1);
@@ -204,8 +124,8 @@ class ArrayBucketTest {
     ObjectNode node1 = createNode("priority", "2");
     ObjectNode node2 = createNode("priority", "1");
 
-    bucket.upsert(key("k1"), node1, MappingConfig.ConflictPolicy.error);
-    bucket.upsert(key("k2"), node2, MappingConfig.ConflictPolicy.error);
+    bucket.upsert(key("k1"), node1);
+    bucket.upsert(key("k2"), node2);
 
     Comparator<ObjectNode> comparator = Comparator.comparing(n -> n.get("priority").asInt());
     ArrayNode result = bucket.asArray(om, List.of(comparator));
@@ -220,13 +140,32 @@ class ArrayBucketTest {
     ObjectNode node1 = createNode("id", "first");
     ObjectNode node2 = createNode("id", "second");
 
-    bucket.upsert(key("k1"), node1, MappingConfig.ConflictPolicy.error);
-    bucket.upsert(key("k2"), node2, MappingConfig.ConflictPolicy.error);
+    bucket.upsert(key("k1"), node1);
+    bucket.upsert(key("k2"), node2);
 
     ArrayNode result = bucket.asArray(om, List.of());
 
     assertThat(result).hasSize(2);
     assertThat(result.get(0).get("id").asText()).isEqualTo("first");
     assertThat(result.get(1).get("id").asText()).isEqualTo("second");
+  }
+
+  @Test
+  void upsert_withExistingKey_doesNotInvalidateCache() {
+    CompositeKey k = key("id1");
+    ObjectNode first = om.createObjectNode();
+    first.put("priority", "1");
+
+    bucket.upsert(k, first);
+
+    Comparator<ObjectNode> comparator = Comparator.comparing(n -> n.get("priority").asInt());
+    List<ObjectNode> cached1 = bucket.ordered(List.of(comparator));
+
+    ObjectNode second = om.createObjectNode();
+    bucket.upsert(k, second);
+
+    List<ObjectNode> cached2 = bucket.ordered(List.of(comparator));
+
+    assertThat(cached1).isSameAs(cached2);
   }
 }
