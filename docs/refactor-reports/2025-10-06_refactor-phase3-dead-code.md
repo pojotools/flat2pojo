@@ -1,3 +1,7 @@
+> **SUPERSEDED:** This report has been consolidated into [UNIFIED-REFACTORING-PLAN.md](../UNIFIED-REFACTORING-PLAN.md)
+
+---
+
 # Flat2Pojo Core Refactoring Report - Phase 3
 
 **Date**: 2025-10-06
@@ -30,58 +34,62 @@ All tests passing: ✓
 
 **Reason**: Class not referenced by any production code in flat2pojo-core. Only test usage existed.
 
-**Note**: PathOps.splitPath() was initially flagged for removal but kept due to usage in flat2pojo-benchmarks module (outside scope).
+**Note**: PathOps.splitPath() was initially flagged for removal but kept due to usage in flat2pojo-benchmarks module (
+outside scope).
 
 ### 2. ListRuleProcessor Refactoring
 
 **File**: `/flat2pojo-core/src/main/java/io/github/pojotools/flat2pojo/core/impl/ListRuleProcessor.java`
 
 **Changes**:
+
 - Split `createListElement()` (17 lines → 5 lines) by extracting:
-  - `findBaseObject()` - null check and error handling
-  - `computeRelativePath()` - path computation logic
+    - `findBaseObject()` - null check and error handling
+    - `computeRelativePath()` - path computation logic
 - Split `processRule()` (13 lines → 6 lines) by extracting:
-  - `processListElementCreation()` - element creation and caching
+    - `processListElementCreation()` - element creation and caching
 
 **Before**:
+
 ```java
 private ObjectNode createListElement(...) {
-    final String listPath = rule.path();
-    final String parentListPath = context.hierarchyCache().getParentListPath(listPath);
-    final ObjectNode baseObject = resolveBaseObject(parentListPath, root);
-    if (baseObject == null) {
-      throw new IllegalStateException(...);
-    }
-    final String relativePath = parentListPath == null
-        ? listPath
-        : context.pathResolver().tailAfter(listPath, parentListPath);
-    return groupingEngine.upsertListElementRelative(baseObject, relativePath, rowValues, rule);
+  final String listPath = rule.path();
+  final String parentListPath = context.hierarchyCache().getParentListPath(listPath);
+  final ObjectNode baseObject = resolveBaseObject(parentListPath, root);
+  if (baseObject == null) {
+    throw new IllegalStateException(...);
   }
+  final String relativePath = parentListPath == null
+    ? listPath
+    : context.pathResolver().tailAfter(listPath, parentListPath);
+  return groupingEngine.upsertListElementRelative(baseObject, relativePath, rowValues, rule);
+}
 ```
 
 **After**:
+
 ```java
 private ObjectNode createListElement(...) {
-    final String listPath = rule.path();
-    final String parentListPath = context.hierarchyCache().getParentListPath(listPath);
-    final ObjectNode baseObject = findBaseObject(parentListPath, root);
-    final String relativePath = computeRelativePath(listPath, parentListPath);
-    return groupingEngine.upsertListElementRelative(baseObject, relativePath, rowValues, rule);
-  }
+  final String listPath = rule.path();
+  final String parentListPath = context.hierarchyCache().getParentListPath(listPath);
+  final ObjectNode baseObject = findBaseObject(parentListPath, root);
+  final String relativePath = computeRelativePath(listPath, parentListPath);
+  return groupingEngine.upsertListElementRelative(baseObject, relativePath, rowValues, rule);
+}
 
-  private ObjectNode findBaseObject(final String parentListPath, final ObjectNode root) {
-    final ObjectNode baseObject = resolveBaseObject(parentListPath, root);
-    if (baseObject == null) {
-      throw new IllegalStateException(...);
-    }
-    return baseObject;
+private ObjectNode findBaseObject(final String parentListPath, final ObjectNode root) {
+  final ObjectNode baseObject = resolveBaseObject(parentListPath, root);
+  if (baseObject == null) {
+    throw new IllegalStateException(...);
   }
+  return baseObject;
+}
 
-  private String computeRelativePath(final String listPath, final String parentListPath) {
-    return parentListPath == null
-        ? listPath
-        : context.pathResolver().tailAfter(listPath, parentListPath);
-  }
+private String computeRelativePath(final String listPath, final String parentListPath) {
+  return parentListPath == null
+    ? listPath
+    : context.pathResolver().tailAfter(listPath, parentListPath);
+}
 ```
 
 ### 3. ComparatorBuilder Refactoring
@@ -89,31 +97,34 @@ private ObjectNode createListElement(...) {
 **File**: `/flat2pojo-core/src/main/java/io/github/pojotools/flat2pojo/core/engine/ComparatorBuilder.java`
 
 **Changes**:
+
 - Split `createFieldComparator()` (22 lines → 6 lines) by extracting:
-  - `compareWithNulls()` - null handling logic
-  - `compareValues()` - direction-aware comparison
+    - `compareWithNulls()` - null handling logic
+    - `compareValues()` - direction-aware comparison
 - Split `findValueAtPath()` (15 lines → 5 lines) by extracting:
-  - `traversePath()` - path traversal loop
-  - `isNullOrMissing()` - null check predicate
+    - `traversePath()` - path traversal loop
+    - `isNullOrMissing()` - null check predicate
 
 **Before**:
+
 ```java
 private Comparator<ObjectNode> createFieldComparator(...) {
-    return (nodeA, nodeB) -> {
-      final JsonNode valueA = findValueAtPath(nodeA, relativePath);
-      final JsonNode valueB = findValueAtPath(nodeB, relativePath);
-      final boolean isANull = valueA == null || valueA.isNull();
-      final boolean isBNull = valueB == null || valueB.isNull();
-      if (isANull && isBNull) return 0;
-      if (isANull) return nullsFirst ? -1 : 1;
-      if (isBNull) return nullsFirst ? 1 : -1;
-      final int comparison = compareJsonValues(valueA, valueB);
-      return isAscending ? comparison : -comparison;
-    };
-  }
+  return (nodeA, nodeB) -> {
+    final JsonNode valueA = findValueAtPath(nodeA, relativePath);
+    final JsonNode valueB = findValueAtPath(nodeB, relativePath);
+    final boolean isANull = valueA == null || valueA.isNull();
+    final boolean isBNull = valueB == null || valueB.isNull();
+    if (isANull && isBNull) return 0;
+    if (isANull) return nullsFirst ? -1 : 1;
+    if (isBNull) return nullsFirst ? 1 : -1;
+    final int comparison = compareJsonValues(valueA, valueB);
+    return isAscending ? comparison : -comparison;
+  };
+}
 ```
 
 **After**:
+
 ```java
 private Comparator<ObjectNode> createFieldComparator(...) {
     return (nodeA, nodeB) -> {
@@ -143,11 +154,13 @@ private Comparator<ObjectNode> createFieldComparator(...) {
 **File**: `/flat2pojo-core/src/main/java/io/github/pojotools/flat2pojo/core/engine/ArrayFinalizer.java`
 
 **Changes**:
+
 - Split `finalizeArrayNode()` (14 lines → 4 lines) by extracting:
-  - `applyBucketOrdering()` - bucket sort/dedupe logic
-  - `pushChildrenToStack()` - stack traversal continuation
+    - `applyBucketOrdering()` - bucket sort/dedupe logic
+    - `pushChildrenToStack()` - stack traversal continuation
 
 **Before**:
+
 ```java
 private void finalizeArrayNode(final ArrayNode arrayNode, final Deque<JsonNode> stack) {
     final ArrayBucket bucket = buckets.get(arrayNode);
@@ -165,6 +178,7 @@ private void finalizeArrayNode(final ArrayNode arrayNode, final Deque<JsonNode> 
 ```
 
 **After**:
+
 ```java
 private void finalizeArrayNode(final ArrayNode arrayNode, final Deque<JsonNode> stack) {
     applyBucketOrdering(arrayNode);
@@ -193,29 +207,32 @@ private void finalizeArrayNode(final ArrayNode arrayNode, final Deque<JsonNode> 
 **File**: `/flat2pojo-core/src/main/java/io/github/pojotools/flat2pojo/core/impl/RowGraphAssembler.java`
 
 **Changes**:
+
 - Extracted negative conditional `!underAnyList && !skipped` into intention-revealing helper
 - Added `isEligibleForDirectWrite()` to express positive intent
 
 **Before**:
+
 ```java
 private boolean isDirectValuePath(final String path, final Set<String> skippedListPaths) {
-    final boolean underAnyList = context.hierarchyCache().isUnderAnyList(path);
-    final boolean skipped = context.pathResolver().isUnderAny(path, skippedListPaths);
-    return !underAnyList && !skipped;
-  }
+  final boolean underAnyList = context.hierarchyCache().isUnderAnyList(path);
+  final boolean skipped = context.pathResolver().isUnderAny(path, skippedListPaths);
+  return !underAnyList && !skipped;
+}
 ```
 
 **After**:
+
 ```java
 private boolean isDirectValuePath(final String path, final Set<String> skippedListPaths) {
-    return isEligibleForDirectWrite(path, skippedListPaths);
-  }
+  return isEligibleForDirectWrite(path, skippedListPaths);
+}
 
-  private boolean isEligibleForDirectWrite(final String path, final Set<String> skippedListPaths) {
-    final boolean underAnyList = context.hierarchyCache().isUnderAnyList(path);
-    final boolean skipped = context.pathResolver().isUnderAny(path, skippedListPaths);
-    return !underAnyList && !skipped;
-  }
+private boolean isEligibleForDirectWrite(final String path, final Set<String> skippedListPaths) {
+  final boolean underAnyList = context.hierarchyCache().isUnderAnyList(path);
+  final boolean skipped = context.pathResolver().isUnderAny(path, skippedListPaths);
+  return !underAnyList && !skipped;
+}
 ```
 
 ### 6. Newspaper Ordering
@@ -223,6 +240,7 @@ private boolean isDirectValuePath(final String path, final Set<String> skippedLi
 **File**: `/flat2pojo-core/src/main/java/io/github/pojotools/flat2pojo/core/impl/RowGraphAssembler.java`
 
 **Changes**:
+
 - Reordered methods to place public API methods (`processRow`, `materialize`) before private helpers
 - Callers now appear above callees for top-to-bottom readability
 
@@ -234,10 +252,10 @@ private boolean isDirectValuePath(final String path, final Set<String> skippedLi
 
 ### Removed Items
 
-| Item | Location | Reason Safe to Remove | Impact |
-|------|----------|----------------------|---------|
-| PathUtil class | `/core/paths/PathUtil.java` | Not imported by any production code; only test usage | Removed entire class (62 lines) |
-| PathUtilTest class | `/test/.../PathUtilTest.java` | Test for removed class | Removed test file (186 lines) |
+| Item               | Location                      | Reason Safe to Remove                                | Impact                          |
+|--------------------|-------------------------------|------------------------------------------------------|---------------------------------|
+| PathUtil class     | `/core/paths/PathUtil.java`   | Not imported by any production code; only test usage | Removed entire class (62 lines) |
+| PathUtilTest class | `/test/.../PathUtilTest.java` | Test for removed class                               | Removed test file (186 lines)   |
 
 **Total Lines Removed**: 248 lines
 
@@ -251,8 +269,8 @@ private boolean isDirectValuePath(final String path, final Set<String> skippedLi
 
 ### Items Initially Considered But Kept
 
-| Item | Reason Kept |
-|------|-------------|
+| Item                | Reason Kept                                         |
+|---------------------|-----------------------------------------------------|
 | PathOps.splitPath() | Used in flat2pojo-benchmarks module (outside scope) |
 
 ---
@@ -261,28 +279,28 @@ private boolean isDirectValuePath(final String path, final Set<String> skippedLi
 
 ### Entry-Point Flow Functions
 
-| Class | Method | Lines Before | Lines After | Indent Before | Indent After | Params | Improvement |
-|-------|--------|--------------|-------------|---------------|--------------|--------|-------------|
+| Class                 | Method                       | Lines Before | Lines After | Indent Before | Indent After | Params | Improvement                  |
+|-----------------------|------------------------------|--------------|-------------|---------------|--------------|--------|------------------------------|
 | **ListRuleProcessor** |
-| | processRule | 13 | 6 | 3 | 2 | 4 | Split responsibility |
-| | createListElement | 17 | 5 | 4 | 3 | 3 | **Major improvement** |
-| | *findBaseObject* | - | 7 | - | 3 | 2 | New helper |
-| | *computeRelativePath* | - | 4 | - | 2 | 2 | New helper |
-| | *processListElementCreation* | - | 8 | - | 3 | 4 | New helper |
+|                       | processRule                  | 13           | 6           | 3             | 2            | 4      | Split responsibility         |
+|                       | createListElement            | 17           | 5           | 4             | 3            | 3      | **Major improvement**        |
+|                       | *findBaseObject*             | -            | 7           | -             | 3            | 2      | New helper                   |
+|                       | *computeRelativePath*        | -            | 4           | -             | 2            | 2      | New helper                   |
+|                       | *processListElementCreation* | -            | 8           | -             | 3            | 4      | New helper                   |
 | **ComparatorBuilder** |
-| | createFieldComparator | 22 | 6 | 5 | 3 | 3 | **Major improvement** |
-| | *compareWithNulls* | - | 17 | - | 4 | 4 | New helper |
-| | *compareValues* | - | 4 | - | 2 | 3 | New helper |
-| | findValueAtPath | 15 | 5 | 4 | 3 | 2 | **Major improvement** |
-| | *traversePath* | - | 11 | - | 4 | 2 | New helper |
-| | *isNullOrMissing* | - | 3 | - | 2 | 1 | New helper |
-| **ArrayFinalizer** |
-| | finalizeArrayNode | 14 | 4 | 4 | 2 | 2 | **Major improvement** |
-| | *applyBucketOrdering* | - | 11 | - | 3 | 1 | New helper |
-| | *pushChildrenToStack* | - | 5 | - | 3 | 2 | New helper |
+|                       | createFieldComparator        | 22           | 6           | 5             | 3            | 3      | **Major improvement**        |
+|                       | *compareWithNulls*           | -            | 17          | -             | 4            | 4      | New helper                   |
+|                       | *compareValues*              | -            | 4           | -             | 2            | 3      | New helper                   |
+|                       | findValueAtPath              | 15           | 5           | 4             | 3            | 2      | **Major improvement**        |
+|                       | *traversePath*               | -            | 11          | -             | 4            | 2      | New helper                   |
+|                       | *isNullOrMissing*            | -            | 3           | -             | 2            | 1      | New helper                   |
+| **ArrayFinalizer**    |
+|                       | finalizeArrayNode            | 14           | 4           | 4             | 2            | 2      | **Major improvement**        |
+|                       | *applyBucketOrdering*        | -            | 11          | -             | 3            | 1      | New helper                   |
+|                       | *pushChildrenToStack*        | -            | 5           | -             | 3            | 2      | New helper                   |
 | **RowGraphAssembler** |
-| | isDirectValuePath | 5 | 3 | 3 | 2 | 2 | Delegation |
-| | *isEligibleForDirectWrite* | - | 5 | - | 3 | 2 | New helper (positive intent) |
+|                       | isDirectValuePath            | 5            | 3           | 3             | 2            | 2      | Delegation                   |
+|                       | *isEligibleForDirectWrite*   | -            | 5           | -             | 3            | 2      | New helper (positive intent) |
 
 ### Summary Statistics
 
@@ -439,20 +457,20 @@ sequenceDiagram
 ### Achieved Goals
 
 1. **Dead Code Elimination**: ✓
-   - Removed PathUtil class (62 lines)
-   - Removed PathUtilTest (186 lines)
-   - Total: 248 lines eliminated
+    - Removed PathUtil class (62 lines)
+    - Removed PathUtilTest (186 lines)
+    - Total: 248 lines eliminated
 
 2. **Newspaper Layout**: ✓
-   - Public API methods at top
-   - Helpers immediately below their callers
-   - Top-to-bottom readability achieved
+    - Public API methods at top
+    - Helpers immediately below their callers
+    - Top-to-bottom readability achieved
 
 3. **Small Function Targets (~4-6 lines)**: ✓
-   - 4 major functions refactored (17→5 avg)
-   - 11 new helpers extracted
-   - 82% of new helpers meet guideline
-   - Max function length in entry-point flow: 11 lines (down from 22)
+    - 4 major functions refactored (17→5 avg)
+    - 11 new helpers extracted
+    - 82% of new helpers meet guideline
+    - Max function length in entry-point flow: 11 lines (down from 22)
 
 ### SOLID/Clean Code Principles Applied
 
@@ -510,7 +528,8 @@ $ mvn -q clean verify -pl flat2pojo-core
 
 ## Final Summary
 
-This refactoring successfully transformed the flat2pojo-core module from the entry point `Flat2PojoCore#convertAll` through the entire reachable call graph. The work focused on:
+This refactoring successfully transformed the flat2pojo-core module from the entry point `Flat2PojoCore#convertAll`
+through the entire reachable call graph. The work focused on:
 
 1. **Eliminating waste**: 248 lines of dead code removed
 2. **Improving readability**: Functions reduced from 22 lines max to 11 lines max (50% reduction)
@@ -519,4 +538,6 @@ This refactoring successfully transformed the flat2pojo-core module from the ent
 5. **Positive intent**: Replaced negative conditionals with intention-revealing helpers
 6. **Zero regressions**: Clean build, all tests passing
 
-The codebase now reads like a well-structured narrative, with high-level intent at the top and progressively more detail as you drill down. Function size targets (~4-6 lines) were achieved for 82% of new helpers, with the remainder staying well below the previous highs of 22 lines.
+The codebase now reads like a well-structured narrative, with high-level intent at the top and progressively more detail
+as you drill down. Function size targets (~4-6 lines) were achieved for 82% of new helpers, with the remainder staying
+well below the previous highs of 22 lines.
