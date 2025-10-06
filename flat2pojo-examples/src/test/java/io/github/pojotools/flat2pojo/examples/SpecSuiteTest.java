@@ -17,19 +17,19 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class SpecSuiteTest {
-  ObjectMapper om;
-  Flat2Pojo f2p;
+  private ObjectMapper objectMapper;
+  private Flat2Pojo converter;
 
   @BeforeEach
   void init() {
-    om = TestSupport.om();
-    f2p = TestSupport.mapper(om);
+    objectMapper = TestSupport.createObjectMapper();
+    converter = TestSupport.createConverter(objectMapper);
   }
 
   @Test
   void test01_singleRow_noLists() {
     MappingConfig cfg =
-        TestSupport.cfgFromYaml(
+        TestSupport.loadMappingConfigFromYaml(
             """
       separator: "/"
       allowSparseRows: false
@@ -39,10 +39,10 @@ class SpecSuiteTest {
     List<Map<String, ?>> rows =
         List.of(Map.of("workflow/isTerminated", false, "metadata/name", "Alpha"));
 
-    var out = TestSupport.first(f2p.convertAll(rows, ImmutableProductRoot.class, cfg));
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, ImmutableProductRoot.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-        om,
+      objectMapper,
         """
       {
         "workflow": { "isTerminated": false },
@@ -57,7 +57,7 @@ class SpecSuiteTest {
   void test02_sparse_default_absent_fields() {
     // No schema → absent (not null)
     MappingConfig cfg =
-        TestSupport.cfgFromYaml(
+        TestSupport.loadMappingConfigFromYaml(
             """
       separator: "/"
       allowSparseRows: false
@@ -65,10 +65,10 @@ class SpecSuiteTest {
     """);
 
     List<Map<String, ?>> rows = List.of(Map.of("metadata/name", "Alpha"));
-    var out = TestSupport.first(f2p.convertAll(rows, ImmutableProductRoot.class, cfg));
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, ImmutableProductRoot.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-        om,
+      objectMapper,
         """
       {
         "metadata": { "name": "Alpha" },
@@ -81,7 +81,7 @@ class SpecSuiteTest {
   @Test
   void test03_sparseRows_allowed() {
     MappingConfig cfg =
-        TestSupport.cfgFromYaml(
+        TestSupport.loadMappingConfigFromYaml(
             """
       separator: "/"
       allowSparseRows: true
@@ -89,10 +89,10 @@ class SpecSuiteTest {
     """);
 
     List<Map<String, ?>> rows = List.of(Map.of("metadata/name", "Alpha"));
-    var out = TestSupport.first(f2p.convertAll(rows, ImmutableProductRoot.class, cfg));
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, ImmutableProductRoot.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-        om,
+      objectMapper,
         """
       {
         "metadata": { "name": "Alpha" },
@@ -105,7 +105,7 @@ class SpecSuiteTest {
   @Test
   void test04_rootGrouping_multipleRoots() {
     MappingConfig cfg =
-        TestSupport.cfgFromYaml(
+        TestSupport.loadMappingConfigFromYaml(
             """
       separator: "/"
       allowSparseRows: false
@@ -120,10 +120,10 @@ class SpecSuiteTest {
             Map.of("referencedProductId/identifier", "P-1", "definitions/id/identifier", "D-1"),
             Map.of("referencedProductId/identifier", "P-2", "definitions/id/identifier", "D-2"));
 
-    var out = f2p.convertAll(rows, ImmutableProductRoot.class, cfg);
+    var out = converter.convertAll(rows, ImmutableProductRoot.class, cfg);
 
     PojoJsonAssert.assertPojoJsonEquals(
-        om,
+      objectMapper,
         """
       [
         {
@@ -142,7 +142,7 @@ class SpecSuiteTest {
   @Test
   void test05_hierarchical_grouping_tasks_comments() {
     MappingConfig cfg =
-        TestSupport.cfgFromYaml(
+        TestSupport.loadMappingConfigFromYaml(
             """
       separator: "/"
       allowSparseRows: false
@@ -195,10 +195,10 @@ class SpecSuiteTest {
                 "definitions/tracker/tasks/comments/loggedAt",
                 "2025-01-02T01:00:00Z"));
 
-    var out = TestSupport.first(f2p.convertAll(rows, ImmutableProductRoot.class, cfg));
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, ImmutableProductRoot.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-        om,
+      objectMapper,
         """
       {
         "referencedProductId": { "identifier": "P-1" },
@@ -234,7 +234,7 @@ class SpecSuiteTest {
   @Test
   void test06_cartesian_with_sibling_comments_full_assert() {
     MappingConfig cfg =
-        TestSupport.cfgFromYaml(
+        TestSupport.loadMappingConfigFromYaml(
             """
       separator: "/"
       allowSparseRows: false
@@ -277,12 +277,12 @@ class SpecSuiteTest {
       }
     }
 
-    var out = TestSupport.first(f2p.convertAll(rows, ImmutableProductRoot.class, cfg));
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, ImmutableProductRoot.class, cfg));
 
     // Full expected tree (two definitions, each with 3 tracker comments + 3 tasks each with 2
     // comments)
     PojoJsonAssert.assertPojoJsonEquals(
-        om,
+      objectMapper,
         """
       {
         "referencedProductId": { "identifier": "P-1" },
@@ -362,7 +362,7 @@ class SpecSuiteTest {
   @Test
   void test07_primitive_split_weekdays() {
     MappingConfig cfg =
-        TestSupport.cfgFromYaml(
+        TestSupport.loadMappingConfigFromYaml(
             """
       separator: "/"
       allowSparseRows: false
@@ -380,10 +380,10 @@ class SpecSuiteTest {
                 "definitions/id/identifier", "D-1",
                 "definitions/schedule/weekdays", "MON, TUE, WED"));
 
-    var out = TestSupport.first(f2p.convertAll(rows, ImmutableProductRoot.class, cfg));
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, ImmutableProductRoot.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-        om,
+      objectMapper,
         """
       {
         "definitions": [
@@ -400,7 +400,7 @@ class SpecSuiteTest {
   @Test
   void test08_jackson_first_coercions_passthrough_values() {
     MappingConfig cfg =
-        TestSupport.cfgFromYaml(
+        TestSupport.loadMappingConfigFromYaml(
             """
       separator: "/"
       allowSparseRows: false
@@ -414,10 +414,10 @@ class SpecSuiteTest {
                 "status/type", "covenantproduct",
                 "dates/modifiedAt", "2025-01-01T01:23:45.000Z"));
 
-    var out = TestSupport.first(f2p.convertAll(rows, JsonNode.class, cfg));
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-        om,
+      objectMapper,
         """
       {
         "flags": { "isUser": "yes" },
@@ -431,7 +431,7 @@ class SpecSuiteTest {
   @Test
   void test09_orderBy_basic() {
     MappingConfig cfg =
-        TestSupport.cfgFromYaml(
+        TestSupport.loadMappingConfigFromYaml(
             """
       separator: "/"
       allowSparseRows: false
@@ -450,10 +450,10 @@ class SpecSuiteTest {
             Map.of("definitions/id/identifier", "D-1", "definitions/name", "Alpha"),
             Map.of("definitions/id/identifier", "D-3"));
 
-    var out = TestSupport.first(f2p.convertAll(rows, ImmutableProductRoot.class, cfg));
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, ImmutableProductRoot.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-        om,
+      objectMapper,
         """
       {
         "definitions": [
@@ -469,7 +469,7 @@ class SpecSuiteTest {
   @Test
   void test10_dedupe_merge() {
     MappingConfig cfg =
-        TestSupport.cfgFromYaml(
+        TestSupport.loadMappingConfigFromYaml(
             """
       separator: "/"
       allowSparseRows: false
@@ -485,10 +485,10 @@ class SpecSuiteTest {
             Map.of("definitions/id/identifier", "D-1", "definitions/name", "Alpha"),
             Map.of("definitions/id/identifier", "D-1", "definitions/audit/modifiedBy", "me"));
 
-    var out = TestSupport.first(f2p.convertAll(rows, ImmutableProductRoot.class, cfg));
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, ImmutableProductRoot.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-        om,
+      objectMapper,
         """
       {
         "definitions": [
@@ -506,7 +506,7 @@ class SpecSuiteTest {
   @Test
   void test11_conflict_lastWriteWins() {
     MappingConfig cfg =
-        TestSupport.cfgFromYaml(
+        TestSupport.loadMappingConfigFromYaml(
             """
       separator: "/"
       allowSparseRows: false
@@ -522,10 +522,10 @@ class SpecSuiteTest {
             Map.of("definitions/id/identifier", "D-1", "definitions/name", "Alpha"),
             Map.of("definitions/id/identifier", "D-1", "definitions/name", "Beta"));
 
-    var out = TestSupport.first(f2p.convertAll(rows, ImmutableProductRoot.class, cfg));
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, ImmutableProductRoot.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-        om,
+      objectMapper,
         """
       {
         "definitions": [
@@ -539,7 +539,7 @@ class SpecSuiteTest {
   @Test
   void test12_conflict_error_throws() {
     MappingConfig cfg =
-        TestSupport.cfgFromYaml(
+        TestSupport.loadMappingConfigFromYaml(
             """
       separator: "/"
       allowSparseRows: false
@@ -555,14 +555,14 @@ class SpecSuiteTest {
             Map.of("definitions/id/identifier", "D-1", "definitions/name", "Alpha"),
             Map.of("definitions/id/identifier", "D-1", "definitions/name", "Beta"));
 
-    assertThatThrownBy(() -> f2p.convertAll(rows, JsonNode.class, cfg))
+    assertThatThrownBy(() -> converter.convertAll(rows, JsonNode.class, cfg))
         .isInstanceOf(RuntimeException.class);
   }
 
   @Test
   void test13_unknown_paths_ignored() {
     MappingConfig cfg =
-        TestSupport.cfgFromYaml(
+        TestSupport.loadMappingConfigFromYaml(
             """
       separator: "/"
       allowSparseRows: false
@@ -571,10 +571,10 @@ class SpecSuiteTest {
 
     List<Map<String, ?>> rows = List.of(Map.of("metadata/name", "Alpha", "unknown/field", "noise"));
 
-    var out = TestSupport.first(f2p.convertAll(rows, ImmutableProductRoot.class, cfg));
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, ImmutableProductRoot.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-        om,
+      objectMapper,
         """
       {
         "metadata": { "name": "Alpha" },
@@ -587,7 +587,7 @@ class SpecSuiteTest {
   @Test
   void test14_invalid_hierarchy_rejected() {
     MappingConfig cfg =
-        TestSupport.cfgFromYaml(
+        TestSupport.loadMappingConfigFromYaml(
             """
       separator: "/"
       allowSparseRows: false
@@ -606,7 +606,7 @@ class SpecSuiteTest {
   @Test
   void test15_blank_to_null_collapsing() {
     MappingConfig cfg =
-        TestSupport.cfgFromYaml(
+        TestSupport.loadMappingConfigFromYaml(
             """
       separator: "/"
       allowSparseRows: false
@@ -616,10 +616,10 @@ class SpecSuiteTest {
 
     List<Map<String, ?>> rows = List.of(Map.of("metadata/description", ""));
 
-    JsonNode out = TestSupport.first(f2p.convertAll(rows, JsonNode.class, cfg));
+    JsonNode out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-        om, """
+      objectMapper, """
       { "metadata": { "description": null } }
     """, out);
   }
@@ -627,7 +627,7 @@ class SpecSuiteTest {
   @Test
   void test16_streaming_many_roots_full_shape() {
     MappingConfig cfg =
-        TestSupport.cfgFromYaml(
+        TestSupport.loadMappingConfigFromYaml(
             """
       separator: "/"
       allowSparseRows: false
@@ -646,10 +646,10 @@ class SpecSuiteTest {
             Map.of("referencedProductId/identifier", "P-3", "definitions/id/identifier", "D-1"),
             Map.of("referencedProductId/identifier", "P-3", "definitions/id/identifier", "D-2"));
 
-    var out = f2p.stream(rows.iterator(), ImmutableProductRoot.class, cfg).toList();
+    var out = converter.stream(rows.iterator(), ImmutableProductRoot.class, cfg).toList();
 
     PojoJsonAssert.assertPojoJsonEquals(
-        om,
+      objectMapper,
         """
       [
         {
@@ -681,7 +681,7 @@ class SpecSuiteTest {
   @Test
   void test17_null_keyPaths_should_skip_list_entries() {
     MappingConfig cfg =
-        TestSupport.cfgFromYaml(
+        TestSupport.loadMappingConfigFromYaml(
             """
             separator: "/"
             allowSparseRows: false
@@ -711,10 +711,10 @@ class SpecSuiteTest {
                 30));
     // Note: definitions/tracker/tasks/taskDate is missing (null) → skip the task entry
 
-    var out = TestSupport.first(f2p.convertAll(rows, JsonNode.class, cfg));
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-        om,
+      objectMapper,
         """
             {
               "referencedProductId": { "identifier": "P-1" },
@@ -733,7 +733,7 @@ class SpecSuiteTest {
   @Test
   void test18_mixed_keyPaths_some_present_some_absent() {
     MappingConfig cfg =
-        TestSupport.cfgFromYaml(
+        TestSupport.loadMappingConfigFromYaml(
             """
             separator: "/"
             allowSparseRows: false
@@ -787,10 +787,10 @@ class SpecSuiteTest {
                 // Note: comments/loggedAt is missing, so comment should be skipped
                 ));
 
-    var out = TestSupport.first(f2p.convertAll(rows, JsonNode.class, cfg));
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-        om,
+      objectMapper,
         """
             {
               "referencedProductId": { "identifier": "P-1" },
@@ -847,7 +847,7 @@ class SpecSuiteTest {
   @Test
   void test19_deeply_nested_keyPath_skipping() {
     MappingConfig cfg =
-        TestSupport.cfgFromYaml(
+        TestSupport.loadMappingConfigFromYaml(
             """
             separator: "/"
             allowSparseRows: false
@@ -888,10 +888,10 @@ class SpecSuiteTest {
                 // Note: modules/name is missing -> entire modules subtree skipped
                 ));
 
-    var out = TestSupport.first(f2p.convertAll(rows, JsonNode.class, cfg));
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-        om,
+      objectMapper,
         """
             {
               "definitions": [
@@ -936,7 +936,7 @@ class SpecSuiteTest {
   @Test
   void test20_conflict_policy_firstWriteWins() {
     MappingConfig cfg =
-        TestSupport.cfgFromYaml(
+        TestSupport.loadMappingConfigFromYaml(
             """
             separator: "/"
             allowSparseRows: false
@@ -952,10 +952,10 @@ class SpecSuiteTest {
             Map.of("definitions/id/identifier", "D-1", "definitions/name", "FirstName"),
             Map.of("definitions/id/identifier", "D-1", "definitions/name", "SecondName"));
 
-    var out = TestSupport.first(f2p.convertAll(rows, ImmutableProductRoot.class, cfg));
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, ImmutableProductRoot.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-        om,
+      objectMapper,
         """
         {
           "definitions": [
@@ -969,7 +969,7 @@ class SpecSuiteTest {
   @Test
   void test21_primitive_types_and_blanks_as_nulls() {
     MappingConfig cfg =
-        TestSupport.cfgFromYaml(
+        TestSupport.loadMappingConfigFromYaml(
             """
             separator: "/"
             allowSparseRows: false
@@ -986,10 +986,10 @@ class SpecSuiteTest {
                 "text/emptyField", "",
                 "text/validField", "value"));
 
-    JsonNode out = TestSupport.first(f2p.convertAll(rows, JsonNode.class, cfg));
+    JsonNode out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-        om,
+      objectMapper,
         """
         {
           "numbers": {
@@ -1009,7 +1009,7 @@ class SpecSuiteTest {
   @Test
   void test22_primitive_split_with_blanks() {
     MappingConfig cfg =
-        TestSupport.cfgFromYaml(
+        TestSupport.loadMappingConfigFromYaml(
             """
             separator: "/"
             allowSparseRows: false
@@ -1028,10 +1028,10 @@ class SpecSuiteTest {
                 "definitions/id/identifier", "D-1",
                 "definitions/tags", "tag1, , tag3,"));
 
-    var out = TestSupport.first(f2p.convertAll(rows, JsonNode.class, cfg));
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-        om,
+      objectMapper,
         """
         {
           "definitions": [
@@ -1048,7 +1048,7 @@ class SpecSuiteTest {
   @Test
   void test23_complex_separator_and_deep_paths() {
     MappingConfig cfg =
-        TestSupport.cfgFromYaml(
+        TestSupport.loadMappingConfigFromYaml(
             """
             separator: "::"
             allowSparseRows: false
@@ -1062,10 +1062,10 @@ class SpecSuiteTest {
                 "simple", "noSeparator",
                 "a::b::c::d::e::f", "veryDeep"));
 
-    JsonNode out = TestSupport.first(f2p.convertAll(rows, JsonNode.class, cfg));
+    JsonNode out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-        om,
+      objectMapper,
         """
         {
           "root": {
@@ -1095,7 +1095,7 @@ class SpecSuiteTest {
   @Test
   void test24_merge_conflict_with_incompatible_types() {
     MappingConfig cfg =
-        TestSupport.cfgFromYaml(
+        TestSupport.loadMappingConfigFromYaml(
             """
             separator: "/"
             allowSparseRows: false
@@ -1111,11 +1111,11 @@ class SpecSuiteTest {
             Map.of("definitions/id/identifier", "D-1", "definitions/conflictField", "stringValue"),
             Map.of("definitions/id/identifier", "D-1", "definitions/conflictField", 123));
 
-    var out = TestSupport.first(f2p.convertAll(rows, JsonNode.class, cfg));
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
 
     // When types are incompatible, merge should fall back to lastWriteWins
     PojoJsonAssert.assertPojoJsonEquals(
-        om,
+      objectMapper,
         """
         {
           "definitions": [
@@ -1132,7 +1132,7 @@ class SpecSuiteTest {
   @Test
   void test25_deep_merge_nested_objects() {
     MappingConfig cfg =
-        TestSupport.cfgFromYaml(
+        TestSupport.loadMappingConfigFromYaml(
             """
             separator: "/"
             allowSparseRows: false
@@ -1152,10 +1152,10 @@ class SpecSuiteTest {
                 "definitions/id/identifier", "D-1",
                 "definitions/metadata/field2", "value2"));
 
-    var out = TestSupport.first(f2p.convertAll(rows, JsonNode.class, cfg));
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-        om,
+      objectMapper,
         """
         {
           "definitions": [
@@ -1175,7 +1175,7 @@ class SpecSuiteTest {
   @Test
   void test26_ordering_with_cache_hit() {
     MappingConfig cfg =
-        TestSupport.cfgFromYaml(
+        TestSupport.loadMappingConfigFromYaml(
             """
             separator: "/"
             allowSparseRows: false
@@ -1194,8 +1194,8 @@ class SpecSuiteTest {
             Map.of("definitions/id/identifier", "D-3", "definitions/priority", 2));
 
     // Convert multiple times to trigger cache hit scenarios
-    var out1 = TestSupport.first(f2p.convertAll(rows, JsonNode.class, cfg));
-    var out2 = TestSupport.first(f2p.convertAll(rows, JsonNode.class, cfg));
+    var out1 = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
+    var out2 = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
 
     String expectedJson = """
         {
@@ -1208,14 +1208,14 @@ class SpecSuiteTest {
         """;
 
     // Both conversions should produce identical results (cache works correctly)
-    PojoJsonAssert.assertPojoJsonEquals(om, expectedJson, out1);
-    PojoJsonAssert.assertPojoJsonEquals(om, expectedJson, out2);
+    PojoJsonAssert.assertPojoJsonEquals(objectMapper, expectedJson, out1);
+    PojoJsonAssert.assertPojoJsonEquals(objectMapper, expectedJson, out2);
   }
 
   @Test
   void test27_order_by_nulls_handling() {
     MappingConfig cfg =
-        TestSupport.cfgFromYaml(
+        TestSupport.loadMappingConfigFromYaml(
             """
             separator: "/"
             allowSparseRows: false
@@ -1234,10 +1234,10 @@ class SpecSuiteTest {
             Map.of("definitions/id/identifier", "D-2"),  // null priority
             Map.of("definitions/id/identifier", "D-3", "definitions/priority", 1));
 
-    var out = TestSupport.first(f2p.convertAll(rows, JsonNode.class, cfg));
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-        om,
+      objectMapper,
         """
         {
           "definitions": [
@@ -1253,7 +1253,7 @@ class SpecSuiteTest {
   @Test
   void test28_multiple_field_conflicts_and_iterations() {
     MappingConfig cfg =
-        TestSupport.cfgFromYaml(
+        TestSupport.loadMappingConfigFromYaml(
             """
             separator: "/"
             allowSparseRows: false
@@ -1281,10 +1281,10 @@ class SpecSuiteTest {
                 "definitions/nested/subfield3", "sub3",
                 "definitions/nested/subfield4", "sub4"));
 
-    var out = TestSupport.first(f2p.convertAll(rows, JsonNode.class, cfg));
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-        om,
+      objectMapper,
         """
         {
           "definitions": [
@@ -1312,7 +1312,7 @@ class SpecSuiteTest {
   @Test
   void test29_null_and_empty_handling_edge_cases() {
     MappingConfig cfg =
-        TestSupport.cfgFromYaml(
+        TestSupport.loadMappingConfigFromYaml(
             """
             separator: "/"
             allowSparseRows: true
@@ -1328,10 +1328,10 @@ class SpecSuiteTest {
         Map.of("definitions/id/identifier", "D-2", "definitions/emptyField", ""),
         Map.of("definitions/id/identifier", "D-4", "definitions/blankField", "   "));
 
-    var out = TestSupport.first(f2p.convertAll(rows, JsonNode.class, cfg));
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-        om,
+      objectMapper,
         """
         {
           "definitions": [
@@ -1347,7 +1347,7 @@ class SpecSuiteTest {
   @Test
   void test30_complex_path_traversal_edge_cases() {
     MappingConfig cfg =
-        TestSupport.cfgFromYaml(
+        TestSupport.loadMappingConfigFromYaml(
             """
             separator: "::"
             allowSparseRows: false
@@ -1372,10 +1372,10 @@ class SpecSuiteTest {
                 "items::tags", "tagA|  tagB  |tagC",
                 "level1::field2", "value2"));
 
-    var out = TestSupport.first(f2p.convertAll(rows, JsonNode.class, cfg));
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-        om,
+      objectMapper,
         """
         {
           "items": [
@@ -1402,7 +1402,7 @@ class SpecSuiteTest {
   @Test
   void test31_multiple_comparator_edge_cases() {
     MappingConfig cfg =
-        TestSupport.cfgFromYaml(
+        TestSupport.loadMappingConfigFromYaml(
             """
             separator: "/"
             allowSparseRows: false
@@ -1428,10 +1428,10 @@ class SpecSuiteTest {
             Map.of("definitions/id/identifier", "D-4", "definitions/category", "A", "definitions/priority", 3, "definitions/name", "Delta"),
             Map.of("definitions/id/identifier", "D-5", "definitions/name", "Epsilon"));
 
-    var out = TestSupport.first(f2p.convertAll(rows, JsonNode.class, cfg));
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-        om,
+      objectMapper,
         """
         {
           "definitions": [
@@ -1449,7 +1449,7 @@ class SpecSuiteTest {
   @Test
   void test32_empty_and_single_element_lists() {
     MappingConfig cfg =
-        TestSupport.cfgFromYaml(
+        TestSupport.loadMappingConfigFromYaml(
             """
             separator: "/"
             allowSparseRows: false
@@ -1467,10 +1467,10 @@ class SpecSuiteTest {
             Map.of("definitions/id/identifier", "D-1", "definitions/priority", 5),
             Map.of("other/field", "ignored"));  // This won't create a definition
 
-    var out = TestSupport.first(f2p.convertAll(rows, JsonNode.class, cfg));
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-        om,
+      objectMapper,
         """
         {
           "definitions": [

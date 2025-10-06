@@ -26,7 +26,7 @@ public final class Flat2PojoCore implements Flat2Pojo {
   @Override
   public <T> Optional<T> convertOptional(Map<String, ?> flatRow, Class<T> type, MappingConfig config) {
     List<T> all = convertAll(List.of(flatRow), type, config);
-    return all.isEmpty() ? java.util.Optional.empty() : java.util.Optional.of(all.getFirst());
+    return all.isEmpty() ? Optional.empty() : Optional.of(all.getFirst());
   }
 
   /**

@@ -83,5 +83,11 @@ public final class GroupingEngine {
   public void finalizeArrays(final ObjectNode node) {
     final ArrayFinalizer finalizer = new ArrayFinalizer(buckets, comparators);
     finalizer.finalizeArrays(node);
+    clearBucketState();
+  }
+
+  private void clearBucketState() {
+    buckets.clear();
+    comparators.clear();
   }
 }
