@@ -52,7 +52,8 @@ For individual conversions or testing:
 
 ```java
 Map<String, Object> singleRow = getSingleRow();
-MyPojo result = converter.convert(singleRow, MyPojo.class, config);
+Optional<MyPojo> result = converter.convertOptional(singleRow, MyPojo.class, config);
+result.ifPresent(this::processResult);
 ```
 
 ## Memory Management
@@ -129,7 +130,7 @@ converter.convertAll(batch, MyPojo.class, config);
 
 // ❌ Bad: Row-by-row processing
 for (Map<String, Object> row : rows) {
-    converter.convert(row, MyPojo.class, config); // Inefficient
+    converter.convertOptional(row, MyPojo.class, config); // Inefficient - use batch instead
 }
 ```
 

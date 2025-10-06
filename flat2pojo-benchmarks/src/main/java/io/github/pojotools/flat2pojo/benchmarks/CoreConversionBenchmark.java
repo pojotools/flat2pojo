@@ -54,25 +54,25 @@ public class CoreConversionBenchmark {
 
   @Benchmark
   public void convertSimpleMap(Blackhole bh) {
-    Object result = converter.convert(simpleRow, Map.class, config);
+    Object result = converter.convertOptional(simpleRow, Object.class, config).orElse(null);
     bh.consume(result);
   }
 
   @Benchmark
   public void convertNestedMap(Blackhole bh) {
-    Object result = converter.convert(nestedRow, Map.class, config);
+    Object result = converter.convertOptional(nestedRow, Object.class, config).orElse(null);
     bh.consume(result);
   }
 
   @Benchmark
   public void convertMultipleRows(Blackhole bh) {
-    List<Map> results = converter.convertAll(multipleRows, Map.class, config);
+    List<Object> results = converter.convertAll(multipleRows, Object.class, config);
     bh.consume(results);
   }
 
   @Benchmark
   public void convertToCustomPojo(Blackhole bh) {
-    SimpleUser result = converter.convert(simpleRow, SimpleUser.class, config);
+    SimpleUser result = converter.convertOptional(simpleRow, SimpleUser.class, config).orElse(null);
     bh.consume(result);
   }
 

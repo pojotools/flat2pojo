@@ -20,21 +20,14 @@ import java.util.stream.Stream;
 public interface Flat2Pojo {
 
   /**
-   * Converts a single flat row to a POJO.
-   *
-   * @param flatRow the flat key-value map to convert
-   * @param type the target POJO class
-   * @param config the mapping configuration
-   * @param <T> the target type
-   * @return the converted POJO, or null if the input is empty
-   * @deprecated Use {@link #convertOptional(Map, Class, MappingConfig)} to avoid null returns
-   */
-  <T> T convert(Map<String, ?> flatRow, Class<T> type, MappingConfig config);
-
-  /**
    * Converts a single flat row to a POJO, wrapped in Optional.
    *
-   * <p>Prefer this method over {@link #convert(Map, Class, MappingConfig)} to avoid null handling.
+   * <p>This method processes a single row and returns the result wrapped in Optional to avoid null handling.
+   * For batch processing of multiple rows, use {@link #convertAll(List, Class, MappingConfig)} instead.
+   *
+   * <p><strong>Migration from deprecated convert():</strong> Replace {@code converter.convert(row, Type.class, config)}
+   * with {@code converter.convertOptional(row, Type.class, config).orElse(null)} or better yet,
+   * use {@code .ifPresent()} / {@code .map()} to avoid null entirely.
    *
    * @param flatRow the flat key-value map to convert
    * @param type the target POJO class

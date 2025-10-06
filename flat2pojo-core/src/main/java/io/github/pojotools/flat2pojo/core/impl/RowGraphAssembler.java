@@ -14,7 +14,7 @@ import java.util.function.Function;
  * Assembles object graphs from flat rows by processing list rules and direct values.
  * Single Responsibility: Builds nested JSON tree structure from flat key-value rows.
  */
-final class RowGraphAssembler {
+final class RowGraphAssembler implements RowProcessor {
   private final ObjectNode root;
   private final AssemblerDependencies dependencies;
   private final ProcessingContext context;
@@ -34,14 +34,16 @@ final class RowGraphAssembler {
     this.preprocessor = buildPreprocessor(context.config());
   }
 
-  void processRow(final Map<String, ?> row) {
+  @Override
+  public void processRow(final Map<String, ?> row) {
     final Map<String, ?> preprocessed = preprocessor.apply(row);
     final Map<String, JsonNode> rowValues = dependencies.valueTransformer().transformRowValuesToJsonNodes(preprocessed);
     final Set<String> skippedListPaths = processListRules(rowValues);
     processDirectValues(rowValues, skippedListPaths);
   }
 
-  <T> T materialize(final Class<T> type) {
+  @Override
+  public <T> T materialize(final Class<T> type) {
     dependencies.groupingEngine().finalizeArrays(root);
     return dependencies.materializer().materialize(root, type);
   }

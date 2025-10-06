@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 public final class Flat2PojoCore implements Flat2Pojo {
@@ -23,13 +24,7 @@ public final class Flat2PojoCore implements Flat2Pojo {
   }
 
   @Override
-  public <T> T convert(Map<String, ?> flatRow, Class<T> type, MappingConfig config) {
-    List<T> all = convertAll(List.of(flatRow), type, config);
-    return all.isEmpty() ? null : all.getFirst();
-  }
-
-  @Override
-  public <T> java.util.Optional<T> convertOptional(Map<String, ?> flatRow, Class<T> type, MappingConfig config) {
+  public <T> Optional<T> convertOptional(Map<String, ?> flatRow, Class<T> type, MappingConfig config) {
     List<T> all = convertAll(List.of(flatRow), type, config);
     return all.isEmpty() ? java.util.Optional.empty() : java.util.Optional.of(all.getFirst());
   }
@@ -78,9 +73,9 @@ public final class Flat2PojoCore implements Flat2Pojo {
       final List<? extends Map<String, ?>> rows,
       final Class<T> type,
       final ProcessingPipeline pipeline) {
-    final RowGraphAssembler assembler = pipeline.createAssembler();
-    rows.forEach(assembler::processRow);
-    return List.of(assembler.materialize(type));
+    final RowProcessor processor = pipeline.createAssembler();
+    rows.forEach(processor::processRow);
+    return List.of(processor.materialize(type));
   }
 
   private <T> List<T> convertWithGrouping(
@@ -100,9 +95,9 @@ public final class Flat2PojoCore implements Flat2Pojo {
       final List<Map<String, ?>> groupRows,
       final Class<T> type,
       final ProcessingPipeline pipeline) {
-    final RowGraphAssembler assembler = pipeline.createAssembler();
-    groupRows.forEach(assembler::processRow);
-    return assembler.materialize(type);
+    final RowProcessor processor = pipeline.createAssembler();
+    groupRows.forEach(processor::processRow);
+    return processor.materialize(type);
   }
 
   @Override
