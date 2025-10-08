@@ -1483,4 +1483,375 @@ class SpecSuiteTest {
         """,
         out);
   }
+
+  @Test
+  void test33_comprehensive_real_world_conversion() {
+    // Comprehensive test showcasing all major features:
+    // - Multiple root objects (grouping by product ID)
+    // - Deep hierarchical nesting (definitions -> tracker -> tasks -> comments)
+    // - Multiple list configurations with different key paths
+    // - Ordering by multiple fields with different directions
+    // - Conflict resolution with merge and deduplication
+    // - Primitive arrays with split operations (tags)
+    // - Null handling with blanks-as-nulls
+    // - Complex cartesian product data (realistic database JOIN results)
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            nullPolicy: { blanksAsNulls: true }
+            rootKeys: ["referencedProductId/identifier"]
+            lists:
+              - path: "definitions"
+                keyPaths: ["id/identifier"]
+                dedupe: true
+                onConflict: "merge"
+                orderBy:
+                  - path: "priority"
+                    direction: "desc"
+                  - path: "name"
+                    direction: "asc"
+              - path: "definitions/tracker/comments"
+                keyPaths: ["loggedAt"]
+                orderBy:
+                  - path: "loggedAt"
+                    direction: "asc"
+              - path: "definitions/tracker/tasks"
+                keyPaths: ["taskDate"]
+                orderBy:
+                  - path: "taskDate"
+                    direction: "asc"
+              - path: "definitions/tracker/tasks/comments"
+                keyPaths: ["loggedAt"]
+                orderBy:
+                  - path: "loggedAt"
+                    direction: "asc"
+              - path: "definitions/modules"
+                keyPaths: ["name"]
+                orderBy:
+                  - path: "name"
+                    direction: "asc"
+              - path: "definitions/modules/components"
+                keyPaths: ["id"]
+                orderBy:
+                  - path: "id"
+                    direction: "asc"
+              - path: "definitions/modules/components/features"
+                keyPaths: ["name"]
+                orderBy:
+                  - path: "name"
+                    direction: "asc"
+            primitives:
+              - path: "definitions/tags"
+                split: { delimiter: ",", trim: true }
+            """);
+
+    // Build comprehensive test data representing real-world scenario:
+    // Multiple products with definitions, each having complex nested structures
+    ArrayList<Map<String, ?>> rows = new ArrayList<>();
+
+    // Product P-1, Definition D-1: Base definition with tags, metadata merge, tracker comments
+    rows.add(Map.of(
+        "referencedProductId/identifier", "P-1",
+        "definitions/id/identifier", "D-1",
+        "definitions/name", "Core Services",
+        "definitions/priority", 5,
+        "definitions/tags", "backend, critical, v2.0",
+        "definitions/metadata/name", "Core Services Module",
+        "definitions/metadata/description", "Main backend services",
+        "definitions/tracker/comments/loggedAt", "2025-01-01T09:00:00Z",
+        "definitions/tracker/comments/comment", "Initial setup complete",
+        "definitions/tracker/comments/loggedBy", "alice"
+    ));
+
+    // P-1, D-1: Metadata merge (conflict resolution) + additional tracker comment
+    rows.add(Map.of(
+        "referencedProductId/identifier", "P-1",
+        "definitions/id/identifier", "D-1",
+        "definitions/metadata/description", "", // Blank should become null
+        "definitions/audit/modifiedBy", "alice",
+        "definitions/audit/modifiedAt", "2025-01-01T10:00:00Z",
+        "definitions/tracker/comments/loggedAt", "2025-01-01T11:00:00Z",
+        "definitions/tracker/comments/comment", "Configuration updated",
+        "definitions/tracker/comments/loggedBy", "bob"
+    ));
+
+    // P-1, D-1: Tasks with nested comments (cartesian product)
+    rows.add(Map.of(
+        "referencedProductId/identifier", "P-1",
+        "definitions/id/identifier", "D-1",
+        "definitions/tracker/tasks/taskDate", "2025-01-15",
+        "definitions/tracker/tasks/dueDate", "2025-01-20",
+        "definitions/tracker/tasks/isUser", true,
+        "definitions/tracker/tasks/gracePeriod", 5,
+        "definitions/tracker/tasks/comments/loggedAt", "2025-01-15T08:00:00Z",
+        "definitions/tracker/tasks/comments/comment", "Task started",
+        "definitions/tracker/tasks/comments/loggedBy", "charlie"
+    ));
+
+    rows.add(Map.of(
+        "referencedProductId/identifier", "P-1",
+        "definitions/id/identifier", "D-1",
+        "definitions/tracker/tasks/taskDate", "2025-01-15",
+        "definitions/tracker/tasks/comments/loggedAt", "2025-01-15T14:00:00Z",
+        "definitions/tracker/tasks/comments/comment", "Halfway done",
+        "definitions/tracker/tasks/comments/loggedBy", "alice"
+    ));
+
+    // P-1, D-1: Second task
+    rows.add(Map.of(
+        "referencedProductId/identifier", "P-1",
+        "definitions/id/identifier", "D-1",
+        "definitions/tracker/tasks/taskDate", "2025-01-10",
+        "definitions/tracker/tasks/isUser", false,
+        "definitions/tracker/tasks/gracePeriod", 10,
+        "definitions/tracker/tasks/comments/loggedAt", "2025-01-10T10:00:00Z",
+        "definitions/tracker/tasks/comments/comment", "Automated task executed",
+        "definitions/tracker/tasks/comments/loggedBy", "system"
+    ));
+
+    // P-1, D-1: Modules and nested components/features
+    rows.add(Map.of(
+        "referencedProductId/identifier", "P-1",
+        "definitions/id/identifier", "D-1",
+        "definitions/modules/name", "Authentication",
+        "definitions/modules/version", "1.2.0",
+        "definitions/modules/components/id", "auth-api",
+        "definitions/modules/components/type", "REST",
+        "definitions/modules/components/features/name", "OAuth2",
+        "definitions/modules/components/features/enabled", true,
+        "definitions/modules/components/features/version", "2.1"
+    ));
+
+    rows.add(Map.of(
+        "referencedProductId/identifier", "P-1",
+        "definitions/id/identifier", "D-1",
+        "definitions/modules/name", "Authentication",
+        "definitions/modules/components/id", "auth-api",
+        "definitions/modules/components/features/name", "JWT",
+        "definitions/modules/components/features/enabled", true,
+        "definitions/modules/components/features/version", "1.5"
+    ));
+
+    rows.add(Map.of(
+        "referencedProductId/identifier", "P-1",
+        "definitions/id/identifier", "D-1",
+        "definitions/modules/name", "Database",
+        "definitions/modules/version", "2.0.0",
+        "definitions/modules/components/id", "db-pool",
+        "definitions/modules/components/type", "Connection Pool",
+        "definitions/modules/components/features/name", "Connection Pooling",
+        "definitions/modules/components/features/enabled", true
+    ));
+
+    // P-1, D-2: Second definition (lower priority, should come after D-1)
+    rows.add(Map.of(
+        "referencedProductId/identifier", "P-1",
+        "definitions/id/identifier", "D-2",
+        "definitions/name", "Analytics Engine",
+        "definitions/priority", 3,
+        "definitions/tags", "analytics, reporting",
+        "definitions/tracker/comments/loggedAt", "2025-01-02T10:00:00Z",
+        "definitions/tracker/comments/comment", "Analytics module deployed",
+        "definitions/tracker/comments/loggedBy", "david"
+    ));
+
+    // P-2: Second product with different structure
+    rows.add(Map.of(
+        "referencedProductId/identifier", "P-2",
+        "definitions/id/identifier", "D-3",
+        "definitions/name", "Frontend Dashboard",
+        "definitions/priority", 7,
+        "definitions/tags", "frontend, ui, dashboard",
+        "definitions/metadata/name", "Frontend Dashboard",
+        "definitions/tracker/tasks/taskDate", "2025-02-01",
+        "definitions/tracker/tasks/isUser", true,
+        "definitions/tracker/tasks/comments/loggedAt", "2025-02-01T09:00:00Z",
+        "definitions/tracker/tasks/comments/comment", "UI redesign started"
+    ));
+
+    // P-3: Third product (minimal data to test sparse handling)
+    rows.add(Map.of(
+        "referencedProductId/identifier", "P-3",
+        "definitions/id/identifier", "D-4",
+        "definitions/name", "Legacy System",
+        "definitions/priority", 1
+    ));
+
+    var out = converter.convertAll(rows, ImmutableProductRoot.class, cfg);
+
+    // Verify the comprehensive transformation
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        [
+          {
+            "referencedProductId": { "identifier": "P-1" },
+            "definitions": [
+              {
+                "id": { "identifier": "D-1" },
+                "name": "Core Services",
+                "priority": 5,
+                "tags": ["backend", "critical", "v2.0"],
+                "metadata": {
+                  "name": "Core Services Module"
+                },
+                "audit": {
+                  "modifiedBy": "alice",
+                  "modifiedAt": "2025-01-01T10:00:00Z"
+                },
+                "tracker": {
+                  "comments": [
+                    {
+                      "comment": "Initial setup complete",
+                      "loggedBy": "alice",
+                      "loggedAt": "2025-01-01T09:00:00Z"
+                    },
+                    {
+                      "comment": "Configuration updated",
+                      "loggedBy": "bob",
+                      "loggedAt": "2025-01-01T11:00:00Z"
+                    }
+                  ],
+                  "tasks": [
+                    {
+                      "taskDate": "2025-01-10",
+                      "gracePeriod": 10,
+                      "isUser": false,
+                      "comments": [
+                        {
+                          "comment": "Automated task executed",
+                          "loggedBy": "system",
+                          "loggedAt": "2025-01-10T10:00:00Z"
+                        }
+                      ]
+                    },
+                    {
+                      "taskDate": "2025-01-15",
+                      "dueDate": "2025-01-20",
+                      "gracePeriod": 5,
+                      "isUser": true,
+                      "comments": [
+                        {
+                          "comment": "Task started",
+                          "loggedBy": "charlie",
+                          "loggedAt": "2025-01-15T08:00:00Z"
+                        },
+                        {
+                          "comment": "Halfway done",
+                          "loggedBy": "alice",
+                          "loggedAt": "2025-01-15T14:00:00Z"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "modules": [
+                  {
+                    "name": "Authentication",
+                    "version": "1.2.0",
+                    "components": [
+                      {
+                        "id": "auth-api",
+                        "type": "REST",
+                        "features": [
+                          {
+                            "name": "JWT",
+                            "enabled": true,
+                            "version": "1.5"
+                          },
+                          {
+                            "name": "OAuth2",
+                            "enabled": true,
+                            "version": "2.1"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "name": "Database",
+                    "version": "2.0.0",
+                    "components": [
+                      {
+                        "id": "db-pool",
+                        "type": "Connection Pool",
+                        "features": [
+                          {
+                            "name": "Connection Pooling",
+                            "enabled": true
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": { "identifier": "D-2" },
+                "name": "Analytics Engine",
+                "priority": 3,
+                "tags": ["analytics", "reporting"],
+                "tracker": {
+                  "comments": [
+                    {
+                      "comment": "Analytics module deployed",
+                      "loggedBy": "david",
+                      "loggedAt": "2025-01-02T10:00:00Z"
+                    }
+                  ],
+                  "tasks": []
+                },
+                "modules": []
+              }
+            ]
+          },
+          {
+            "referencedProductId": { "identifier": "P-2" },
+            "definitions": [
+              {
+                "id": { "identifier": "D-3" },
+                "name": "Frontend Dashboard",
+                "priority": 7,
+                "tags": ["frontend", "ui", "dashboard"],
+                "metadata": { "name": "Frontend Dashboard" },
+                "tracker": {
+                  "comments": [],
+                  "tasks": [
+                    {
+                      "taskDate": "2025-02-01",
+                      "isUser": true,
+                      "comments": [
+                        {
+                          "comment": "UI redesign started",
+                          "loggedAt": "2025-02-01T09:00:00Z"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "modules": []
+              }
+            ]
+          },
+          {
+            "referencedProductId": { "identifier": "P-3" },
+            "definitions": [
+              {
+                "id": { "identifier": "D-4" },
+                "name": "Legacy System",
+                "priority": 1,
+                "tracker": {
+                  "comments": [],
+                  "tasks": []
+                },
+                "modules": []
+              }
+            ]
+          }
+        ]
+        """,
+        out);
+  }
 }
