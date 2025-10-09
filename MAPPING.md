@@ -1,6 +1,88 @@
 # Mapping Configuration Guide
 
-This document provides detailed information about flat2pojo's mapping configuration system, including advanced features like hierarchical grouping, conflict resolution, and extensibility options.
+This document provides detailed information about flat2pojo's mapping configuration system, including configuration schema, semantic rules, hierarchical grouping, conflict resolution, and extensibility options.
+
+## Configuration Schema
+
+The `MappingConfig` object defines all mapping behavior:
+
+```yaml
+separator: "/"                    # Path segment delimiter (default: "/")
+rootKeys: []                      # Keys for grouping rows (empty = single group)
+
+lists: []                         # List rules (processed in declaration order)
+  - path: "definitions/modules"   # Absolute path to list
+    keyPaths: ["id"]              # Relative paths for composite key
+    orderBy: []                   # Sort specifications
+      - path: "name"              # Relative path
+        direction: asc|desc
+        nulls: first|last
+    dedupe: true                  # Enable deduplication
+    onConflict: firstWriteWins    # error | firstWriteWins | lastWriteWins | merge
+
+primitives: []                    # String-to-array split rules
+  - path: "tags"                  # Absolute path
+    delimiter: ","                # Split delimiter
+    trim: true                    # Trim whitespace from elements
+
+nullPolicy:
+  blanksAsNulls: true             # Treat blank strings as null
+
+reporter: Optional<Reporter>      # SPI for warnings/errors
+valuePreprocessor: Optional<ValuePreprocessor>  # SPI for row transformation
+```
+
+## Configuration Semantics
+
+### Path Resolution Rules
+
+1. **Relative vs Absolute Paths:**
+   - List rules use **absolute paths** (e.g., `"definitions/modules"`)
+   - `keyPaths` within list rules use **absolute paths** (e.g., `"definitions/modules/id"`)
+   - `orderBy` paths within list rules use **relative paths** (e.g., `"name"` not `"definitions/modules/name"`)
+   - Validation enforces these constraints
+
+2. **Declaration Order Matters:**
+   - Lists must be declared **parent-before-child**
+   - Processing follows declaration order
+   - Enables nested list elements to reference parent elements from the same row
+
+3. **Separator Semantics:**
+   - Single or multi-character separators supported
+   - Used for all path operations (split, join, traversal)
+   - Single-character separators provide best performance
+
+### Deduplication Behavior
+
+**First-Write-Wins Semantics:**
+- `ArrayBucket` implements first-write-wins for existing composite keys
+- First row with a composite key establishes the list element
+- Subsequent rows with same composite key **reuse** the existing element
+- Element population continues across multiple rows in the same group
+- This enables multi-row population of complex list elements
+
+**Example:**
+```
+Row 1: items/id=A, items/name=Widget
+Row 2: items/id=A, items/qty=10
+Result: [{id: "A", name: "Widget", qty: 10}]  // Single element, merged from both rows
+```
+
+### Conflict Resolution Policies
+
+Applied when writing values to existing fields:
+
+| Policy | Behavior | When to Use |
+|--------|----------|-------------|
+| `error` | Throw exception on scalar conflicts | Strict validation, detect data inconsistencies |
+| `firstWriteWins` | Keep existing value, ignore new value | Stable defaults, preserve initial values |
+| `lastWriteWins` | Overwrite with new value | Override behavior, use most recent data |
+| `merge` | Deep merge objects, overwrite scalars | Flexible merging, combine nested structures |
+
+**Merge Policy Details:**
+- Objects are recursively merged (fields combined)
+- Scalars are overwritten (last-write-wins fallback)
+- Arrays are replaced (no element-level merging)
 
 ## Root Keys
 
@@ -561,3 +643,9 @@ if (!conflicts.isEmpty()) {
     logger.info("Conflicts resolved: {}", conflicts.size());
 }
 ```
+
+## Related Documentation
+
+- [PSEUDOCODE.md](PSEUDOCODE.md) - Internal algorithm flow, component architecture, and performance characteristics
+- [OPERATIONS.md](OPERATIONS.md) - API guide, production deployment patterns, monitoring, and troubleshooting
+- [README.md](README.md) - Project overview, quick start guide, and getting started

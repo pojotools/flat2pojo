@@ -131,7 +131,38 @@ List<ProjectRoot> projects = converter.convertAll(flatData, ProjectRoot.class, c
 ]
 ```
 
+## Documentation
+
+### Core Documentation
+
+- **[MAPPING.md](MAPPING.md)** - Complete configuration reference
+  - Configuration schema and semantic rules
+  - Field mapping and path conventions
+  - List rules, ordering, and deduplication
+  - Conflict resolution policies
+  - Validation rules and best practices
+
+- **[OPERATIONS.md](OPERATIONS.md)** - Production operations guide
+  - API reference and entry points
+  - Performance optimization strategies
+  - Monitoring and observability patterns
+  - Troubleshooting and debugging
+  - Enterprise deployment best practices
+
+- **[PSEUDOCODE.md](PSEUDOCODE.md)** - Internal architecture (for contributors)
+  - Algorithm flow and pseudocode
+  - Component interactions and data flow
+  - Performance characteristics
+  - Design rationale
+
+### Additional Resources
+
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Contribution guidelines
+- **[RELEASE.md](RELEASE.md)** - Release process and versioning
+
 ## Configuration Reference
+
+For complete configuration details, see [MAPPING.md](MAPPING.md).
 
 ### Complete Configuration Structure
 
@@ -358,6 +389,8 @@ The Reporter interface captures these types of warnings:
 • **Consider streaming** - Use `converter.stream()` for very large datasets
 • **Optimize Jackson mapper** - Reuse the same `ObjectMapper` instance
 
+For detailed performance optimization strategies, see [OPERATIONS.md](OPERATIONS.md#performance-optimization).
+
 ## Jackson Integration
 
 flat2pojo uses the standard Jackson `JsonMapper` with optimized settings:
@@ -512,35 +545,14 @@ lists:
     keyPaths: ["tasks/id"]
 ```
 
-**Issue: Conflicts not resolving as expected**
-```yaml
-# Add Reporter to see what's happening
-```
-
-**Issue: Performance problems with large datasets**
-```java
-// Process in smaller batches
-List<List<Map<String, Object>>> batches = partition(largeDataset, 1000);
-List<MyPojo> allResults = new ArrayList<>();
-
-for (List<Map<String, Object>> batch : batches) {
-    List<MyPojo> batchResults = converter.convertAll(batch, MyPojo.class, config);
-    allResults.addAll(batchResults);
-}
-```
-
 **Issue: Jackson deserialization errors**
 ```java
 // Use JsonNode first to debug structure
 List<JsonNode> nodes = converter.convertAll(data, JsonNode.class, config);
 System.out.println(nodes.get(0).toPrettyString());
-
-// Then convert to your POJOs
-ObjectMapper mapper = new ObjectMapper();
-List<MyPojo> pojos = nodes.stream()
-    .map(node -> mapper.convertValue(node, MyPojo.class))
-    .collect(toList());
 ```
+
+For comprehensive troubleshooting guidance, advanced debugging techniques, and production monitoring patterns, see [OPERATIONS.md](OPERATIONS.md#troubleshooting).
 
 ## Development
 

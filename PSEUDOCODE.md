@@ -1,369 +1,711 @@
 # FLAT2POJO: Converting Flat Key-Value Maps to Nested POJOs
 
+**Generated:** 2025-10-09
+**Commit:** 9f9315f
+**Modules:** flat2pojo-core, flat2pojo-examples
+
+---
+
 ## HIGH-LEVEL OVERVIEW
 
 **Input:**  List of flat Maps (e.g., `{"person/name": "Alice", "person/age": 30}`)
 **Output:** List of POJOs (e.g., `Person{name="Alice", age=30}`)
 
+**Core Pipeline (6 Steps):**
+1. Validate configuration hierarchy (parents before children)
+2. Group rows by root keys (if configured)
+3. Process each group independently
+4. Transform flat values to JsonNode trees
+5. Finalize arrays (sort, deduplicate)
+6. Materialize JSON to target POJO type
+
 ## MAIN ALGORITHM: convertAll(rows, targetType, config)
 
 ```
 1. VALIDATE configuration hierarchy
-    - Ensure parent lists declared before children
-    - Ensure implied parent lists exist
+   ├─ Ensure parent lists declared before children
+   ├─ Validate keyPaths are relative (not absolute)
+   └─ Validate orderBy paths are relative
 
-2. GROUP rows by rootKeys
-    - If rootKeys defined: group rows with same root key values
-    - If no rootKeys: treat all rows as single group
-    - Example: Group all rows where "orderId"=123 together
+2. BUILD processing pipeline
+   ├─ Create PathResolver (separator-aware path operations)
+   ├─ Build ListHierarchyCache (parent-child list relationships)
+   ├─ Create GroupingEngine (array management with deduplication)
+   ├─ Create ValueTransformer (value→JsonNode conversion)
+   └─ Create ResultMaterializer (JSON→POJO converter)
 
-3. FOR EACH group:
-   a. processRootGroup → returns one POJO instance
+3. BRANCH by rootKeys configuration
+   IF rootKeys.isEmpty():
+     → convertWithoutGrouping(all rows as single group)
+   ELSE:
+     → convertWithGrouping(group by root keys)
 
 4. RETURN list of POJOs
 ```
 
-## DETAILED: processRootGroup(groupRows, type, config)
-
+### convertWithoutGrouping(rows, type, pipeline)
 ```
-Initialize:
-- root = empty JSON ObjectNode
-- GroupingEngine (manages arrays with deduplication & sorting)
-- FlatTreeBuilder (applies value transformations)
-
-FOR EACH row in groupRows:
-  processRowIntoTree(row, root, engines, config)
-
-finalizeArrays(root) → sort and dedupe all arrays
-materializeResult(root, type) → convert JSON to POJO using Jackson
+1. assembler = pipeline.createAssembler()  // RowGraphAssembler
+2. FOR EACH row IN rows:
+     assembler.processRow(row)
+3. RETURN [assembler.materialize(type)]     // Single POJO
 ```
 
-## DETAILED: processRowIntoTree(row, root, engines, config)
-
-### PHASE 1: Value Preprocessing (Optional SPI)
+### convertWithGrouping(rows, type, config, pipeline)
 ```
+1. rowGroups = RootKeyGrouper.groupByRootKeys(rows, config.rootKeys())
+   └─ Returns LinkedHashMap<compositeKey, List<rows>> preserving insertion order
+
+2. results = []
+3. FOR EACH groupRows IN rowGroups.values():
+     assembler = pipeline.createAssembler()
+     FOR EACH row IN groupRows:
+       assembler.processRow(row)
+     results.add(assembler.materialize(type))
+
+4. RETURN results
+```
+
+## ROW PROCESSING: RowGraphAssembler.processRow(row)
+
+The RowGraphAssembler maintains state across all rows in a group:
+- root: ObjectNode (accumulated JSON tree)
+- listElementCache: Map<listPath, currentElement> (shared across rows in group)
+
+```
+PHASE 1: Optional preprocessing
 IF valuePreprocessor configured:
   row = valuePreprocessor.process(row)
-  // Example: normalize phone numbers, convert YES/NO → boolean
+
+PHASE 2: Value transformation
+rowValues = valueTransformer.transformRowValuesToJsonNodes(row)
+  └─ Flat map → Map<path, JsonNode> with primitives split, blanks nullified
+
+PHASE 3: Process list rules hierarchically
+skippedListPaths = {}
+FOR EACH listRule IN config.lists() (declaration order):
+  ListRuleProcessor.processRule(rowValues, skippedListPaths, rule, root)
+
+PHASE 4: Write direct (non-list) values
+FOR EACH entry IN rowValues:
+  IF NOT underAnyList(path) AND NOT underSkippedList(path):
+    ListElementWriter.writeDirectly(root, path, value)
 ```
 
-### PHASE 2: Value Transformation
-```
-rowNode = FlatTreeBuilder.buildTreeForRow(row)
-  - Convert flat map to nested tree
-  - Apply primitive splits: "tags": "a,b,c" → ["a", "b", "c"]
-  - Apply blanksAsNulls: "" → null
-  - Convert to JsonNode types
+## KEY COLLABORATORS
 
-rowValues = flatten(rowNode)
-  - Back to path→value map: {"person/name": JsonNode("Alice")}
-  - Why? List processing needs paths to extract composite keys
-```
-
-### PHASE 3: Process List Rules (Hierarchically)
-```
-skippedPaths = {}
-listElementCache = {}  // Maps listPath → current element for this row
-
-FOR EACH list rule (in declaration order):
-
-    // Skip if parent list was skipped
-    IF rule.path is under any skippedPath:
-      SKIP and warn
-
-    // Find where to attach this list
-    parentListPath = findParentListPath(rule.path)
-    IF parentListPath exists:
-      baseObject = listElementCache[parentListPath]
-      relativePath = rule.path MINUS parentListPath
-    ELSE:
-      baseObject = root
-      relativePath = rule.path
-
-    // Extract composite key from keyPaths
-    keyValues = []
-    FOR EACH keyPath in rule.keyPaths:
-      value = rowValues[keyPath]
-      IF value is null or missing:
-        SKIP this list entry entirely
-        Add to skippedPaths
-        WARN user
-        CONTINUE to next rule
-      keyValues.append(value)
-
-    compositeKey = CompositeKey(keyValues)
-
-    // Upsert into array
-    element = GroupingEngine.upsertListElement(
-      baseObject,
-      relativePath,
-      compositeKey,
-      rule.dedupe,
-      rule.onConflict
-    )
-
-    IF element created:
-      listElementCache[rule.path] = element
-
-      // Copy values under this list path into the element
-      copyListSubtreeValues(rowValues, element, rule)
-        FOR EACH path→value in rowValues:
-          IF path is under rule.path:
-            AND path is NOT in a child list subtree:
-              suffix = path MINUS rule.path
-              writeValue(element, suffix, value, rule.onConflict)
-```
-
-### PHASE 4: Process Non-List Values
-```
-processNonListValues(rowValues, root, skippedPaths)
-
-FOR EACH path→value in rowValues:
-  IF path is NOT a list path:
-    AND path is NOT under any skipped list:
-      writeValue(root, path, value)
-```
-
-## KEY COMPONENTS
-
-### GroupingEngine: Manages list/array construction
+### 1. ListRuleProcessor: Processes a single list rule for a row
 
 ```
-State per array:
-- ArrayBucket: Map<CompositeKey, ObjectNode>
-    - Deduplicates elements by composite key
-    - Handles conflicts (error, firstWins, lastWins, merge)
-- Comparators: Sort specifications from orderBy rules
+processRule(rowValues, skippedListPaths, rule, root):
 
-upsertListElement(base, path, key, dedupePolicy):
-1. Navigate to parent object via path
-2. Get or create array field
-3. Get bucket for this array (or create new)
-4. bucket.upsert(key, newElement, conflictPolicy)
-   - If key exists & dedupe=true: handle conflict
-   - If key exists & dedupe=false: add anyway
-   - Else: add new element
-5. Return the element
+STEP 1: Check parent status
+IF rule.path is under any skippedListPath:
+  WARN and RETURN (skip this rule)
+
+STEP 2: Determine base object and relative path
+parentListPath = hierarchyCache.getParentListPath(rule.path)
+IF parentListPath exists:
+  baseObject = listElementCache[parentListPath]  // Nested list
+  relativePath = tailAfter(rule.path, parentListPath)
+ELSE:
+  baseObject = root                               // Top-level list
+  relativePath = rule.path
+
+STEP 3: Create/get list element
+listElement = groupingEngine.upsertListElementRelative(
+  baseObject, relativePath, rowValues, rule
+)
+
+IF listElement is null:  // Missing keyPath values
+  skippedListPaths.add(rule.path)
+  WARN about missing keyPaths
+  RETURN
+
+STEP 4: Cache element and copy values
+listElementCache[rule.path] = listElement
+copyValuesToElement(rowValues, listElement, rule)
+```
+
+### 2. GroupingEngine: Manages arrays with deduplication and sorting
+
+**State (per RowGraphAssembler instance):**
+- buckets: IdentityHashMap<ArrayNode, ArrayBucket>
+- comparators: IdentityHashMap<ArrayNode, List<Comparator<ObjectNode>>>
+
+```
+upsertListElementRelative(base, relativeListPath, rowValues, rule):
+
+STEP 1: Resolve array node
+parentNode = traverseAndEnsurePath(base, relativeListPath)
+arrayField = getFinalSegment(relativeListPath)
+arrayNode = parentNode.withArray(arrayField)
+
+STEP 2: Ensure bucket state
+bucket = buckets.computeIfAbsent(arrayNode, → new ArrayBucket())
+comparators.computeIfAbsent(arrayNode, → precomputed comparators for rule.path)
+
+STEP 3: Extract composite key
+keyValues = []
+FOR EACH relativeKeyPath IN rule.keyPaths():
+  absoluteKeyPath = rule.path + separator + relativeKeyPath
+  value = rowValues[absoluteKeyPath]
+  IF value is null or missing:
+    RETURN null  // Signal to skip this element
+  keyValues.add(value)
+compositeKey = new CompositeKey(keyValues)
+
+STEP 4: Upsert into bucket
+element = bucket.upsert(compositeKey, objectMapper.createObjectNode())
+RETURN element
+
+---
 
 finalizeArrays(root):
-Traverse tree depth-first
-FOR EACH array with bucket:
-  1. Get elements from bucket
-  2. Sort by orderBy comparators
-  3. Replace array contents with sorted elements
+arrayFinalizer = new ArrayFinalizer(buckets, comparators)
+arrayFinalizer.finalizeArrays(root)  // Depth-first traversal
+clearBucketState()                    // Prevent memory leaks
 ```
 
-### FlatTreeBuilder: Value transformations
+### 3. ArrayBucket: Deduplicates elements by composite key
+
+**Implementation:** First-write-wins semantics
 
 ```
-buildTreeForRow(row):
-root = {}
-FOR EACH key→value in row:
-  1. Split key by separator: "person/address/city" → ["person", "address", "city"]
-  2. Navigate/create path: root.person.address
-  3. Handle primitive splits if configured: "a,b,c" → ["a", "b", "c"]
-  4. Apply blanksAsNulls: "" → null
-  5. Set leaf value: root.person.address.city = value
+State:
+- byKey: LinkedHashMap<CompositeKey, ObjectNode>
+- insertionOrder: List<ObjectNode>
+- cachedSortedElements: List<ObjectNode> (cached for performance)
+
+upsert(key, candidate):
+IF key exists in byKey:
+  RETURN byKey[key]  // Return existing, ignore candidate
+ELSE:
+  byKey[key] = candidate
+  insertionOrder.add(candidate)
+  invalidateCache()
+  RETURN candidate
+
+ordered(comparators):
+IF cache is valid for these comparators:
+  RETURN cachedSortedElements
+ELSE:
+  elements = new ArrayList(byKey.values())
+  IF comparators not empty:
+    elements.sort(combineComparators(comparators))
+  cache(comparators, elements)
+  RETURN elements
 ```
 
-### ConflictHandler: Resolves field conflicts
+### 4. ArrayFinalizer: Finalizes all arrays in the tree
 
 ```
-writeScalarWithPolicy(target, field, newValue, policy):
+finalizeArrays(root):
+
+Depth-first traversal using stack:
+stack = [root]
+WHILE stack not empty:
+  current = stack.pop()
+  IF current is ObjectNode:
+    FOR EACH child IN current.fieldValues():
+      stack.push(child)
+  ELSE IF current is ArrayNode:
+    applyBucketOrdering(current)
+    FOR EACH child IN current:
+      stack.push(child)
+
+applyBucketOrdering(arrayNode):
+bucket = buckets[arrayNode]
+IF bucket exists:
+  comparators = comparators[arrayNode] or []
+  sortedElements = bucket.ordered(comparators)
+  arrayNode.removeAll()
+  FOR EACH element IN sortedElements:
+    arrayNode.add(element)
+```
+
+### 5. ValueTransformer: Transforms flat values to JsonNode
+
+```
+transformRowValuesToJsonNodes(row):
+
+result = LinkedHashMap(row.size)
+FOR EACH key→value IN row:
+
+  STEP 1: Normalize blank values
+  IF blanksAsNulls AND value is blank string:
+    normalized = null
+  ELSE:
+    normalized = value
+
+  STEP 2: Check for primitive split rule
+  splitRule = splitRulesCache[key]
+  IF splitRule exists AND normalized is String:
+    valueNode = createSplitArrayNode(normalized, splitRule)
+  ELSE:
+    valueNode = createLeafNode(normalized)
+
+  result[key] = valueNode
+
+RETURN result
+
+---
+
+createSplitArrayNode(stringValue, splitRule):
+parts = stringValue.split(splitRule.delimiter)
+arrayNode = objectMapper.createArrayNode()
+FOR EACH part IN parts:
+  processed = splitRule.trim ? part.trim() : part
+  element = blanksAsNulls AND processed.isBlank() ? NullNode : TextNode(processed)
+  arrayNode.add(element)
+RETURN arrayNode
+
+createLeafNode(value):
+RETURN SWITCH value:
+  case null → NullNode
+  case String s → blanksAsNulls AND s.isBlank() ? NullNode : TextNode(s)
+  case Integer i → IntNode(i)
+  case Long l → LongNode(l)
+  case Double d → DoubleNode(d)
+  case Boolean b → BooleanNode(b)
+  default → objectMapper.valueToTree(value)
+```
+
+### 6. ListElementWriter: Writes values with conflict handling
+
+```
+writeWithConflictPolicy(target, path, value, policy, absolutePath):
+IF path.isEmpty():
+  RETURN  // Skip empty paths
+
+parent = pathResolver.traverseAndEnsurePath(target, path)
+lastSegment = pathResolver.getFinalSegment(path)
+conflictContext = new ConflictContext(policy, absolutePath, reporter)
+
+ConflictHandler.writeScalarWithPolicy(parent, lastSegment, value, conflictContext)
+
+---
+
+writeDirectly(target, path, value):
+IF path.isEmpty():
+  RETURN
+
+parent = pathResolver.traverseAndEnsurePath(target, path)
+lastSegment = pathResolver.getFinalSegment(path)
+parent.set(lastSegment, value)  // Direct overwrite
+```
+
+### 7. ConflictHandler: Resolves field conflicts
+
+```
+writeScalarWithPolicy(target, field, newValue, context):
+
 existing = target[field]
-
 IF existing is null:
   target[field] = newValue
   RETURN
 
-SWITCH policy:
-  error:        THROW exception
-  firstWins:    IGNORE newValue, KEEP existing
-  lastWins:     REPLACE with newValue
-  merge:
-    IF both are objects: deepMerge(existing, newValue)
-    ELSE: fallback to lastWins
+SWITCH context.policy:
+  case error:
+    THROW Flat2PojoException("Conflict at " + context.absolutePath)
+
+  case firstWriteWins:
+    RETURN  // Keep existing, ignore newValue
+
+  case lastWriteWins:
+    target[field] = newValue
+
+  case merge:
+    IF both are ObjectNode:
+      deepMerge(existing, newValue)
+    ELSE:
+      target[field] = newValue  // Fallback to lastWriteWins
 ```
 
-### ConfigurationCache: Pre-computed lookups (O(1) access)
+### 8. ListHierarchyCache: Pre-computed list hierarchy
+
+**Computed once per config:**
 
 ```
-buildCaches(config):
-  allListPaths = {}        // Contains list paths + all their prefixes
-  parentListPaths = {}     // Maps child list → parent list
-  seenListPaths = {}
+State:
+- parentListPaths: Map<childListPath, parentListPath>
+- declaredListPaths: Set<String> (all list paths from config)
 
-  FOR EACH list rule:
-    path = rule.path
-    allListPaths.add(path)
+buildParentListPaths(config):
+sortedPaths = config.lists().sortByPathLength()
+result = {}
 
-    // Build all prefixes
-    segments = split(path, separator)
-    FOR EACH prefix in segments[0..n-1]:
-      allListPaths.add(prefix)
+FOR EACH childPath IN sortedPaths:
+  FOR EACH potentialParent IN sortedPaths (shorter paths):
+    IF childPath.startsWith(potentialParent + separator):
+      result[childPath] = potentialParent
+      BREAK  // Found parent
 
-      // Track parent (deepest prefix that's a list)
-      IF prefix in seenListPaths:
-        parent = prefix
+RETURN result
 
-    IF parent exists:
-      parentListPaths[path] = parent
+---
 
-    seenListPaths[path] = path
+getParentListPath(listPath):
+RETURN parentListPaths[listPath]  // null if top-level
 
-isListPath(path):
-  // O(k) where k = path segments
-  IF path in allListPaths:
-    RETURN true
+isUnderAnyList(path):
+RETURN pathResolver.isUnderAny(path, declaredListPaths)
 
-  FOR EACH prefix of path:
-    IF prefix in allListPaths:
+isUnderAnyChildList(suffix, parentPath):
+FOR EACH listPath IN declaredListPaths:
+  IF listPath.startsWith(parentPath + separator):
+    childRelativePath = listPath.substring(parentPath.length + 1)
+    IF suffix.startsWith(childRelativePath + separator):
       RETURN true
-
-  RETURN false
+RETURN false
 ```
 
-### PathCache: Per-row segment caching
+### 9. ResultMaterializer: JSON to POJO conversion
 
 ```
-PathCache:
-  segmentCache = {}  // Maps path → List<String> segments
+materialize(root, type):
 
-  getSegments(path):
-    IF path not in cache:
-      cache[path] = PathOps.splitPath(path, separator)
-    RETURN cache[path]
-
-  // Avoids repeated path splitting (4+ times per value)
-  // Lives for one row only, then discarded
+TRY:
+  IF type is JsonNode:
+    RETURN root  // Skip conversion
+  ELSE:
+    RETURN objectMapper.treeToValue(root, type)  // Jackson conversion
+CATCH Exception e:
+  THROW Flat2PojoException("Failed to map result to " + type, e)
 ```
 
 ## PERFORMANCE CHARACTERISTICS
 
 ### Time Complexity
 - **Overall:** O(n × m) where n = rows, m = average values per row
-- **List path check:** O(k) where k = path segments (via prefix cache)
-- **Parent lookup:** O(1) (pre-computed in ConfigurationCache)
-- **Path splitting:** O(k) amortized via PathCache
+- **List hierarchy lookup:** O(1) via ListHierarchyCache pre-computation
+- **Parent lookup:** O(1) via parentListPaths map
+- **Path operations:** O(k) where k = path depth (typically small constant)
 
 ### Space Complexity
-- **ConfigurationCache:** O(L × d) where L = list rules, d = avg path depth
-- **PathCache:** O(m × k) per row, where m = unique paths, k = segments
-- **ArrayBuckets:** O(unique elements) across all lists
+- **ListHierarchyCache:** O(L) where L = number of list rules
+- **ArrayBuckets:** O(E) where E = total unique list elements across all arrays
+- **RowGraphAssembler:** O(V) where V = values per group (accumulated JSON tree)
+- **Per-row:** O(m) for transformed values map
 
 ### Key Optimizations
-1. **Prefix caching** - `allListPaths` stores all prefixes for O(1) lookup
-2. **Path segment cache** - Avoids repeated `splitPath()` calls per row
-3. **Single-pass cache build** - Computes parent relationships while building prefixes
-4. **IdentityHashMap** - Array buckets use identity to avoid `.equals()` overhead
+1. **IdentityHashMap for buckets** - Avoids `.equals()` overhead on ArrayNode keys
+2. **ListHierarchyCache pre-computation** - Parent relationships computed once per config
+3. **Sorted path processing** - O(n log n) cache build instead of O(n²)
+4. **Bucket sorting cache** - Sorted elements cached until bucket changes
+5. **LinkedHashMap ordering** - Preserves insertion order for deterministic output
+
+### Hot Paths
+1. **ValueTransformer.transformRowValuesToJsonNodes** - Called once per row
+2. **GroupingEngine.upsertListElementRelative** - Called once per list rule per row
+3. **ArrayBucket.upsert** - Called for each list element creation
+4. **ArrayFinalizer.finalizeArrays** - Called once per group (depth-first tree walk)
 
 ## CORRECTNESS GUARANTEES
 
 ### Hierarchical Processing
 Lists processed in **declaration order** ensures:
 - Parent lists populated before children
-- Child elements inserted into correct parent element
-- Validation catches missing parent declarations
+- Child elements inserted into correct parent element from listElementCache
+- Validation catches missing parent declarations at startup
 
-### Deduplication
+### Deduplication Semantics
 Composite keys ensure:
-- Elements with same key values deduplicated per array
-- Conflict policies control merge behavior
-- Works across multiple rows
+- Elements with same keyPath values deduplicated per array
+- First-write-wins: first row establishes element, subsequent rows populate it
+- Works correctly across multiple rows in the same group
 
 ### Data Integrity
-- Missing keyPath values → skip list element + warn via Reporter
-- Skipped parents → skip all descendants
-- Conflict policies prevent silent data loss
+- Missing keyPath values → skip list element, add to skippedListPaths, warn via Reporter
+- Skipped parents → skip all child lists (isUnderAny check)
+- Conflict policies prevent silent data loss (configurable: error, firstWriteWins, lastWriteWins, merge)
+- Bucket state cleared after finalization to prevent leaks across groups
 
 ## EXAMPLE EXECUTION
 
+### Simple Case: Order with Line Items
+
+**Input Rows:**
 ```
-Input Rows:
-  1. {order/id: "123", order/items/id: "A", order/items/name: "Widget"}
-  2. {order/id: "123", order/items/id: "B", order/items/name: "Gadget"}
+Row 1: {order/id: "123", order/items/id: "A", order/items/name: "Widget", order/items/qty: "2"}
+Row 2: {order/id: "123", order/items/id: "B", order/items/name: "Gadget", order/items/qty: "1"}
+```
 
-Config:
-  lists:
-    - path: "order/items"
-      keyPaths: ["order/items/id"]
+**Config:**
+```yaml
+lists:
+  - path: "order/items"
+    keyPaths: ["id"]  # Relative to order/items
+    dedupe: true
+```
 
-Execution:
-  Group: All rows (no rootKeys)
+**Execution Trace:**
 
-  Row 1:
-    - rowValues = {"order/id": "123", "order/items/id": "A", ...}
-    - Process list "order/items":
-      - key = ["A"]
-      - Upsert into root.order.items array
-      - element = {id: "A", name: "Widget"}
-    - Process non-list:
-      - root.order.id = "123"
+```
+SETUP:
+- rootKeys: [] → single group
+- Create RowGraphAssembler:
+  - root = {}
+  - listElementCache = {}
 
-  Row 2:
-    - Process list "order/items":
-      - key = ["B"]
-      - Upsert into root.order.items array
-      - element = {id: "B", name: "Gadget"}
-    - Process non-list:
-      - root.order.id = "123" (conflict handled)
+ROW 1:
+1. Transform: {"order/id": TextNode("123"), "order/items/id": TextNode("A"), ...}
+2. Process list "order/items":
+   - parentListPath = null (top-level)
+   - baseObject = root
+   - Extract key from rowValues["order/items/id"] = "A"
+   - compositeKey = ["A"]
+   - Upsert into bucket → NEW element created
+   - listElementCache["order/items"] = element
+   - Copy values: element.id = "A", element.name = "Widget", element.qty = "2"
+3. Write direct values: root.order.id = "123"
 
-  Finalize:
-    - Sort arrays per orderBy rules
+ROW 2:
+1. Transform: {"order/id": TextNode("123"), "order/items/id": TextNode("B"), ...}
+2. Process list "order/items":
+   - compositeKey = ["B"]
+   - Upsert into bucket → NEW element created
+   - listElementCache["order/items"] = element  (OVERWRITE cache with new element)
+   - Copy values: element.id = "B", element.name = "Gadget", element.qty = "1"
+3. Write direct values: root.order.id = "123" (already set, no conflict)
 
-  Result:
-    Order {
-      id: "123",
-      items: [
-        {id: "A", name: "Widget"},
-        {id: "B", name: "Gadget"}
-      ]
-    }
+FINALIZE:
+- ArrayFinalizer walks tree
+- For arrayNode at root.order.items:
+  - bucket.ordered([]) → [element_A, element_B] (insertion order)
+  - Replace arrayNode contents
+
+MATERIALIZE:
+- Jackson converts root to Order.class
+```
+
+**Result:**
+```json
+{
+  "order": {
+    "id": "123",
+    "items": [
+      {"id": "A", "name": "Widget", "qty": "2"},
+      {"id": "B", "name": "Gadget", "qty": "1"}
+    ]
+  }
+}
+```
+
+### Complex Case: Nested Lists with Grouping
+
+**Input:** Definitions with nested modules (see SpecSuiteTest for real examples)
+
+**Key Insight:** listElementCache updates per row, allowing nested list elements to be written to the correct parent element established in the same row.
+
+## DIAGRAMS
+
+### Sequence Diagram: convertAll Flow
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Flat2PojoCore
+    participant MappingConfigLoader
+    participant RootKeyGrouper
+    participant RowGraphAssembler
+    participant ListRuleProcessor
+    participant GroupingEngine
+    participant ArrayFinalizer
+    participant ResultMaterializer
+
+    Client->>Flat2PojoCore: convertAll(rows, type, config)
+    Flat2PojoCore->>MappingConfigLoader: validateHierarchy(config)
+    MappingConfigLoader-->>Flat2PojoCore: ✓
+
+    Flat2PojoCore->>Flat2PojoCore: buildProcessingPipeline(config)
+    Note over Flat2PojoCore: Creates PathResolver, ListHierarchyCache,<br/>GroupingEngine, ValueTransformer, ResultMaterializer
+
+    alt rootKeys configured
+        Flat2PojoCore->>RootKeyGrouper: groupByRootKeys(rows, rootKeys)
+        RootKeyGrouper-->>Flat2PojoCore: Map<key, List<rows>>
+    end
+
+    loop For each group
+        Flat2PojoCore->>RowGraphAssembler: new(dependencies, context)
+        Note over RowGraphAssembler: root = {}, listElementCache = {}
+
+        loop For each row in group
+            Flat2PojoCore->>RowGraphAssembler: processRow(row)
+            RowGraphAssembler->>RowGraphAssembler: preprocess (optional)
+            RowGraphAssembler->>RowGraphAssembler: transformRowValuesToJsonNodes
+
+            loop For each list rule
+                RowGraphAssembler->>ListRuleProcessor: processRule(rowValues, skippedPaths, rule, root)
+                ListRuleProcessor->>GroupingEngine: upsertListElementRelative(base, path, rowValues, rule)
+                GroupingEngine->>GroupingEngine: Extract composite key
+                GroupingEngine->>GroupingEngine: ArrayBucket.upsert(key, element)
+                GroupingEngine-->>ListRuleProcessor: element (or null)
+                ListRuleProcessor->>ListRuleProcessor: Cache element & copy values
+            end
+
+            RowGraphAssembler->>RowGraphAssembler: Write direct values to root
+        end
+
+        Flat2PojoCore->>RowGraphAssembler: materialize(type)
+        RowGraphAssembler->>GroupingEngine: finalizeArrays(root)
+        GroupingEngine->>ArrayFinalizer: finalizeArrays(root)
+        Note over ArrayFinalizer: Depth-first: sort & replace all arrays
+        ArrayFinalizer-->>GroupingEngine: ✓
+        GroupingEngine->>GroupingEngine: clearBucketState()
+
+        RowGraphAssembler->>ResultMaterializer: materialize(root, type)
+        ResultMaterializer-->>RowGraphAssembler: POJO instance
+        RowGraphAssembler-->>Flat2PojoCore: POJO
+    end
+
+    Flat2PojoCore-->>Client: List<POJO>
+```
+
+### Component Diagram: Data Flow
+
+```mermaid
+graph TB
+    subgraph Input
+        A[Flat Rows<br/>Map&lt;String, ?&gt;]
+    end
+
+    subgraph "Config Layer"
+        B[MappingConfig]
+        C[ListHierarchyCache]
+        D[PathResolver]
+    end
+
+    subgraph "Grouping Layer"
+        E[RootKeyGrouper]
+        F[LinkedHashMap<br/>key → rows]
+    end
+
+    subgraph "Processing Layer"
+        G[RowGraphAssembler<br/>State: root, listElementCache]
+        H[ValueTransformer]
+        I[ListRuleProcessor]
+        J[ListElementWriter]
+    end
+
+    subgraph "Array Management"
+        K[GroupingEngine<br/>State: buckets, comparators]
+        L[ArrayBucket<br/>byKey, insertionOrder]
+        M[ArrayFinalizer]
+    end
+
+    subgraph "Output Layer"
+        N[ObjectNode<br/>JSON Tree]
+        O[ResultMaterializer]
+        P[POJO Instance]
+    end
+
+    A --> E
+    B --> C
+    B --> D
+    B --> H
+    B --> K
+
+    E --> F
+    F --> G
+
+    G --> H
+    H --> I
+    I --> K
+    K --> L
+
+    I --> J
+    J --> N
+
+    G --> M
+    M --> L
+    M --> N
+
+    N --> O
+    O --> P
+
+    style A fill:#e1f5ff
+    style P fill:#d4edda
+    style G fill:#fff3cd
+    style K fill:#fff3cd
+    style N fill:#f8d7da
 ```
 
 ## DESIGN RATIONALE
 
-### Why Build-Then-Flatten?
+### Why Direct Value Transformation (Not Build-Then-Flatten)?
 
-The `processRowValues()` method builds a tree then flattens it. Why?
+**Current Implementation:** `ValueTransformer.transformRowValuesToJsonNodes` directly produces `Map<String, JsonNode>` without building an intermediate tree.
 
-**Reason:** `FlatTreeBuilder` handles complex value transformations:
-- Primitive splits: `"a,b,c"` → `["a", "b", "c"]` (creates ArrayNode)
-- Type conversions: String → proper JsonNode types
-- BlanksAsNulls: `""` → `null`
-
-These transformations require Jackson's type system. The tree is then flattened because:
-- List processing needs **paths** to extract composite keys
-- Values must be routed to correct list elements based on hierarchical structure
-- Simpler to work with path→value map than nested tree traversal
+**Rationale:**
+- List processing needs **paths** to extract composite keys (e.g., `"order/items/id"` → key for deduplication)
+- Building a tree just to flatten it again is wasteful
+- Direct transformation applies primitives split and blanksAsNulls in one pass
+- Simpler to work with flat path→value map for routing to list elements
 
 ### Why Jackson-First?
 
 Building a JSON tree first (via Jackson's ObjectNode) provides:
-- **Type safety** - JsonNode types match POJO types
-- **Compatibility** - Existing Jackson annotations, deserializers work
-- **Simplicity** - Let Jackson handle all type conversion edge cases
-- **Testability** - Can verify intermediate JSON structure
+- **Type safety:** JsonNode types match POJO field types
+- **Compatibility:** Existing Jackson annotations and deserializers work seamlessly
+- **Simplicity:** Let Jackson handle all type conversion edge cases
+- **Testability:** Can verify intermediate JSON structure before materialization
 
 ### Why Hierarchical Processing?
 
 Processing lists in declaration order enables:
-- **Nested lists** - Child lists inserted into parent elements
-- **Validation** - Catch missing parent declarations early
-- **Cache efficiency** - Parent element available when processing child
-- **Determinism** - Predictable processing order
+- **Nested lists:** Child lists inserted into parent elements via listElementCache
+- **Early validation:** Catch missing parent declarations at startup
+- **Cache efficiency:** Parent element available when processing child in same row
+- **Determinism:** Predictable processing order, no hidden dependencies
 
-## SUMMARY
+### Why IdentityHashMap for Buckets?
 
-flat2pojo converts flat maps to nested POJOs through:
+- ArrayNode identity uniquely identifies each array in the tree
+- Avoids expensive `.equals()` calls on large ArrayNode instances
+- Matches natural tree structure (one bucket per physical array node)
 
-1. **Grouping** - Rows → root objects
-2. **Transformation** - Values → JsonNodes
-3. **Hierarchical upsert** - Lists with deduplication
-4. **Finalization** - Sort + convert to POJO
+## RELATED DOCUMENTATION
 
-Key characteristics:
-- **O(n) processing** with optimized path lookups
-- **Configurable** via declarative YAML
-- **Extensible** via SPI (Reporter, ValuePreprocessor)
-- **Robust** with conflict resolution and validation
+- [MAPPING.md](MAPPING.md) - Configuration schema, field mapping rules, and semantic constraints
+- [OPERATIONS.md](OPERATIONS.md) - API guide, production deployment, monitoring, and troubleshooting
+- [README.md](README.md) - Project overview, quick start, and getting started guide
+
+## SOURCES
+
+All pseudocode derived from code inspection at commit `9f9315f`:
+
+### Core Entry Points
+- `flat2pojo-core/src/main/java/io/github/pojotools/flat2pojo/core/api/Flat2Pojo.java`
+- `flat2pojo-core/src/main/java/io/github/pojotools/flat2pojo/core/impl/Flat2PojoCore.java` (lines 42-111)
+
+### Grouping & Processing
+- `flat2pojo-core/src/main/java/io/github/pojotools/flat2pojo/core/impl/RootKeyGrouper.java` (lines 25-58)
+- `flat2pojo-core/src/main/java/io/github/pojotools/flat2pojo/core/impl/RowGraphAssembler.java` (lines 38-84)
+- `flat2pojo-core/src/main/java/io/github/pojotools/flat2pojo/core/impl/ProcessingPipeline.java`
+
+### List Processing
+- `flat2pojo-core/src/main/java/io/github/pojotools/flat2pojo/core/impl/ListRuleProcessor.java` (lines 31-133)
+- `flat2pojo-core/src/main/java/io/github/pojotools/flat2pojo/core/impl/ListElementWriter.java` (lines 20-48)
+
+### Array Management
+- `flat2pojo-core/src/main/java/io/github/pojotools/flat2pojo/core/engine/GroupingEngine.java` (lines 36-92)
+- `flat2pojo-core/src/main/java/io/github/pojotools/flat2pojo/core/engine/ArrayBucket.java` (lines 27-78)
+- `flat2pojo-core/src/main/java/io/github/pojotools/flat2pojo/core/engine/ArrayFinalizer.java` (lines 29-76)
+
+### Value Transformation
+- `flat2pojo-core/src/main/java/io/github/pojotools/flat2pojo/core/engine/ValueTransformer.java` (lines 45-112)
+- `flat2pojo-core/src/main/java/io/github/pojotools/flat2pojo/core/util/ConflictHandler.java`
+
+### Configuration & Caching
+- `flat2pojo-core/src/main/java/io/github/pojotools/flat2pojo/core/config/MappingConfig.java` (lines 32-192)
+- `flat2pojo-core/src/main/java/io/github/pojotools/flat2pojo/core/config/MappingConfigLoader.java` (lines 20-124)
+- `flat2pojo-core/src/main/java/io/github/pojotools/flat2pojo/core/config/ListHierarchyCache.java` (lines 19-57)
+- `flat2pojo-core/src/main/java/io/github/pojotools/flat2pojo/core/util/PathResolver.java` (lines 10-74)
+
+### Materialization
+- `flat2pojo-core/src/main/java/io/github/pojotools/flat2pojo/core/impl/ResultMaterializer.java` (lines 19-31)
+
+---
+
+**End of Document**

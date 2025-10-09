@@ -1,6 +1,64 @@
 # Operations Guide
 
-This document covers operational aspects of using flat2pojo in production environments, including performance optimization, monitoring, troubleshooting, and best practices for enterprise deployments.
+This document covers operational aspects of using flat2pojo in production environments, including API usage, performance optimization, monitoring, troubleshooting, and best practices for enterprise deployments.
+
+## Related Documentation
+
+- [MAPPING.md](MAPPING.md) - Configuration schema, field mapping rules, and semantic constraints
+- [PSEUDOCODE.md](PSEUDOCODE.md) - Internal algorithm flow, component architecture, and performance characteristics
+- [README.md](README.md) - Project overview, quick start guide, and getting started
+
+## API Entry Points
+
+The `Flat2Pojo` interface provides several entry points for data conversion:
+
+### convertAll(rows, targetType, config)
+
+**Primary batch conversion method** - converts a list of flat maps to POJOs:
+
+```java
+List<Map<String, Object>> rows = loadData();
+MappingConfig config = MappingConfigLoader.fromYaml(yamlString);
+Flat2Pojo converter = Flat2PojoFactory.create();
+
+List<MyPojo> results = converter.convertAll(rows, MyPojo.class, config);
+```
+
+**Use when:**
+- Processing multiple rows as a batch (recommended)
+- Grouping is configured via `rootKeys`
+- Optimal performance is required
+
+### convertOptional(row, targetType, config)
+
+**Safe single row conversion** - returns `Optional<T>`:
+
+```java
+Map<String, Object> row = getSingleRow();
+Optional<MyPojo> result = converter.convertOptional(row, MyPojo.class, config);
+result.ifPresent(this::processResult);
+```
+
+**Use when:**
+- Null safety is important
+- Handling potentially empty results
+- Functional programming patterns
+
+### stream(iterator, targetType, config)
+
+**Streaming conversion** - processes data incrementally:
+
+```java
+Iterator<Map<String, Object>> rowIterator = getLargeDataset();
+Stream<MyPojo> results = converter.stream(rowIterator, MyPojo.class, config);
+
+results.forEach(this::processResult);
+```
+
+**Use when:**
+- Dataset too large for memory
+- Real-time processing pipelines
+- ETL transformations
 
 ## Processing Modes
 
