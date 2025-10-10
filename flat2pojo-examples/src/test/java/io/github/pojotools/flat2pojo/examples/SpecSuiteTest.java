@@ -1,5 +1,7 @@
 package io.github.pojotools.flat2pojo.examples;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.pojotools.flat2pojo.core.api.Flat2Pojo;
@@ -7,14 +9,11 @@ import io.github.pojotools.flat2pojo.core.config.MappingConfig;
 import io.github.pojotools.flat2pojo.core.config.MappingConfigLoader;
 import io.github.pojotools.flat2pojo.core.config.ValidationException;
 import io.github.pojotools.flat2pojo.examples.domain.ImmutableProductRoot;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 class SpecSuiteTest {
   private ObjectMapper objectMapper;
@@ -39,10 +38,12 @@ class SpecSuiteTest {
     List<Map<String, ?>> rows =
         List.of(Map.of("workflow/isTerminated", false, "metadata/name", "Alpha"));
 
-    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, ImmutableProductRoot.class, cfg));
+    var out =
+        TestSupport.firstElementOrThrow(
+            converter.convertAll(rows, ImmutableProductRoot.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-      objectMapper,
+        objectMapper,
         """
       {
         "workflow": { "isTerminated": false },
@@ -65,10 +66,12 @@ class SpecSuiteTest {
     """);
 
     List<Map<String, ?>> rows = List.of(Map.of("metadata/name", "Alpha"));
-    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, ImmutableProductRoot.class, cfg));
+    var out =
+        TestSupport.firstElementOrThrow(
+            converter.convertAll(rows, ImmutableProductRoot.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-      objectMapper,
+        objectMapper,
         """
       {
         "metadata": { "name": "Alpha" },
@@ -89,10 +92,12 @@ class SpecSuiteTest {
     """);
 
     List<Map<String, ?>> rows = List.of(Map.of("metadata/name", "Alpha"));
-    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, ImmutableProductRoot.class, cfg));
+    var out =
+        TestSupport.firstElementOrThrow(
+            converter.convertAll(rows, ImmutableProductRoot.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-      objectMapper,
+        objectMapper,
         """
       {
         "metadata": { "name": "Alpha" },
@@ -123,7 +128,7 @@ class SpecSuiteTest {
     var out = converter.convertAll(rows, ImmutableProductRoot.class, cfg);
 
     PojoJsonAssert.assertPojoJsonEquals(
-      objectMapper,
+        objectMapper,
         """
       [
         {
@@ -195,10 +200,12 @@ class SpecSuiteTest {
                 "definitions/tracker/tasks/comments/loggedAt",
                 "2025-01-02T01:00:00Z"));
 
-    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, ImmutableProductRoot.class, cfg));
+    var out =
+        TestSupport.firstElementOrThrow(
+            converter.convertAll(rows, ImmutableProductRoot.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-      objectMapper,
+        objectMapper,
         """
       {
         "referencedProductId": { "identifier": "P-1" },
@@ -277,12 +284,14 @@ class SpecSuiteTest {
       }
     }
 
-    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, ImmutableProductRoot.class, cfg));
+    var out =
+        TestSupport.firstElementOrThrow(
+            converter.convertAll(rows, ImmutableProductRoot.class, cfg));
 
     // Full expected tree (two definitions, each with 3 tracker comments + 3 tasks each with 2
     // comments)
     PojoJsonAssert.assertPojoJsonEquals(
-      objectMapper,
+        objectMapper,
         """
       {
         "referencedProductId": { "identifier": "P-1" },
@@ -380,10 +389,12 @@ class SpecSuiteTest {
                 "definitions/id/identifier", "D-1",
                 "definitions/schedule/weekdays", "MON, TUE, WED"));
 
-    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, ImmutableProductRoot.class, cfg));
+    var out =
+        TestSupport.firstElementOrThrow(
+            converter.convertAll(rows, ImmutableProductRoot.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-      objectMapper,
+        objectMapper,
         """
       {
         "definitions": [
@@ -417,7 +428,7 @@ class SpecSuiteTest {
     var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-      objectMapper,
+        objectMapper,
         """
       {
         "flags": { "isUser": "yes" },
@@ -450,10 +461,12 @@ class SpecSuiteTest {
             Map.of("definitions/id/identifier", "D-1", "definitions/name", "Alpha"),
             Map.of("definitions/id/identifier", "D-3"));
 
-    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, ImmutableProductRoot.class, cfg));
+    var out =
+        TestSupport.firstElementOrThrow(
+            converter.convertAll(rows, ImmutableProductRoot.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-      objectMapper,
+        objectMapper,
         """
       {
         "definitions": [
@@ -485,10 +498,12 @@ class SpecSuiteTest {
             Map.of("definitions/id/identifier", "D-1", "definitions/name", "Alpha"),
             Map.of("definitions/id/identifier", "D-1", "definitions/audit/modifiedBy", "me"));
 
-    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, ImmutableProductRoot.class, cfg));
+    var out =
+        TestSupport.firstElementOrThrow(
+            converter.convertAll(rows, ImmutableProductRoot.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-      objectMapper,
+        objectMapper,
         """
       {
         "definitions": [
@@ -522,10 +537,12 @@ class SpecSuiteTest {
             Map.of("definitions/id/identifier", "D-1", "definitions/name", "Alpha"),
             Map.of("definitions/id/identifier", "D-1", "definitions/name", "Beta"));
 
-    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, ImmutableProductRoot.class, cfg));
+    var out =
+        TestSupport.firstElementOrThrow(
+            converter.convertAll(rows, ImmutableProductRoot.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-      objectMapper,
+        objectMapper,
         """
       {
         "definitions": [
@@ -571,10 +588,12 @@ class SpecSuiteTest {
 
     List<Map<String, ?>> rows = List.of(Map.of("metadata/name", "Alpha", "unknown/field", "noise"));
 
-    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, ImmutableProductRoot.class, cfg));
+    var out =
+        TestSupport.firstElementOrThrow(
+            converter.convertAll(rows, ImmutableProductRoot.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-      objectMapper,
+        objectMapper,
         """
       {
         "metadata": { "name": "Alpha" },
@@ -619,7 +638,7 @@ class SpecSuiteTest {
     JsonNode out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-      objectMapper, """
+        objectMapper, """
       { "metadata": { "description": null } }
     """, out);
   }
@@ -649,7 +668,7 @@ class SpecSuiteTest {
     var out = converter.stream(rows.iterator(), ImmutableProductRoot.class, cfg).toList();
 
     PojoJsonAssert.assertPojoJsonEquals(
-      objectMapper,
+        objectMapper,
         """
       [
         {
@@ -714,7 +733,7 @@ class SpecSuiteTest {
     var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-      objectMapper,
+        objectMapper,
         """
             {
               "referencedProductId": { "identifier": "P-1" },
@@ -790,7 +809,7 @@ class SpecSuiteTest {
     var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-      objectMapper,
+        objectMapper,
         """
             {
               "referencedProductId": { "identifier": "P-1" },
@@ -891,7 +910,7 @@ class SpecSuiteTest {
     var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-      objectMapper,
+        objectMapper,
         """
             {
               "definitions": [
@@ -952,10 +971,12 @@ class SpecSuiteTest {
             Map.of("definitions/id/identifier", "D-1", "definitions/name", "FirstName"),
             Map.of("definitions/id/identifier", "D-1", "definitions/name", "SecondName"));
 
-    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, ImmutableProductRoot.class, cfg));
+    var out =
+        TestSupport.firstElementOrThrow(
+            converter.convertAll(rows, ImmutableProductRoot.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-      objectMapper,
+        objectMapper,
         """
         {
           "definitions": [
@@ -989,7 +1010,7 @@ class SpecSuiteTest {
     JsonNode out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-      objectMapper,
+        objectMapper,
         """
         {
           "numbers": {
@@ -1031,7 +1052,7 @@ class SpecSuiteTest {
     var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-      objectMapper,
+        objectMapper,
         """
         {
           "definitions": [
@@ -1065,7 +1086,7 @@ class SpecSuiteTest {
     JsonNode out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-      objectMapper,
+        objectMapper,
         """
         {
           "root": {
@@ -1115,7 +1136,7 @@ class SpecSuiteTest {
 
     // When types are incompatible, merge should fall back to lastWriteWins
     PojoJsonAssert.assertPojoJsonEquals(
-      objectMapper,
+        objectMapper,
         """
         {
           "definitions": [
@@ -1155,7 +1176,7 @@ class SpecSuiteTest {
     var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-      objectMapper,
+        objectMapper,
         """
         {
           "definitions": [
@@ -1197,7 +1218,8 @@ class SpecSuiteTest {
     var out1 = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
     var out2 = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
 
-    String expectedJson = """
+    String expectedJson =
+        """
         {
           "definitions": [
             { "id": { "identifier": "D-2" }, "priority": 3 },
@@ -1231,13 +1253,13 @@ class SpecSuiteTest {
     List<Map<String, ?>> rows =
         List.of(
             Map.of("definitions/id/identifier", "D-1", "definitions/priority", 2),
-            Map.of("definitions/id/identifier", "D-2"),  // null priority
+            Map.of("definitions/id/identifier", "D-2"), // null priority
             Map.of("definitions/id/identifier", "D-3", "definitions/priority", 1));
 
     var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-      objectMapper,
+        objectMapper,
         """
         {
           "definitions": [
@@ -1284,7 +1306,7 @@ class SpecSuiteTest {
     var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-      objectMapper,
+        objectMapper,
         """
         {
           "definitions": [
@@ -1323,15 +1345,16 @@ class SpecSuiteTest {
           """);
 
     // Use Map.of() carefully - it doesn't accept null values
-    List<Map<String, ?>> rows = List.of(
-        Map.of("definitions/id/identifier", "D-1"),
-        Map.of("definitions/id/identifier", "D-2", "definitions/emptyField", ""),
-        Map.of("definitions/id/identifier", "D-4", "definitions/blankField", "   "));
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of("definitions/id/identifier", "D-1"),
+            Map.of("definitions/id/identifier", "D-2", "definitions/emptyField", ""),
+            Map.of("definitions/id/identifier", "D-4", "definitions/blankField", "   "));
 
     var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-      objectMapper,
+        objectMapper,
         """
         {
           "definitions": [
@@ -1375,7 +1398,7 @@ class SpecSuiteTest {
     var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-      objectMapper,
+        objectMapper,
         """
         {
           "items": [
@@ -1422,16 +1445,46 @@ class SpecSuiteTest {
 
     List<Map<String, ?>> rows =
         List.of(
-            Map.of("definitions/id/identifier", "D-1", "definitions/category", "B", "definitions/priority", 1, "definitions/name", "Beta"),
-            Map.of("definitions/id/identifier", "D-2", "definitions/category", "A", "definitions/name", "Alpha"),
-            Map.of("definitions/id/identifier", "D-3", "definitions/category", "A", "definitions/priority", 3, "definitions/name", "Gamma"),
-            Map.of("definitions/id/identifier", "D-4", "definitions/category", "A", "definitions/priority", 3, "definitions/name", "Delta"),
+            Map.of(
+                "definitions/id/identifier",
+                "D-1",
+                "definitions/category",
+                "B",
+                "definitions/priority",
+                1,
+                "definitions/name",
+                "Beta"),
+            Map.of(
+                "definitions/id/identifier",
+                "D-2",
+                "definitions/category",
+                "A",
+                "definitions/name",
+                "Alpha"),
+            Map.of(
+                "definitions/id/identifier",
+                "D-3",
+                "definitions/category",
+                "A",
+                "definitions/priority",
+                3,
+                "definitions/name",
+                "Gamma"),
+            Map.of(
+                "definitions/id/identifier",
+                "D-4",
+                "definitions/category",
+                "A",
+                "definitions/priority",
+                3,
+                "definitions/name",
+                "Delta"),
             Map.of("definitions/id/identifier", "D-5", "definitions/name", "Epsilon"));
 
     var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-      objectMapper,
+        objectMapper,
         """
         {
           "definitions": [
@@ -1465,12 +1518,12 @@ class SpecSuiteTest {
     List<Map<String, ?>> rows =
         List.of(
             Map.of("definitions/id/identifier", "D-1", "definitions/priority", 5),
-            Map.of("other/field", "ignored"));  // This won't create a definition
+            Map.of("other/field", "ignored")); // This won't create a definition
 
     var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-      objectMapper,
+        objectMapper,
         """
         {
           "definitions": [
@@ -1552,132 +1605,132 @@ class SpecSuiteTest {
     ArrayList<Map<String, ?>> rows = new ArrayList<>();
 
     // Product P-1, Definition D-1: Base definition with tags, metadata merge, tracker comments
-    rows.add(Map.of(
-        "referencedProductId/identifier", "P-1",
-        "definitions/id/identifier", "D-1",
-        "definitions/name", "Core Services",
-        "definitions/priority", 5,
-        "definitions/tags", "backend, critical, v2.0",
-        "definitions/metadata/name", "Core Services Module",
-        "definitions/metadata/description", "Main backend services",
-        "definitions/tracker/comments/loggedAt", "2025-01-01T09:00:00Z",
-        "definitions/tracker/comments/comment", "Initial setup complete",
-        "definitions/tracker/comments/loggedBy", "alice"
-    ));
+    rows.add(
+        Map.of(
+            "referencedProductId/identifier", "P-1",
+            "definitions/id/identifier", "D-1",
+            "definitions/name", "Core Services",
+            "definitions/priority", 5,
+            "definitions/tags", "backend, critical, v2.0",
+            "definitions/metadata/name", "Core Services Module",
+            "definitions/metadata/description", "Main backend services",
+            "definitions/tracker/comments/loggedAt", "2025-01-01T09:00:00Z",
+            "definitions/tracker/comments/comment", "Initial setup complete",
+            "definitions/tracker/comments/loggedBy", "alice"));
 
     // P-1, D-1: Metadata merge (conflict resolution) + additional tracker comment
-    rows.add(Map.of(
-        "referencedProductId/identifier", "P-1",
-        "definitions/id/identifier", "D-1",
-        "definitions/metadata/description", "", // Blank should become null
-        "definitions/audit/modifiedBy", "alice",
-        "definitions/audit/modifiedAt", "2025-01-01T10:00:00Z",
-        "definitions/tracker/comments/loggedAt", "2025-01-01T11:00:00Z",
-        "definitions/tracker/comments/comment", "Configuration updated",
-        "definitions/tracker/comments/loggedBy", "bob"
-    ));
+    rows.add(
+        Map.of(
+            "referencedProductId/identifier", "P-1",
+            "definitions/id/identifier", "D-1",
+            "definitions/metadata/description", "", // Blank should become null
+            "definitions/audit/modifiedBy", "alice",
+            "definitions/audit/modifiedAt", "2025-01-01T10:00:00Z",
+            "definitions/tracker/comments/loggedAt", "2025-01-01T11:00:00Z",
+            "definitions/tracker/comments/comment", "Configuration updated",
+            "definitions/tracker/comments/loggedBy", "bob"));
 
     // P-1, D-1: Tasks with nested comments (cartesian product)
-    rows.add(Map.of(
-        "referencedProductId/identifier", "P-1",
-        "definitions/id/identifier", "D-1",
-        "definitions/tracker/tasks/taskDate", "2025-01-15",
-        "definitions/tracker/tasks/dueDate", "2025-01-20",
-        "definitions/tracker/tasks/isUser", true,
-        "definitions/tracker/tasks/gracePeriod", 5,
-        "definitions/tracker/tasks/comments/loggedAt", "2025-01-15T08:00:00Z",
-        "definitions/tracker/tasks/comments/comment", "Task started",
-        "definitions/tracker/tasks/comments/loggedBy", "charlie"
-    ));
+    rows.add(
+        Map.of(
+            "referencedProductId/identifier", "P-1",
+            "definitions/id/identifier", "D-1",
+            "definitions/tracker/tasks/taskDate", "2025-01-15",
+            "definitions/tracker/tasks/dueDate", "2025-01-20",
+            "definitions/tracker/tasks/isUser", true,
+            "definitions/tracker/tasks/gracePeriod", 5,
+            "definitions/tracker/tasks/comments/loggedAt", "2025-01-15T08:00:00Z",
+            "definitions/tracker/tasks/comments/comment", "Task started",
+            "definitions/tracker/tasks/comments/loggedBy", "charlie"));
 
-    rows.add(Map.of(
-        "referencedProductId/identifier", "P-1",
-        "definitions/id/identifier", "D-1",
-        "definitions/tracker/tasks/taskDate", "2025-01-15",
-        "definitions/tracker/tasks/comments/loggedAt", "2025-01-15T14:00:00Z",
-        "definitions/tracker/tasks/comments/comment", "Halfway done",
-        "definitions/tracker/tasks/comments/loggedBy", "alice"
-    ));
+    rows.add(
+        Map.of(
+            "referencedProductId/identifier", "P-1",
+            "definitions/id/identifier", "D-1",
+            "definitions/tracker/tasks/taskDate", "2025-01-15",
+            "definitions/tracker/tasks/comments/loggedAt", "2025-01-15T14:00:00Z",
+            "definitions/tracker/tasks/comments/comment", "Halfway done",
+            "definitions/tracker/tasks/comments/loggedBy", "alice"));
 
     // P-1, D-1: Second task
-    rows.add(Map.of(
-        "referencedProductId/identifier", "P-1",
-        "definitions/id/identifier", "D-1",
-        "definitions/tracker/tasks/taskDate", "2025-01-10",
-        "definitions/tracker/tasks/isUser", false,
-        "definitions/tracker/tasks/gracePeriod", 10,
-        "definitions/tracker/tasks/comments/loggedAt", "2025-01-10T10:00:00Z",
-        "definitions/tracker/tasks/comments/comment", "Automated task executed",
-        "definitions/tracker/tasks/comments/loggedBy", "system"
-    ));
+    rows.add(
+        Map.of(
+            "referencedProductId/identifier", "P-1",
+            "definitions/id/identifier", "D-1",
+            "definitions/tracker/tasks/taskDate", "2025-01-10",
+            "definitions/tracker/tasks/isUser", false,
+            "definitions/tracker/tasks/gracePeriod", 10,
+            "definitions/tracker/tasks/comments/loggedAt", "2025-01-10T10:00:00Z",
+            "definitions/tracker/tasks/comments/comment", "Automated task executed",
+            "definitions/tracker/tasks/comments/loggedBy", "system"));
 
     // P-1, D-1: Modules and nested components/features
-    rows.add(Map.of(
-        "referencedProductId/identifier", "P-1",
-        "definitions/id/identifier", "D-1",
-        "definitions/modules/name", "Authentication",
-        "definitions/modules/version", "1.2.0",
-        "definitions/modules/components/id", "auth-api",
-        "definitions/modules/components/type", "REST",
-        "definitions/modules/components/features/name", "OAuth2",
-        "definitions/modules/components/features/enabled", true,
-        "definitions/modules/components/features/version", "2.1"
-    ));
+    rows.add(
+        Map.of(
+            "referencedProductId/identifier", "P-1",
+            "definitions/id/identifier", "D-1",
+            "definitions/modules/name", "Authentication",
+            "definitions/modules/version", "1.2.0",
+            "definitions/modules/components/id", "auth-api",
+            "definitions/modules/components/type", "REST",
+            "definitions/modules/components/features/name", "OAuth2",
+            "definitions/modules/components/features/enabled", true,
+            "definitions/modules/components/features/version", "2.1"));
 
-    rows.add(Map.of(
-        "referencedProductId/identifier", "P-1",
-        "definitions/id/identifier", "D-1",
-        "definitions/modules/name", "Authentication",
-        "definitions/modules/components/id", "auth-api",
-        "definitions/modules/components/features/name", "JWT",
-        "definitions/modules/components/features/enabled", true,
-        "definitions/modules/components/features/version", "1.5"
-    ));
+    rows.add(
+        Map.of(
+            "referencedProductId/identifier", "P-1",
+            "definitions/id/identifier", "D-1",
+            "definitions/modules/name", "Authentication",
+            "definitions/modules/components/id", "auth-api",
+            "definitions/modules/components/features/name", "JWT",
+            "definitions/modules/components/features/enabled", true,
+            "definitions/modules/components/features/version", "1.5"));
 
-    rows.add(Map.of(
-        "referencedProductId/identifier", "P-1",
-        "definitions/id/identifier", "D-1",
-        "definitions/modules/name", "Database",
-        "definitions/modules/version", "2.0.0",
-        "definitions/modules/components/id", "db-pool",
-        "definitions/modules/components/type", "Connection Pool",
-        "definitions/modules/components/features/name", "Connection Pooling",
-        "definitions/modules/components/features/enabled", true
-    ));
+    rows.add(
+        Map.of(
+            "referencedProductId/identifier", "P-1",
+            "definitions/id/identifier", "D-1",
+            "definitions/modules/name", "Database",
+            "definitions/modules/version", "2.0.0",
+            "definitions/modules/components/id", "db-pool",
+            "definitions/modules/components/type", "Connection Pool",
+            "definitions/modules/components/features/name", "Connection Pooling",
+            "definitions/modules/components/features/enabled", true));
 
     // P-1, D-2: Second definition (lower priority, should come after D-1)
-    rows.add(Map.of(
-        "referencedProductId/identifier", "P-1",
-        "definitions/id/identifier", "D-2",
-        "definitions/name", "Analytics Engine",
-        "definitions/priority", 3,
-        "definitions/tags", "analytics, reporting",
-        "definitions/tracker/comments/loggedAt", "2025-01-02T10:00:00Z",
-        "definitions/tracker/comments/comment", "Analytics module deployed",
-        "definitions/tracker/comments/loggedBy", "david"
-    ));
+    rows.add(
+        Map.of(
+            "referencedProductId/identifier", "P-1",
+            "definitions/id/identifier", "D-2",
+            "definitions/name", "Analytics Engine",
+            "definitions/priority", 3,
+            "definitions/tags", "analytics, reporting",
+            "definitions/tracker/comments/loggedAt", "2025-01-02T10:00:00Z",
+            "definitions/tracker/comments/comment", "Analytics module deployed",
+            "definitions/tracker/comments/loggedBy", "david"));
 
     // P-2: Second product with different structure
-    rows.add(Map.of(
-        "referencedProductId/identifier", "P-2",
-        "definitions/id/identifier", "D-3",
-        "definitions/name", "Frontend Dashboard",
-        "definitions/priority", 7,
-        "definitions/tags", "frontend, ui, dashboard",
-        "definitions/metadata/name", "Frontend Dashboard",
-        "definitions/tracker/tasks/taskDate", "2025-02-01",
-        "definitions/tracker/tasks/isUser", true,
-        "definitions/tracker/tasks/comments/loggedAt", "2025-02-01T09:00:00Z",
-        "definitions/tracker/tasks/comments/comment", "UI redesign started"
-    ));
+    rows.add(
+        Map.of(
+            "referencedProductId/identifier", "P-2",
+            "definitions/id/identifier", "D-3",
+            "definitions/name", "Frontend Dashboard",
+            "definitions/priority", 7,
+            "definitions/tags", "frontend, ui, dashboard",
+            "definitions/metadata/name", "Frontend Dashboard",
+            "definitions/tracker/tasks/taskDate", "2025-02-01",
+            "definitions/tracker/tasks/isUser", true,
+            "definitions/tracker/tasks/comments/loggedAt", "2025-02-01T09:00:00Z",
+            "definitions/tracker/tasks/comments/comment", "UI redesign started"));
 
     // P-3: Third product (minimal data to test sparse handling)
-    rows.add(Map.of(
-        "referencedProductId/identifier", "P-3",
-        "definitions/id/identifier", "D-4",
-        "definitions/name", "Legacy System",
-        "definitions/priority", 1
-    ));
+    rows.add(
+        Map.of(
+            "referencedProductId/identifier", "P-3",
+            "definitions/id/identifier", "D-4",
+            "definitions/name", "Legacy System",
+            "definitions/priority", 1));
 
     var out = converter.convertAll(rows, ImmutableProductRoot.class, cfg);
 

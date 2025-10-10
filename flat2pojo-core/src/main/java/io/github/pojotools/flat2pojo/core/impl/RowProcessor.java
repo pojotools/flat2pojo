@@ -3,8 +3,8 @@ package io.github.pojotools.flat2pojo.core.impl;
 import java.util.Map;
 
 /**
- * Processes individual flat rows and builds object graph structure.
- * Enables plugin-based preprocessing and alternative row-processing strategies.
+ * Processes individual flat rows and builds object graph structure. Enables plugin-based
+ * preprocessing and alternative row-processing strategies.
  *
  * <p>Single Responsibility: Transform a single flat key-value row into nested JSON structure.
  */

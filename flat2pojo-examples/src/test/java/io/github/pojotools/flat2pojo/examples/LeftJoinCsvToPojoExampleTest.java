@@ -4,11 +4,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.pojotools.flat2pojo.core.api.Flat2Pojo;
 import io.github.pojotools.flat2pojo.core.config.MappingConfig;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import java.util.List;
 import java.util.Map;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests demonstrating LEFT JOIN semantics with optional relationships.
@@ -16,14 +15,16 @@ import java.util.Map;
  * <p>Models the scenario: Orders LEFT JOIN Customers LEFT JOIN Addresses LEFT JOIN LineItems.
  *
  * <p>Key behaviors:
+ *
  * <ul>
- *   <li>Some orders have no customer (omitted fields prevent spurious objects)</li>
- *   <li>Some orders have a customer but no address (address fields omitted)</li>
- *   <li>Some orders have multiple line items; others have zero</li>
- *   <li>Absent keys in a row mean no object is created for that level</li>
+ *   <li>Some orders have no customer (omitted fields prevent spurious objects)
+ *   <li>Some orders have a customer but no address (address fields omitted)
+ *   <li>Some orders have multiple line items; others have zero
+ *   <li>Absent keys in a row mean no object is created for that level
  * </ul>
  *
  * <p>Relationship diagram:
+ *
  * <pre>
  * Order 1--? Customer 1--? Address
  *   |
@@ -55,8 +56,7 @@ class LeftJoinCsvToPojoExampleTest {
     """);
 
     // Order with no customer, no address, no line items (all optional fields omitted)
-    List<Map<String, ?>> rows =
-        List.of(Map.of("order/id", "ORD001", "order/date", "2025-01-15"));
+    List<Map<String, ?>> rows = List.of(Map.of("order/id", "ORD001", "order/date", "2025-01-15"));
 
     var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
 

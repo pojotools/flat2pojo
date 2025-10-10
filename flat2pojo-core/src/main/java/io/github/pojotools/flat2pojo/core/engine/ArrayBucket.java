@@ -13,14 +13,14 @@ public final class ArrayBucket {
 
   /**
    * Upserts an element into the bucket.
-   * <p>
-   * Production behavior: Always called with an empty candidate node. When a key exists,
-   * returns the existing node unchanged. When key is new, inserts and returns the candidate.
-   * <p>
-   * This implements first-write-wins semantics: the first insert establishes the node,
+   *
+   * <p>Production behavior: Always called with an empty candidate node. When a key exists, returns
+   * the existing node unchanged. When key is new, inserts and returns the candidate.
+   *
+   * <p>This implements first-write-wins semantics: the first insert establishes the node,
    * subsequent upserts with the same key return the existing node without modification.
    *
-   * @param key       composite key identifying the element
+   * @param key composite key identifying the element
    * @param candidate node to insert (production: always empty; will be populated by callers)
    * @return the node in the bucket (either newly inserted or pre-existing)
    */

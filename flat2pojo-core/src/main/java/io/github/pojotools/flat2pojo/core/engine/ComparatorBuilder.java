@@ -11,8 +11,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Builds and caches comparators for list ordering.
- * Single Responsibility: Comparator construction logic only.
+ * Builds and caches comparators for list ordering. Single Responsibility: Comparator construction
+ * logic only.
  */
 final class ComparatorBuilder {
   private final String separator;
@@ -106,7 +106,8 @@ final class ComparatorBuilder {
     return node == null || node.isNull();
   }
 
-  private JsonNode navigateToNextSegment(final JsonNode current, final String path, final int start) {
+  private JsonNode navigateToNextSegment(
+      final JsonNode current, final String path, final int start) {
     if (!(current instanceof ObjectNode objectNode)) {
       return null;
     }

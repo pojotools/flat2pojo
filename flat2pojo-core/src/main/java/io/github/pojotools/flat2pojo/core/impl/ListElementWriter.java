@@ -7,8 +7,8 @@ import io.github.pojotools.flat2pojo.core.util.ConflictContext;
 import io.github.pojotools.flat2pojo.core.util.ConflictHandler;
 
 /**
- * Writes values into list elements with appropriate conflict handling.
- * Single Responsibility: Value writing logic only.
+ * Writes values into list elements with appropriate conflict handling. Single Responsibility: Value
+ * writing logic only.
  */
 final class ListElementWriter {
   private final ProcessingContext context;
@@ -29,10 +29,8 @@ final class ListElementWriter {
 
     final ObjectNode parent = context.pathResolver().traverseAndEnsurePath(target, path);
     final String lastSegment = context.pathResolver().getFinalSegment(path);
-    final ConflictContext conflictContext = new ConflictContext(
-        policy,
-        absolutePath,
-        context.config().reporter().orElse(null));
+    final ConflictContext conflictContext =
+        new ConflictContext(policy, absolutePath, context.config().reporter().orElse(null));
 
     ConflictHandler.writeScalarWithPolicy(parent, lastSegment, value, conflictContext);
   }

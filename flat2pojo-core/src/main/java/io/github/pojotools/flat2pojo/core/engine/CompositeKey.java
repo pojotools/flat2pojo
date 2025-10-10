@@ -1,9 +1,8 @@
 package io.github.pojotools.flat2pojo.core.engine;
 
-import lombok.ToString;
-
 import java.util.List;
 import java.util.Objects;
+import lombok.ToString;
 
 @ToString(of = "values")
 public final class CompositeKey {

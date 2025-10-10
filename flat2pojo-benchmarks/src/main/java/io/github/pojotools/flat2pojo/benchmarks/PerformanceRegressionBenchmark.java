@@ -182,7 +182,8 @@ public class PerformanceRegressionBenchmark {
 
   @Benchmark
   public void regressionSingleComplexRow(Blackhole bh) {
-    Object result = converter.convertOptional(singleComplexRow, Object.class, standardConfig).orElse(null);
+    Object result =
+        converter.convertOptional(singleComplexRow, Object.class, standardConfig).orElse(null);
     bh.consume(result);
   }
 

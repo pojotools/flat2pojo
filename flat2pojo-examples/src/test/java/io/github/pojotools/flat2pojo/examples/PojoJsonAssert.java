@@ -1,9 +1,9 @@
 package io.github.pojotools.flat2pojo.examples;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 final class PojoJsonAssert {
 

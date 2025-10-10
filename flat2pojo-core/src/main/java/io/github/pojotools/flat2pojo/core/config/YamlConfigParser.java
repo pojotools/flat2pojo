@@ -5,15 +5,12 @@ import io.github.pojotools.flat2pojo.core.config.MappingConfig.Direction;
 import io.github.pojotools.flat2pojo.core.config.MappingConfig.Nulls;
 import io.github.pojotools.flat2pojo.core.config.MappingConfig.OrderBy;
 import io.github.pojotools.flat2pojo.core.config.MappingConfig.PrimitiveSplitRule;
-import org.yaml.snakeyaml.Yaml;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import org.yaml.snakeyaml.Yaml;
 
-/**
- * Parses YAML configuration into MappingConfig.
- * Single Responsibility: YAML parsing only.
- */
+/** Parses YAML configuration into MappingConfig. Single Responsibility: YAML parsing only. */
 @SuppressWarnings("unchecked")
 final class YamlConfigParser {
   private YamlConfigParser() {}
@@ -140,7 +137,6 @@ final class YamlConfigParser {
     if (blanksAsNullsValue instanceof Boolean booleanValue) {
       return booleanValue;
     }
-    return blanksAsNullsValue != null
-        && Boolean.parseBoolean(String.valueOf(blanksAsNullsValue));
+    return blanksAsNullsValue != null && Boolean.parseBoolean(String.valueOf(blanksAsNullsValue));
   }
 }

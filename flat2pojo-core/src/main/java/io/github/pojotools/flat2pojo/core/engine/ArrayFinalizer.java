@@ -12,8 +12,8 @@ import java.util.Iterator;
 import java.util.List;
 
 /**
- * Finalizes array nodes by applying sorting and deduplication.
- * Single Responsibility: Array finalization logic only.
+ * Finalizes array nodes by applying sorting and deduplication. Single Responsibility: Array
+ * finalization logic only.
  */
 final class ArrayFinalizer {
   private final IdentityHashMap<ArrayNode, ArrayBucket> buckets;

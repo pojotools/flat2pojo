@@ -6,7 +6,6 @@ import io.github.pojotools.flat2pojo.core.config.MappingConfig;
 import io.github.pojotools.flat2pojo.core.config.MappingConfigLoader;
 import io.github.pojotools.flat2pojo.jackson.Flat2PojoFactory;
 import io.github.pojotools.flat2pojo.jackson.JacksonAdapter;
-
 import java.util.List;
 import java.util.Objects;
 

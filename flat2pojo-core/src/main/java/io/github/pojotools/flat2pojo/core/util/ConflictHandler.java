@@ -32,9 +32,7 @@ public final class ConflictHandler {
   }
 
   private static boolean applyPolicy(
-      final JsonNode existing,
-      final JsonNode incoming,
-      final ConflictContext context) {
+      final JsonNode existing, final JsonNode incoming, final ConflictContext context) {
     return switch (context.policy()) {
       case error -> {
         handleErrorPolicy(existing, incoming, context);
@@ -53,65 +51,74 @@ public final class ConflictHandler {
   }
 
   private static void handleErrorPolicy(
-      final JsonNode existing,
-      final JsonNode incoming,
-      final ConflictContext context) {
+      final JsonNode existing, final JsonNode incoming, final ConflictContext context) {
     if (hasValueConflict(existing, incoming)) {
       final String message =
-          "Conflict at '" + context.absolutePath() + "': existing=" + existing + ", incoming=" + incoming;
+          "Conflict at '"
+              + context.absolutePath()
+              + "': existing="
+              + existing
+              + ", incoming="
+              + incoming;
       context.reporterOptional().ifPresent(r -> r.warn(message));
       throw new RuntimeException(message);
     }
   }
 
   private static void handleFirstWriteWinsPolicy(
-      final JsonNode existing,
-      final JsonNode incoming,
-      final ConflictContext context) {
+      final JsonNode existing, final JsonNode incoming, final ConflictContext context) {
     if (hasValueConflict(existing, incoming)) {
-      context.reporterOptional().ifPresent(r -> r.warn(
-          "Field conflict resolved using firstWriteWins policy at '"
-              + context.absolutePath()
-              + "': kept existing="
-              + existing
-              + ", ignored incoming="
-              + incoming));
+      context
+          .reporterOptional()
+          .ifPresent(
+              r ->
+                  r.warn(
+                      "Field conflict resolved using firstWriteWins policy at '"
+                          + context.absolutePath()
+                          + "': kept existing="
+                          + existing
+                          + ", ignored incoming="
+                          + incoming));
     }
   }
 
   private static boolean handleMergePolicy(
-      final JsonNode existing,
-      final JsonNode incoming,
-      final ConflictContext context) {
+      final JsonNode existing, final JsonNode incoming, final ConflictContext context) {
     if (existing instanceof ObjectNode existingObject
         && incoming instanceof ObjectNode incomingObject) {
       deepMerge(existingObject, incomingObject);
       return false; // Don't write, already merged in place
     } else if (!existing.equals(incoming)) {
-      context.reporterOptional().ifPresent(r -> r.warn(
-          "Cannot merge non-object values at '"
-              + context.absolutePath()
-              + "': existing="
-              + existing
-              + ", incoming="
-              + incoming
-              + ". Using lastWriteWins."));
+      context
+          .reporterOptional()
+          .ifPresent(
+              r ->
+                  r.warn(
+                      "Cannot merge non-object values at '"
+                          + context.absolutePath()
+                          + "': existing="
+                          + existing
+                          + ", incoming="
+                          + incoming
+                          + ". Using lastWriteWins."));
     }
     return true; // Write for non-objects (fallback to lastWriteWins)
   }
 
   private static void handleLastWriteWinsPolicy(
-      final JsonNode existing,
-      final JsonNode incoming,
-      final ConflictContext context) {
+      final JsonNode existing, final JsonNode incoming, final ConflictContext context) {
     if (hasValueConflict(existing, incoming)) {
-      context.reporterOptional().ifPresent(r -> r.warn(
-          "Field conflict resolved using lastWriteWins policy at '"
-              + context.absolutePath()
-              + "': replaced existing="
-              + existing
-              + " with incoming="
-              + incoming));
+      context
+          .reporterOptional()
+          .ifPresent(
+              r ->
+                  r.warn(
+                      "Field conflict resolved using lastWriteWins policy at '"
+                          + context.absolutePath()
+                          + "': replaced existing="
+                          + existing
+                          + " with incoming="
+                          + incoming));
     }
   }
 

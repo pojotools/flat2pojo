@@ -8,8 +8,8 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Caches list hierarchy relationships for efficient lookup during conversion.
- * Computes parent-child relationships once and provides fast access methods.
+ * Caches list hierarchy relationships for efficient lookup during conversion. Computes parent-child
+ * relationships once and provides fast access methods.
  */
 public final class ListHierarchyCache {
   private final Map<String, String> parentListPaths;
@@ -24,10 +24,11 @@ public final class ListHierarchyCache {
 
   private Map<String, String> buildParentListPaths(final MappingConfig config) {
     final Map<String, String> result = new HashMap<>();
-    final List<String> sortedPaths = config.lists().stream()
-        .map(MappingConfig.ListRule::path)
-        .sorted(Comparator.comparingInt(String::length))
-        .toList();
+    final List<String> sortedPaths =
+        config.lists().stream()
+            .map(MappingConfig.ListRule::path)
+            .sorted(Comparator.comparingInt(String::length))
+            .toList();
 
     for (int i = 0; i < sortedPaths.size(); i++) {
       final String childPath = sortedPaths.get(i);

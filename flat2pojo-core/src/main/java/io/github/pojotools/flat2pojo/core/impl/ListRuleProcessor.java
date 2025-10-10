@@ -4,14 +4,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.github.pojotools.flat2pojo.core.config.MappingConfig;
 import io.github.pojotools.flat2pojo.core.engine.GroupingEngine;
-
 import java.util.Map;
 import java.util.Set;
 
-/**
- * Processes a single list rule for a row.
- * Single Responsibility: List rule processing logic.
- */
+/** Processes a single list rule for a row. Single Responsibility: List rule processing logic. */
 final class ListRuleProcessor {
   private final ProcessingContext context;
   private final GroupingEngine groupingEngine;
@@ -54,17 +50,34 @@ final class ListRuleProcessor {
 
   private boolean shouldSkipDueToParent(final String listPath, final Set<String> skippedListPaths) {
     if (isSkippedDueToParent(listPath, skippedListPaths)) {
-      context.config().reporter().ifPresent(r ->
-          r.warn("Skipping list rule '" + listPath + "' because parent list was skipped due to missing keyPath"));
+      context
+          .config()
+          .reporter()
+          .ifPresent(
+              r ->
+                  r.warn(
+                      "Skipping list rule '"
+                          + listPath
+                          + "' because parent list was skipped due to missing keyPath"));
       return true;
     }
     return false;
   }
 
-  private void markAsSkipped(final Set<String> skippedListPaths, final MappingConfig.ListRule rule) {
+  private void markAsSkipped(
+      final Set<String> skippedListPaths, final MappingConfig.ListRule rule) {
     skippedListPaths.add(rule.path());
-    context.config().reporter().ifPresent(r -> r.warn(
-        "Skipping list rule '" + rule.path() + "' because keyPath(s) " + rule.keyPaths() + " are missing or null"));
+    context
+        .config()
+        .reporter()
+        .ifPresent(
+            r ->
+                r.warn(
+                    "Skipping list rule '"
+                        + rule.path()
+                        + "' because keyPath(s) "
+                        + rule.keyPaths()
+                        + " are missing or null"));
   }
 
   private boolean isSkippedDueToParent(final String listPath, final Set<String> skippedListPaths) {
@@ -113,7 +126,8 @@ final class ListRuleProcessor {
       final Map<String, JsonNode> rowValues,
       final ObjectNode element,
       final MappingConfig.ListRule rule) {
-    final WriteContext writeContext = new WriteContext(rule, context.pathResolver().buildPrefix(rule.path()));
+    final WriteContext writeContext =
+        new WriteContext(rule, context.pathResolver().buildPrefix(rule.path()));
     for (final var entry : rowValues.entrySet()) {
       if (entry.getKey().startsWith(writeContext.pathPrefix())) {
         writeValueIfNotUnderChild(element, entry, writeContext);
@@ -125,7 +139,8 @@ final class ListRuleProcessor {
       final ObjectNode element,
       final Map.Entry<String, JsonNode> entry,
       final WriteContext writeContext) {
-    final String suffix = context.pathResolver().stripPrefix(entry.getKey(), writeContext.pathPrefix());
+    final String suffix =
+        context.pathResolver().stripPrefix(entry.getKey(), writeContext.pathPrefix());
     if (!context.hierarchyCache().isUnderAnyChildList(suffix, writeContext.rule().path())) {
       writer.writeWithConflictPolicy(
           element, suffix, entry.getValue(), writeContext.rule().onConflict(), entry.getKey());

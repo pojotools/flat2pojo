@@ -6,11 +6,11 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Groups flat rows by root keys (single or composite).
- * Single Responsibility: Root key-based grouping logic only.
+ * Groups flat rows by root keys (single or composite). Single Responsibility: Root key-based
+ * grouping logic only.
  *
- * <p>Implementation note: Uses LinkedHashMap to preserve insertion order of groups,
- * ensuring deterministic output when processing rows in sequence.
+ * <p>Implementation note: Uses LinkedHashMap to preserve insertion order of groups, ensuring
+ * deterministic output when processing rows in sequence.
  */
 final class RootKeyGrouper {
   private RootKeyGrouper() {}
@@ -49,7 +49,8 @@ final class RootKeyGrouper {
     return groups;
   }
 
-  private static List<Object> buildCompositeKey(final Map<String, ?> row, final List<String> rootKeys) {
+  private static List<Object> buildCompositeKey(
+      final Map<String, ?> row, final List<String> rootKeys) {
     final List<Object> compositeKey = new ArrayList<>(rootKeys.size());
     for (final String rootKey : rootKeys) {
       compositeKey.add(row.get(rootKey));

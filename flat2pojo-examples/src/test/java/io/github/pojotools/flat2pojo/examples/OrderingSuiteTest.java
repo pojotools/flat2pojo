@@ -3,11 +3,10 @@ package io.github.pojotools.flat2pojo.examples;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.pojotools.flat2pojo.core.api.Flat2Pojo;
 import io.github.pojotools.flat2pojo.examples.domain.ImmutableProductRoot;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import java.util.List;
 import java.util.Map;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 class OrderingSuiteTest {
   private ObjectMapper objectMapper;
@@ -38,9 +37,11 @@ class OrderingSuiteTest {
             Map.of("definitions/id/identifier", "D-2", "definitions/name", "Zeta"),
             Map.of("definitions/id/identifier", "D-1", "definitions/name", "Alpha"),
             Map.of("definitions/id/identifier", "D-3"));
-    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, ImmutableProductRoot.class, cfg));
+    var out =
+        TestSupport.firstElementOrThrow(
+            converter.convertAll(rows, ImmutableProductRoot.class, cfg));
     PojoJsonAssert.assertPojoJsonEquals(
-      objectMapper,
+        objectMapper,
         """
       {
         "definitions": [
@@ -72,9 +73,11 @@ class OrderingSuiteTest {
             Map.of("definitions/id/identifier", "D-2", "definitions/name", "Zeta"),
             Map.of("definitions/id/identifier", "D-1", "definitions/name", "Alpha"),
             Map.of("definitions/id/identifier", "D-3"));
-    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, ImmutableProductRoot.class, cfg));
+    var out =
+        TestSupport.firstElementOrThrow(
+            converter.convertAll(rows, ImmutableProductRoot.class, cfg));
     PojoJsonAssert.assertPojoJsonEquals(
-      objectMapper,
+        objectMapper,
         """
       {
         "definitions": [
@@ -109,9 +112,11 @@ class OrderingSuiteTest {
             Map.of("definitions/id/identifier", "D-1", "definitions/name", "Alpha"),
             Map.of("definitions/id/identifier", "D-3", "definitions/name", "Alpha"),
             Map.of("definitions/id/identifier", "D-2", "definitions/name", "Beta"));
-    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, ImmutableProductRoot.class, cfg));
+    var out =
+        TestSupport.firstElementOrThrow(
+            converter.convertAll(rows, ImmutableProductRoot.class, cfg));
     PojoJsonAssert.assertPojoJsonEquals(
-      objectMapper,
+        objectMapper,
         """
       {
         "definitions": [
@@ -157,9 +162,11 @@ class OrderingSuiteTest {
                 "D-1",
                 "definitions/tracker/tasks/taskDate",
                 "2025-01-02"));
-    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, ImmutableProductRoot.class, cfg));
+    var out =
+        TestSupport.firstElementOrThrow(
+            converter.convertAll(rows, ImmutableProductRoot.class, cfg));
     PojoJsonAssert.assertPojoJsonEquals(
-      objectMapper,
+        objectMapper,
         """
       {
         "definitions": [
@@ -230,9 +237,11 @@ class OrderingSuiteTest {
                 "2025-01-01",
                 "definitions/tracker/tasks/comments/loggedAt",
                 "2025-01-01T00:05:00Z"));
-    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, ImmutableProductRoot.class, cfg));
+    var out =
+        TestSupport.firstElementOrThrow(
+            converter.convertAll(rows, ImmutableProductRoot.class, cfg));
     PojoJsonAssert.assertPojoJsonEquals(
-      objectMapper,
+        objectMapper,
         """
       {
         "definitions": [
@@ -277,9 +286,11 @@ class OrderingSuiteTest {
             Map.of("definitions/id/identifier", "D-1"),
             Map.of("definitions/id/identifier", "D-2", "definitions/name", "Bravo"),
             Map.of("definitions/id/identifier", "D-3", "definitions/name", "Alpha"));
-    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, ImmutableProductRoot.class, cfg));
+    var out =
+        TestSupport.firstElementOrThrow(
+            converter.convertAll(rows, ImmutableProductRoot.class, cfg));
     PojoJsonAssert.assertPojoJsonEquals(
-      objectMapper,
+        objectMapper,
         """
       {
         "definitions": [
@@ -311,9 +322,11 @@ class OrderingSuiteTest {
             Map.of("definitions/id/identifier", "D-1"),
             Map.of("definitions/id/identifier", "D-2", "definitions/name", "Bravo"),
             Map.of("definitions/id/identifier", "D-3", "definitions/name", "Alpha"));
-    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, ImmutableProductRoot.class, cfg));
+    var out =
+        TestSupport.firstElementOrThrow(
+            converter.convertAll(rows, ImmutableProductRoot.class, cfg));
     PojoJsonAssert.assertPojoJsonEquals(
-      objectMapper,
+        objectMapper,
         """
       {
         "definitions": [
@@ -345,9 +358,11 @@ class OrderingSuiteTest {
             Map.of("definitions/id/identifier", "D-3", "definitions/name", "Gamma"),
             Map.of("definitions/id/identifier", "D-1", "definitions/name", "Alpha"),
             Map.of("definitions/id/identifier", "D-2", "definitions/name", "Beta"));
-    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, ImmutableProductRoot.class, cfg));
+    var out =
+        TestSupport.firstElementOrThrow(
+            converter.convertAll(rows, ImmutableProductRoot.class, cfg));
     PojoJsonAssert.assertPojoJsonEquals(
-      objectMapper,
+        objectMapper,
         """
       {
         "definitions": [
@@ -403,9 +418,11 @@ class OrderingSuiteTest {
                 "Alpha",
                 "definitions/tracker/tasks/taskDate",
                 "2025-01-01"));
-    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, ImmutableProductRoot.class, cfg));
+    var out =
+        TestSupport.firstElementOrThrow(
+            converter.convertAll(rows, ImmutableProductRoot.class, cfg));
     PojoJsonAssert.assertPojoJsonEquals(
-      objectMapper,
+        objectMapper,
         """
       {
         "definitions": [

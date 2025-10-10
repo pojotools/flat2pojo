@@ -1,9 +1,9 @@
 package io.github.pojotools.flat2pojo.core.config;
 
-import org.junit.jupiter.api.Test;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import org.junit.jupiter.api.Test;
 
 class MappingConfigLoaderTest {
 
@@ -43,4 +43,3 @@ class MappingConfigLoaderTest {
         .hasMessageContaining("order/items/id");
   }
 }
-

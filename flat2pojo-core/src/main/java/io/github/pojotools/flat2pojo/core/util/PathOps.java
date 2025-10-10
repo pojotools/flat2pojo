@@ -83,8 +83,8 @@ public final class PathOps {
   }
 
   /**
-   * Finds the nearest parent path from a set of candidate paths by iterating backwards.
-   * Returns the longest prefix of the given path that exists in the candidates set.
+   * Finds the nearest parent path from a set of candidate paths by iterating backwards. Returns the
+   * longest prefix of the given path that exists in the candidates set.
    *
    * @param path the path to find a parent for
    * @param candidates set of potential parent paths

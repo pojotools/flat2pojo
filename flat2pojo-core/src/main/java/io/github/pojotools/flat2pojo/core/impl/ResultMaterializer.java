@@ -6,8 +6,8 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.github.pojotools.flat2pojo.core.api.Flat2PojoException;
 
 /**
- * Converts JSON tree structure to typed POJOs.
- * Single Responsibility: JSON-to-POJO materialization only.
+ * Converts JSON tree structure to typed POJOs. Single Responsibility: JSON-to-POJO materialization
+ * only.
  */
 final class ResultMaterializer {
   private final ObjectMapper objectMapper;

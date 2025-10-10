@@ -10,12 +10,11 @@ import com.fasterxml.jackson.databind.node.LongNode;
 import com.fasterxml.jackson.databind.node.NullNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import io.github.pojotools.flat2pojo.core.config.MappingConfig;
-import lombok.AccessLevel;
-import lombok.experimental.FieldDefaults;
-
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public final class ValueTransformer {
@@ -39,8 +38,8 @@ public final class ValueTransformer {
   }
 
   /**
-   * Transforms flat row values directly to JsonNode map without building intermediate tree.
-   * More efficient than build-then-flatten approach for list processing.
+   * Transforms flat row values directly to JsonNode map without building intermediate tree. More
+   * efficient than build-then-flatten approach for list processing.
    */
   public Map<String, JsonNode> transformRowValuesToJsonNodes(final Map<String, ?> row) {
     final Map<String, JsonNode> result = new LinkedHashMap<>(row.size());
@@ -50,7 +49,8 @@ public final class ValueTransformer {
     return result;
   }
 
-  private void transformEntry(final Map.Entry<String, ?> entry, final Map<String, JsonNode> result) {
+  private void transformEntry(
+      final Map.Entry<String, ?> entry, final Map<String, JsonNode> result) {
     final String key = entry.getKey();
     final Object normalized = normalizeBlankValue(entry.getValue());
     final JsonNode valueNode = createValueNode(key, normalized);
@@ -76,7 +76,8 @@ public final class ValueTransformer {
 
   private ArrayNode createSplitArrayNode(
       final String stringValue, final MappingConfig.PrimitiveSplitRule splitRule) {
-    final String[] parts = stringValue.split(java.util.regex.Pattern.quote(splitRule.delimiter()), -1);
+    final String[] parts =
+        stringValue.split(java.util.regex.Pattern.quote(splitRule.delimiter()), -1);
     final ArrayNode arrayNode = objectMapper.createArrayNode();
     for (final String part : parts) {
       arrayNode.add(createArrayElement(part, splitRule.trim()));

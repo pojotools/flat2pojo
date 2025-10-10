@@ -3,7 +3,6 @@ package io.github.pojotools.flat2pojo.core.config;
 import io.github.pojotools.flat2pojo.core.config.MappingConfig.ListRule;
 import io.github.pojotools.flat2pojo.core.config.MappingConfig.OrderBy;
 import io.github.pojotools.flat2pojo.core.util.PathOps;
-
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -110,11 +109,7 @@ public final class MappingConfigLoader {
       if (nearestAncestor != null
           && declarationOrder.get(nearestAncestor) > declarationOrder.get(path)) {
         throw new ValidationException(
-            "List '"
-                + path
-                + "' must be declared after its parent list '"
-                + nearestAncestor
-                + "'");
+            "List '" + path + "' must be declared after its parent list '" + nearestAncestor + "'");
       }
     }
 

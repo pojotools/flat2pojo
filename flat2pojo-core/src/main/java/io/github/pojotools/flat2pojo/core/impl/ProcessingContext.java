@@ -9,8 +9,4 @@ import io.github.pojotools.flat2pojo.core.util.PathResolver;
  * Eliminates parameter passing throughout the processing pipeline.
  */
 record ProcessingContext(
-    MappingConfig config,
-    ListHierarchyCache hierarchyCache,
-    PathResolver pathResolver
-) {
-}
+    MappingConfig config, ListHierarchyCache hierarchyCache, PathResolver pathResolver) {}

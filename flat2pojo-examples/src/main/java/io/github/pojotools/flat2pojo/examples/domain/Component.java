@@ -4,10 +4,9 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import java.util.List;
 import org.immutables.value.Value;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.List;
 
 @Value.Immutable
 @JsonSerialize(as = ImmutableComponent.class)

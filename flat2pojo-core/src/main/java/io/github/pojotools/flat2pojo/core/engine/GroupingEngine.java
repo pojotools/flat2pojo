@@ -6,14 +6,13 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.github.pojotools.flat2pojo.core.config.MappingConfig;
 import io.github.pojotools.flat2pojo.core.util.PathOps;
-import lombok.AccessLevel;
-import lombok.experimental.FieldDefaults;
-
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 /** Manages list/grouping state while building the JSON tree. */
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
@@ -49,25 +48,29 @@ public final class GroupingEngine {
   }
 
   private ArrayNode resolveArrayNode(final ObjectNode base, final String relativeListPath) {
-    final ObjectNode parentNode = PathOps.traverseAndEnsurePath(
-        base, relativeListPath, separator, PathOps::ensureObject);
+    final ObjectNode parentNode =
+        PathOps.traverseAndEnsurePath(base, relativeListPath, separator, PathOps::ensureObject);
     final String arrayField = PathOps.getFinalSegment(relativeListPath, separator);
     return parentNode.withArray(arrayField);
   }
 
-  private ArrayBucket ensureBucketState(final ArrayNode arrayNode, final MappingConfig.ListRule rule) {
+  private ArrayBucket ensureBucketState(
+      final ArrayNode arrayNode, final MappingConfig.ListRule rule) {
     buckets.computeIfAbsent(arrayNode, k -> new ArrayBucket());
-    comparators.computeIfAbsent(arrayNode, k -> comparatorBuilder.getComparatorsForPath(rule.path()));
+    comparators.computeIfAbsent(
+        arrayNode, k -> comparatorBuilder.getComparatorsForPath(rule.path()));
     return buckets.get(arrayNode);
   }
 
-  private CompositeKey extractCompositeKey(final Map<String, JsonNode> rowValues, final MappingConfig.ListRule rule) {
+  private CompositeKey extractCompositeKey(
+      final Map<String, JsonNode> rowValues, final MappingConfig.ListRule rule) {
     final List<Object> keyValues = collectKeyValues(rowValues, rule);
     return keyValues == null ? null : new CompositeKey(keyValues);
   }
 
   @SuppressWarnings("PMD.ReturnEmptyCollectionRatherThanNull")
-  private List<Object> collectKeyValues(final Map<String, JsonNode> rowValues, final MappingConfig.ListRule rule) {
+  private List<Object> collectKeyValues(
+      final Map<String, JsonNode> rowValues, final MappingConfig.ListRule rule) {
     final List<Object> keyValues = new ArrayList<>(rule.keyPaths().size());
     final String absolutePrefix = rule.path() + separator;
     for (final String relativeKeyPath : rule.keyPaths()) {

@@ -8,7 +8,6 @@ import io.github.pojotools.flat2pojo.core.config.MappingConfigLoader;
 import io.github.pojotools.flat2pojo.core.engine.GroupingEngine;
 import io.github.pojotools.flat2pojo.core.engine.ValueTransformer;
 import io.github.pojotools.flat2pojo.core.util.PathResolver;
-
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -24,7 +23,8 @@ public final class Flat2PojoCore implements Flat2Pojo {
   }
 
   @Override
-  public <T> Optional<T> convertOptional(Map<String, ?> flatRow, Class<T> type, MappingConfig config) {
+  public <T> Optional<T> convertOptional(
+      Map<String, ?> flatRow, Class<T> type, MappingConfig config) {
     List<T> all = convertAll(List.of(flatRow), type, config);
     return all.isEmpty() ? Optional.empty() : Optional.of(all.getFirst());
   }
@@ -83,7 +83,8 @@ public final class Flat2PojoCore implements Flat2Pojo {
       final Class<T> type,
       final MappingConfig config,
       final ProcessingPipeline pipeline) {
-    final Map<Object, List<Map<String, ?>>> rowGroups = RootKeyGrouper.groupByRootKeys(rows, config.rootKeys());
+    final Map<Object, List<Map<String, ?>>> rowGroups =
+        RootKeyGrouper.groupByRootKeys(rows, config.rootKeys());
     final List<T> results = new ArrayList<>(rowGroups.size());
     for (final List<Map<String, ?>> groupRows : rowGroups.values()) {
       results.add(processGroup(groupRows, type, pipeline));
@@ -109,5 +110,4 @@ public final class Flat2PojoCore implements Flat2Pojo {
     rows.forEachRemaining(list::add);
     return convertAll(list, type, config).stream();
   }
-
 }
