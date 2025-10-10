@@ -1,6 +1,6 @@
 # FLAT2POJO: Converting Flat Key-Value Maps to Nested POJOs
 
-**Generated:** 2025-10-09
+**Generated:** 2024-10-09
 **Commit:** 9f9315f
 **Modules:** flat2pojo-core, flat2pojo-examples
 
@@ -667,9 +667,10 @@ Processing lists in declaration order enables:
 
 ## RELATED DOCUMENTATION
 
-- [MAPPING.md](MAPPING.md) - Configuration schema, field mapping rules, and semantic constraints
-- [OPERATIONS.md](OPERATIONS.md) - API guide, production deployment, monitoring, and troubleshooting
-- [README.md](README.md) - Project overview, quick start, and getting started guide
+- [MAPPINGS.md](MAPPINGS.md) - Complete mapping DSL specification
+- [OPERATIONS.md](OPERATIONS.md) - API reference, performance tuning, and production operations
+- [ARCHITECTURE.md](ARCHITECTURE.md) - Design decisions and system architecture
+- [README.md](README.md) - Project overview and quick start guide
 
 ## SOURCES
 

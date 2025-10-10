@@ -191,3 +191,9 @@ mvn dependency:resolve-sources -Dclassifier=sources
 ```
 
 Keep it simple. The new workflow eliminates most complexity.
+
+## Related Documentation
+
+- [CONTRIBUTING.md](CONTRIBUTING.md) - Contribution guidelines
+- [CHANGELOG.md](CHANGELOG.md) - Version history and release notes
+- [DEVELOPMENT.md](DEVELOPMENT.md) - Development environment setup

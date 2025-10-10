@@ -4,9 +4,10 @@ This document covers operational aspects of using flat2pojo in production enviro
 
 ## Related Documentation
 
-- [MAPPING.md](MAPPING.md) - Configuration schema, field mapping rules, and semantic constraints
-- [PSEUDOCODE.md](PSEUDOCODE.md) - Internal algorithm flow, component architecture, and performance characteristics
-- [README.md](README.md) - Project overview, quick start guide, and getting started
+- [MAPPINGS.md](MAPPINGS.md) - Complete mapping DSL specification
+- [ARCHITECTURE.md](ARCHITECTURE.md) - Design decisions and system architecture
+- [PSEUDOCODE.md](PSEUDOCODE.md) - Internal algorithm flow and component interactions
+- [README.md](README.md) - Project overview and quick start guide
 
 ## API Entry Points
 
