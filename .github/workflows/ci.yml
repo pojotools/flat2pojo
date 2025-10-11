@@ -48,6 +48,7 @@ jobs:
         path: |
           **/target/surefire-reports/
           **/target/site/jacoco/
+          flat2pojo-coverage/target/site/jacoco-aggregate/
         retention-days: 30
 
     - name: Upload coverage to Coveralls
@@ -55,5 +56,7 @@ jobs:
       if: success()
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
-        file: ./flat2pojo-coverage/target/site/jacoco.xml
+        file: ./flat2pojo-coverage/target/site/jacoco-aggregate/jacoco.xml
         format: jacoco
+        base-path: .
+        debug: true
