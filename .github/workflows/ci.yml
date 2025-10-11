@@ -33,6 +33,13 @@ jobs:
     - name: Run tests and verification
       run: mvn -q -B verify
 
+    - name: Debug - Check coverage files
+      if: always()
+      run: |
+        echo "Checking for JaCoCo coverage files..."
+        find . -name "jacoco.xml" -type f
+        ls -la flat2pojo-coverage/target/site/ || echo "Coverage directory not found"
+
     - name: Upload test reports
       uses: actions/upload-artifact@v4
       if: always()
@@ -41,11 +48,12 @@ jobs:
         path: |
           **/target/surefire-reports/
           **/target/site/jacoco/
+          **/target/site/jacoco-aggregate/
         retention-days: 30
 
     - name: Upload coverage to Coveralls
       uses: coverallsapp/github-action@v2
-      if: always()
+      if: success()
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         file: ./flat2pojo-coverage/target/site/jacoco-aggregate/jacoco.xml
