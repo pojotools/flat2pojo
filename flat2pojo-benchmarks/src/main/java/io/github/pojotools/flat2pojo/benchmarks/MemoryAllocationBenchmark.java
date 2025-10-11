@@ -75,38 +75,38 @@ public class MemoryAllocationBenchmark {
 
   @Benchmark
   public void convertSmallDatasetSimple(Blackhole bh) {
-    List<Map> results = converter.convertAll(smallDataset, Map.class, simpleConfig);
+    List<Object> results = converter.convertAll(smallDataset, Object.class, simpleConfig);
     bh.consume(results);
   }
 
   @Benchmark
   public void convertMediumDatasetSimple(Blackhole bh) {
-    List<Map> results = converter.convertAll(mediumDataset, Map.class, simpleConfig);
+    List<Object> results = converter.convertAll(mediumDataset, Object.class, simpleConfig);
     bh.consume(results);
   }
 
   @Benchmark
   public void convertLargeDatasetSimple(Blackhole bh) {
-    List<Map> results = converter.convertAll(largeDataset, Map.class, simpleConfig);
+    List<Object> results = converter.convertAll(largeDataset, Object.class, simpleConfig);
     bh.consume(results);
   }
 
   @Benchmark
   public void convertSmallDatasetWithLists(Blackhole bh) {
-    List<Map> results = converter.convertAll(smallDataset, Map.class, listConfig);
+    List<Object> results = converter.convertAll(smallDataset, Object.class, listConfig);
     bh.consume(results);
   }
 
   @Benchmark
   public void convertMediumDatasetWithLists(Blackhole bh) {
-    List<Map> results = converter.convertAll(mediumDataset, Map.class, listConfig);
+    List<Object> results = converter.convertAll(mediumDataset, Object.class, listConfig);
     bh.consume(results);
   }
 
   @Benchmark
   public void singleRowConversion(Blackhole bh) {
     Map<String, Object> singleRow = smallDataset.get(0);
-    Map result = converter.convert(singleRow, Map.class, simpleConfig);
+    Object result = converter.convertOptional(singleRow, Object.class, simpleConfig).orElse(null);
     bh.consume(result);
   }
 

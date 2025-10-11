@@ -2,7 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches:
+      - main
+      - 'feature/**'
   pull_request:
     branches: [ main ]
 
@@ -31,6 +33,52 @@ jobs:
     - name: Run tests and verification
       run: mvn -q -B verify
 
+    - name: Extract and upload coverage
+      if: success() && github.ref == 'refs/heads/main'
+      run: |
+        # Extract coverage percentage from JaCoCo CSV
+        COVERAGE=$(awk -F',' 'NR==2 {
+          instructions_covered = $5
+          instructions_missed = $4
+          total = instructions_covered + instructions_missed
+          if (total > 0) {
+            percentage = (instructions_covered / total) * 100
+            printf "%.0f", percentage
+          } else {
+            print "0"
+          }
+        }' flat2pojo-coverage/target/site/jacoco-aggregate/jacoco.csv)
+
+        # Determine color
+        if [ "$COVERAGE" -ge 80 ]; then COLOR="brightgreen"
+        elif [ "$COVERAGE" -ge 60 ]; then COLOR="yellow"
+        elif [ "$COVERAGE" -ge 40 ]; then COLOR="orange"
+        else COLOR="red"
+        fi
+
+        echo "Coverage: $COVERAGE% (Color: $COLOR)"
+
+        # Create badge JSON
+        cat > coverage-badge.json << EOF
+        {
+          "schemaVersion": 1,
+          "label": "coverage",
+          "message": "${COVERAGE}%",
+          "color": "${COLOR}"
+        }
+        EOF
+
+        # Upload to gist (requires GIST_SECRET with gist scope)
+        if [ -n "${{ secrets.GIST_SECRET }}" ]; then
+          curl -X PATCH \
+            -H "Authorization: token ${{ secrets.GIST_SECRET }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"files\":{\"flat2pojo-coverage.json\":{\"content\":$(cat coverage-badge.json | jq -Rs .)}}}" \
+            "https://api.github.com/gists/${{ secrets.GIST_ID }}"
+        else
+          echo "⚠️  GIST_SECRET not configured - skipping badge update"
+        fi
+
     - name: Upload test reports
       uses: actions/upload-artifact@v4
       if: always()
@@ -39,12 +87,5 @@ jobs:
         path: |
           **/target/surefire-reports/
           **/target/site/jacoco/
+          flat2pojo-coverage/target/site/jacoco-aggregate/
         retention-days: 30
-
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
-      if: always()
-      with:
-        files: ./target/site/jacoco/jacoco.xml
-        flags: unittests
-        name: codecov-umbrella

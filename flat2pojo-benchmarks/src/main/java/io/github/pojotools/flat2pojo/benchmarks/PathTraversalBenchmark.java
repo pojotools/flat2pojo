@@ -48,18 +48,6 @@ public class PathTraversalBenchmark {
   }
 
   @Benchmark
-  public void nextSepShallowPath(Blackhole bh) {
-    int result = PathOps.nextSep(shallowPath, 0, '/');
-    bh.consume(result);
-  }
-
-  @Benchmark
-  public void nextSepDeepPath(Blackhole bh) {
-    int result = PathOps.nextSep(deepPath, 0, '/');
-    bh.consume(result);
-  }
-
-  @Benchmark
   public void isUnderCheckShallow(Blackhole bh) {
     boolean result = PathOps.isUnder("user/profile/name", "user", separator);
     bh.consume(result);

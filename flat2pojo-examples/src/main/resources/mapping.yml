@@ -6,23 +6,19 @@ rootKeys:
 lists:
   - path: "definitions"
     keyPaths:
-      - "definitions/id/identifier"
+      - "id/identifier"
 
   - path: "definitions/tracker/comments"
     keyPaths:
-      - "definitions/id/identifier"
-      - "definitions/tracker/comments/loggedAt"
+      - "loggedAt"
 
   - path: "definitions/tracker/tasks"
     keyPaths:
-      - "definitions/id/identifier"
-      - "definitions/tracker/tasks/taskDate"
+      - "taskDate"
 
   - path: "definitions/tracker/tasks/comments"
     keyPaths:
-      - "definitions/id/identifier"
-      - "definitions/tracker/tasks/taskDate"
-      - "definitions/tracker/tasks/comments/loggedAt"
+      - "loggedAt"
 
 primitives:
   - path: "definitions/schedule/weekdays"

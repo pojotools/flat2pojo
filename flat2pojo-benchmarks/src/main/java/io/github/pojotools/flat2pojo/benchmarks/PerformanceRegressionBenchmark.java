@@ -176,13 +176,14 @@ public class PerformanceRegressionBenchmark {
 
   @Benchmark
   public void regressionFullDataset(Blackhole bh) {
-    List<Map> results = converter.convertAll(regressionDataset, Map.class, standardConfig);
+    List<Object> results = converter.convertAll(regressionDataset, Object.class, standardConfig);
     bh.consume(results);
   }
 
   @Benchmark
   public void regressionSingleComplexRow(Blackhole bh) {
-    Map result = converter.convert(singleComplexRow, Map.class, standardConfig);
+    Object result =
+        converter.convertOptional(singleComplexRow, Object.class, standardConfig).orElse(null);
     bh.consume(result);
   }
 
@@ -190,16 +191,16 @@ public class PerformanceRegressionBenchmark {
   public void regressionSubsetProcessing(Blackhole bh) {
     List<Map<String, Object>> subset =
         regressionDataset.subList(0, Math.min(100, regressionDataset.size()));
-    List<Map> results = converter.convertAll(subset, Map.class, standardConfig);
+    List<Object> results = converter.convertAll(subset, Object.class, standardConfig);
     bh.consume(results);
   }
 
   @Benchmark
   public void regressionStreamProcessing(Blackhole bh) {
-    List<Map> results =
+    List<Object> results =
         converter.stream(
                 regressionDataset.subList(0, Math.min(50, regressionDataset.size())).iterator(),
-                Map.class,
+                Object.class,
                 standardConfig)
             .toList();
     bh.consume(results);
@@ -237,7 +238,7 @@ public class PerformanceRegressionBenchmark {
 
     List<Map<String, Object>> sampleData =
         regressionDataset.subList(0, Math.min(10, regressionDataset.size()));
-    List<Map> results = converter.convertAll(sampleData, Map.class, complexConfig);
+    List<Object> results = converter.convertAll(sampleData, Object.class, complexConfig);
     bh.consume(results);
   }
 

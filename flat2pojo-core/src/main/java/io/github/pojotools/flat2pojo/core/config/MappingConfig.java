@@ -5,8 +5,6 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import io.github.pojotools.flat2pojo.spi.Reporter;
 import io.github.pojotools.flat2pojo.spi.ValuePreprocessor;
-import org.immutables.value.Value;
-
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -14,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import org.immutables.value.Value;
 
 /**
  * Immutable configuration for flat-to-POJO conversion.
@@ -128,18 +127,24 @@ public abstract class MappingConfig {
       prefixMap.put(rulePath, new HashSet<>());
     }
 
-    // For each path, check only previously seen (shorter) paths as potential parents
+    // For each path, find its DIRECT parent (longest matching prefix)
     for (int i = 0; i < sortedPaths.size(); i++) {
       final String childPath = sortedPaths.get(i);
       final String childPrefix = childPath + sep;
 
-      // Check all shorter paths (potential ancestors)
-      for (int j = 0; j < i; j++) {
+      // Find the longest (most specific) parent
+      String directParent = null;
+      for (int j = i - 1; j >= 0; j--) { // Iterate backwards to find longest match first
         final String potentialParent = sortedPaths.get(j);
         if (childPath.startsWith(potentialParent + sep)) {
-          // Add this child to its parent's set
-          prefixMap.get(potentialParent).add(childPrefix);
+          directParent = potentialParent;
+          break; // Found the direct parent, stop searching
         }
+      }
+
+      // Add this child to its direct parent's set (if found)
+      if (directParent != null) {
+        prefixMap.get(directParent).add(childPrefix);
       }
     }
 

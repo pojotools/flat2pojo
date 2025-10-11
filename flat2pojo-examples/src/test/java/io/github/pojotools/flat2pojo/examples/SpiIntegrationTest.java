@@ -8,18 +8,22 @@ import io.github.pojotools.flat2pojo.core.api.Flat2Pojo;
 import io.github.pojotools.flat2pojo.core.config.MappingConfig;
 import io.github.pojotools.flat2pojo.spi.Reporter;
 import io.github.pojotools.flat2pojo.spi.ValuePreprocessor;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class SpiIntegrationTest {
-  ObjectMapper om;
-  Flat2Pojo f2p;
+  private ObjectMapper objectMapper;
+  private Flat2Pojo converter;
 
   @BeforeEach
   void init() {
-    om = TestSupport.om();
-    f2p = TestSupport.mapper(om);
+    objectMapper = TestSupport.createObjectMapper();
+    converter = TestSupport.createConverter(objectMapper);
   }
 
   @Test
@@ -54,10 +58,10 @@ class SpiIntegrationTest {
                 "workflow/isActive", "NO",
                 "metadata/name", "Test"));
 
-    var out = TestSupport.first(f2p.convertAll(rows, JsonNode.class, cfg));
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-        om,
+        objectMapper,
         """
         {
           "workflow": {
@@ -85,13 +89,13 @@ class SpiIntegrationTest {
                 List.of(
                     new MappingConfig.ListRule(
                         "definitions",
-                        List.of("definitions/id/identifier"),
+                        List.of("id/identifier"),
                         List.of(),
                         false,
                         MappingConfig.ConflictPolicy.error),
                     new MappingConfig.ListRule(
                         "definitions/tracker/tasks",
-                        List.of("definitions/tracker/tasks/taskDate"),
+                        List.of("taskDate"),
                         List.of(),
                         false,
                         MappingConfig.ConflictPolicy.error)))
@@ -107,17 +111,16 @@ class SpiIntegrationTest {
                 // Note: taskDate is missing, should generate warning
                 ));
 
-    var out = TestSupport.first(f2p.convertAll(rows, JsonNode.class, cfg));
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
 
     // Check that warning was captured
     assertThat(warnings).hasSize(1);
     assertThat(warnings.getFirst()).contains("Skipping list rule 'definitions/tracker/tasks'");
-    assertThat(warnings.getFirst())
-        .contains("keyPath(s) [definitions/tracker/tasks/taskDate] are missing or null");
+    assertThat(warnings.getFirst()).contains("keyPath(s) [taskDate] are missing or null");
 
     // Check that the result has empty tasks array
     PojoJsonAssert.assertPojoJsonEquals(
-        om,
+        objectMapper,
         """
         {
           "definitions": [
@@ -147,7 +150,7 @@ class SpiIntegrationTest {
                 List.of(
                     new MappingConfig.ListRule(
                         "definitions",
-                        List.of("definitions/id/identifier"),
+                        List.of("id/identifier"),
                         List.of(),
                         true,
                         MappingConfig.ConflictPolicy.lastWriteWins)))
@@ -163,7 +166,7 @@ class SpiIntegrationTest {
                 "definitions/id/identifier", "D-1",
                 "definitions/name", "Second Name"));
 
-    var out = TestSupport.first(f2p.convertAll(rows, JsonNode.class, cfg));
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
 
     // Check that conflict warning was captured
     assertThat(warnings).isNotEmpty();
@@ -174,7 +177,7 @@ class SpiIntegrationTest {
 
     // Check that last write wins
     PojoJsonAssert.assertPojoJsonEquals(
-        om,
+        objectMapper,
         """
         {
           "definitions": [
@@ -217,7 +220,7 @@ class SpiIntegrationTest {
                 List.of(
                     new MappingConfig.ListRule(
                         "items",
-                        List.of("items/id"),
+                        List.of("id"),
                         List.of(),
                         false,
                         MappingConfig.ConflictPolicy.error)))
@@ -230,11 +233,11 @@ class SpiIntegrationTest {
                 "items/name", "Test Item",
                 "items/category", "electronics"));
 
-    var out = TestSupport.first(f2p.convertAll(rows, JsonNode.class, cfg));
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
 
     // Values should be preprocessed
     PojoJsonAssert.assertPojoJsonEquals(
-        om,
+        objectMapper,
         """
         {
           "items": [

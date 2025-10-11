@@ -20,15 +20,25 @@ import java.util.stream.Stream;
 public interface Flat2Pojo {
 
   /**
-   * Converts a single flat row to a POJO.
+   * Converts a single flat row to a POJO, wrapped in Optional.
+   *
+   * <p>This method processes a single row and returns the result wrapped in Optional to avoid null
+   * handling. For batch processing of multiple rows, use {@link #convertAll(List, Class,
+   * MappingConfig)} instead.
+   *
+   * <p><strong>Migration from deprecated convert():</strong> Replace {@code converter.convert(row,
+   * Type.class, config)} with {@code converter.convertOptional(row, Type.class,
+   * config).orElse(null)} or better yet, use {@code .ifPresent()} / {@code .map()} to avoid null
+   * entirely.
    *
    * @param flatRow the flat key-value map to convert
    * @param type the target POJO class
    * @param config the mapping configuration
    * @param <T> the target type
-   * @return the converted POJO, or null if the input is empty
+   * @return Optional containing the converted POJO, or Optional.empty() if the input produces no
+   *     result
    */
-  <T> T convert(Map<String, ?> flatRow, Class<T> type, MappingConfig config);
+  <T> Optional<T> convertOptional(Map<String, ?> flatRow, Class<T> type, MappingConfig config);
 
   /**
    * Converts multiple flat rows to a list of POJOs with grouping and hierarchical structure.

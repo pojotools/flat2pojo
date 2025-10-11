@@ -86,7 +86,7 @@
                 <executions>
                     <execution>
                         <id>report-aggregate</id>
-                        <phase>test</phase>
+                        <phase>prepare-package</phase>
                         <goals>
                             <goal>report-aggregate</goal>
                         </goals>

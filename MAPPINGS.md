@@ -1,6 +1,88 @@
 # Mapping Configuration Guide
 
-This document provides detailed information about flat2pojo's mapping configuration system, including advanced features like hierarchical grouping, conflict resolution, and extensibility options.
+This document provides detailed information about flat2pojo's mapping configuration system, including configuration schema, semantic rules, hierarchical grouping, conflict resolution, and extensibility options.
+
+## Configuration Schema
+
+The `MappingConfig` object defines all mapping behavior:
+
+```yaml
+separator: "/"                    # Path segment delimiter (default: "/")
+rootKeys: []                      # Keys for grouping rows (empty = single group)
+
+lists: []                         # List rules (processed in declaration order)
+  - path: "definitions/modules"   # Absolute path to list
+    keyPaths: ["id"]              # Relative paths for composite key
+    orderBy: []                   # Sort specifications
+      - path: "name"              # Relative path
+        direction: asc|desc
+        nulls: first|last
+    dedupe: true                  # Enable deduplication
+    onConflict: firstWriteWins    # error | firstWriteWins | lastWriteWins | merge
+
+primitives: []                    # String-to-array split rules
+  - path: "tags"                  # Absolute path
+    delimiter: ","                # Split delimiter
+    trim: true                    # Trim whitespace from elements
+
+nullPolicy:
+  blanksAsNulls: true             # Treat blank strings as null
+
+reporter: Optional<Reporter>      # SPI for warnings/errors
+valuePreprocessor: Optional<ValuePreprocessor>  # SPI for row transformation
+```
+
+## Configuration Semantics
+
+### Path Resolution Rules
+
+1. **Relative vs Absolute Paths:**
+   - List rules use **absolute paths** (e.g., `"definitions/modules"`)
+   - `keyPaths` within list rules use **relative paths** (e.g., `"id"` not `"definitions/modules/id"`)
+   - `orderBy` paths within list rules use **relative paths** (e.g., `"name"` not `"definitions/modules/name"`)
+   - Validation enforces these constraints
+
+2. **Declaration Order Matters:**
+   - Lists must be declared **parent-before-child**
+   - Processing follows declaration order
+   - Enables nested list elements to reference parent elements from the same row
+
+3. **Separator Semantics:**
+   - Single or multi-character separators supported
+   - Used for all path operations (split, join, traversal)
+   - Single-character separators provide best performance
+
+### Deduplication Behavior
+
+**First-Write-Wins Semantics:**
+- `ArrayBucket` implements first-write-wins for existing composite keys
+- First row with a composite key establishes the list element
+- Subsequent rows with same composite key **reuse** the existing element
+- Element population continues across multiple rows in the same group
+- This enables multi-row population of complex list elements
+
+**Example:**
+```
+Row 1: items/id=A, items/name=Widget
+Row 2: items/id=A, items/qty=10
+Result: [{id: "A", name: "Widget", qty: 10}]  // Single element, merged from both rows
+```
+
+### Conflict Resolution Policies
+
+Applied when writing values to existing fields:
+
+| Policy | Behavior | When to Use |
+|--------|----------|-------------|
+| `error` | Throw exception on scalar conflicts | Strict validation, detect data inconsistencies |
+| `firstWriteWins` | Keep existing value, ignore new value | Stable defaults, preserve initial values |
+| `lastWriteWins` | Overwrite with new value | Override behavior, use most recent data |
+| `merge` | Deep merge objects, overwrite scalars | Flexible merging, combine nested structures |
+
+**Merge Policy Details:**
+- Objects are recursively merged (fields combined)
+- Scalars are overwritten (last-write-wins fallback)
+- Arrays are replaced (no element-level merging)
 
 ## Root Keys
 
@@ -10,6 +92,9 @@ Root keys control how flat rows are grouped into separate root-level objects. By
 
 ```yaml
 rootKeys: ["organizationId"]
+lists:
+  - path: "departments"
+    keyPaths: ["id"]
 ```
 
 **Input Data:**
@@ -51,16 +136,83 @@ rootKeys: ["region", "organizationId"]
 **Behavior:**
 - Objects are grouped by the combination of ALL root key values
 - Order of root keys matters for consistent results
-- Missing root key values are treated as `null`
+
+### Handling Missing Root Keys
+
+When a root key field is missing or has a null value in a row:
+
+**Behavior:**
+- The row is grouped under a `null` key value
+- All rows with missing/null root keys are grouped together
+- Processing continues normally - no warnings are logged
+- The resulting object will have `null` or missing fields for those root keys
+
+**Example:**
+```yaml
+rootKeys: ["organizationId"]
+```
+
+**Input (3 rows):**
+```
+organizationId=acme, name=ACME Corp, departments/id=eng
+organizationId=acme, name=ACME Corp, departments/id=sales
+name=Unnamed Org, departments/id=dev    # Missing organizationId
+```
+
+**Output (2 objects):**
+```json
+[
+  {
+    "organizationId": "acme",
+    "name": "ACME Corp",
+    "departments": [
+      {"id": "eng"},
+      {"id": "sales"}
+    ]
+  },
+  {
+    "organizationId": null,              // Missing key treated as null
+    "name": "Unnamed Org",
+    "departments": [
+      {"id": "dev"}
+    ]
+  }
+]
+```
 
 ### Root Keys vs List Rules
 
-| Feature | Root Keys | List Rules |
-|---------|-----------|------------|
-| **Purpose** | Group rows into separate root objects | Create nested lists within objects |
-| **Output** | Multiple root-level objects | Single object with nested arrays |
-| **Scope** | Entire conversion result | Specific path within object |
-| **Ordering** | Stable input order | Configurable with `orderBy` |
+Root keys and list rules are **complementary features** that work together in a two-phase process:
+
+**Phase 1: Root Key Grouping (Optional)**
+- When `rootKeys` is configured, rows are partitioned into groups based on root key values
+- Each unique combination of root key values creates one output object
+- Without `rootKeys`, all rows form a single group, producing one output object
+
+**Phase 2: List Processing (Per Group)**
+- Within each group, list rules create nested arrays
+- Each group is processed independently with its own list state
+- List rules use `keyPaths` to deduplicate and merge list elements within that group
+
+**Processing Order:**
+```
+Input Rows
+    ↓
+[RootKeyGrouper] ← Partitions by rootKeys (if configured)
+    ↓
+Group 1, Group 2, ..., Group N
+    ↓
+[GroupingEngine] ← Processes each group independently
+    ↓              - Applies list rules
+    ↓              - Creates arrays via keyPaths
+    ↓
+Object 1, Object 2, ..., Object N
+```
+
+**Example:** The "Basic Root Key Usage" example above demonstrates both features:
+- Root keys partition 3 rows into 2 groups (acme, beta)
+- Within each group, the `departments` list rule creates the nested `departments` array
+- Result: 2 objects, each with its own `departments` list
 
 ## List Rules
 
@@ -71,7 +223,7 @@ List rules define how flat data is grouped into lists and nested structures.
 ```yaml
 lists:
   - path: "tasks"                    # Target path for the list
-    keyPaths: ["tasks/id"]           # Fields that uniquely identify list elements
+    keyPaths: ["id"]                 # Fields that uniquely identify list elements (relative)
     orderBy: []                      # Optional sorting rules
     dedupe: true                     # Remove duplicate elements (default: true)
     onConflict: lastWriteWins        # How to handle field conflicts
@@ -85,13 +237,13 @@ Lists can be nested to create complex hierarchical structures. **Parent lists mu
 lists:
   # Parent list - must come first
   - path: "departments"
-    keyPaths: ["departments/id"]
+    keyPaths: ["id"]
 
   # Child list - references parent
   - path: "departments/employees"
-    keyPaths: ["departments/employees/id"]
+    keyPaths: ["id"]
     orderBy:
-      - path: "departments/employees/name"
+      - path: "name"
         direction: asc
 ```
 
@@ -124,13 +276,67 @@ KeyPaths define the composite key that uniquely identifies list elements. Multip
 ```yaml
 lists:
   - path: "events"
-    keyPaths: ["events/date", "events/location"]  # Compound key
+    keyPaths: ["date", "location"]  # Compound key (relative paths)
 ```
 
 **Behavior:**
 - Elements with the same composite key are merged
 - Order of keyPaths matters for consistent results
-- Use absolute paths from root (not relative to list path)
+- Use relative paths from the list element (not absolute paths from root)
+
+### Handling Missing KeyPaths
+
+When any keyPath field is missing or has a null value in a row:
+
+**Behavior:**
+- The entire list processing for that row is skipped
+- The list path is marked as "skipped" for that row
+- Any child lists under that path are also skipped
+- A warning is logged via Reporter: `"Skipping list rule '<path>' because keyPath(s) <keyPaths> are missing or null"`
+- Row values for that list path are NOT written to the object
+- Processing continues with the next row
+
+**Example:**
+```yaml
+lists:
+  - path: "departments"
+    keyPaths: ["id"]
+  - path: "departments/employees"
+    keyPaths: ["id"]
+```
+
+**Input (3 rows):**
+```
+departments/id=eng, departments/name=Engineering, departments/employees/id=101, departments/employees/name=Alice
+departments/id=sales, departments/name=Sales, departments/employees/id=201, departments/employees/name=Bob
+departments/name=Unnamed, departments/employees/id=301, departments/employees/name=Charlie  # Missing departments/id
+```
+
+**Output:**
+```json
+{
+  "departments": [
+    {
+      "id": "eng",
+      "name": "Engineering",
+      "employees": [{"id": "101", "name": "Alice"}]
+    },
+    {
+      "id": "sales",
+      "name": "Sales",
+      "employees": [{"id": "201", "name": "Bob"}]
+    }
+  ]
+}
+```
+
+**What happened:**
+- Row 3 has missing `departments/id` keyPath
+- Row 3 list processing is skipped (warning logged)
+- Charlie's employee record is NOT added (parent department skipped)
+- "Unnamed" department is NOT added to the output
+
+**Important:** This is the **default and only behavior**. Missing keyPaths always cause list processing to be skipped for that row. There is no configuration option to change this behavior.
 
 ### OrderBy Rules
 
@@ -139,12 +345,12 @@ Sort list elements by one or more fields:
 ```yaml
 lists:
   - path: "tasks"
-    keyPaths: ["tasks/id"]
+    keyPaths: ["id"]
     orderBy:
-      - path: "tasks/priority"      # Primary sort
+      - path: "priority"            # Primary sort (relative)
         direction: desc             # desc or asc
         nulls: last                 # first or last
-      - path: "tasks/created"       # Secondary sort
+      - path: "created"             # Secondary sort (relative)
         direction: asc
         nulls: first
 ```
@@ -171,7 +377,7 @@ When multiple rows contribute to the same list element, conflicts may arise. The
 ```yaml
 lists:
   - path: "users"
-    keyPaths: ["users/id"]
+    keyPaths: ["id"]
     onConflict: merge
 ```
 
@@ -262,17 +468,17 @@ separator: "/"  # Default - can be changed to any string
 
 ### Absolute vs Relative Paths
 
-- **List paths**: Relative to their parent (if nested)
-- **KeyPaths**: Always absolute from root
+- **List paths**: Absolute paths from root
+- **KeyPaths**: Relative to the list element
 - **OrderBy paths**: Relative to the list element
 
 ```yaml
 lists:
   - path: "departments"                    # Absolute
-    keyPaths: ["departments/id"]           # Absolute
+    keyPaths: ["id"]                       # Relative to departments
 
-  - path: "employees"                      # Relative to departments/
-    keyPaths: ["departments/employees/id"] # Absolute
+  - path: "departments/employees"          # Absolute (nested)
+    keyPaths: ["id"]                       # Relative to departments/employees
     orderBy:
       - path: "name"                       # Relative to employees element
 ```
@@ -289,16 +495,16 @@ Child lists must be declared **after** their parent lists:
 # ✅ Correct
 lists:
   - path: "parent"
-    keyPaths: ["parent/id"]
+    keyPaths: ["id"]
   - path: "parent/children"  # Declared after parent
-    keyPaths: ["parent/children/id"]
+    keyPaths: ["id"]
 
 # ❌ Invalid
 lists:
   - path: "parent/children"  # ERROR: parent not declared yet
-    keyPaths: ["parent/children/id"]
+    keyPaths: ["id"]
   - path: "parent"
-    keyPaths: ["parent/id"]
+    keyPaths: ["id"]
 ```
 
 ### 2. Implied Parent Lists
@@ -306,17 +512,17 @@ lists:
 If a keyPath implies a parent list exists, that parent must be explicitly declared:
 
 ```yaml
-# ❌ Invalid
+# ❌ Invalid - using absolute keyPaths (deprecated)
 lists:
   - path: "tasks"
-    keyPaths: ["projects/tasks/id"]  # ERROR: 'projects' list not declared
+    keyPaths: ["projects/tasks/id"]  # ERROR: keyPaths must be relative
 
-# ✅ Correct
+# ✅ Correct - using relative keyPaths
 lists:
   - path: "projects"
-    keyPaths: ["projects/id"]
+    keyPaths: ["id"]                 # Relative to projects
   - path: "projects/tasks"
-    keyPaths: ["projects/tasks/id"]
+    keyPaths: ["id"]                 # Relative to projects/tasks
 ```
 
 ### 3. Validation Error Messages
@@ -337,20 +543,20 @@ ValidationException: Invalid list rule: 'tasks' missing ancestor 'projects' (imp
 separator: "/"
 lists:
   - path: "organizations"
-    keyPaths: ["organizations/id"]
+    keyPaths: ["id"]
     orderBy:
       - path: "name"
         direction: asc
 
   - path: "organizations/departments"
-    keyPaths: ["organizations/departments/id"]
+    keyPaths: ["id"]
     orderBy:
       - path: "budget"
         direction: desc
         nulls: last
 
   - path: "organizations/departments/employees"
-    keyPaths: ["organizations/departments/employees/id"]
+    keyPaths: ["id"]
     orderBy:
       - path: "level"
         direction: desc
@@ -366,35 +572,15 @@ This creates a three-level hierarchy: Organizations → Departments → Employee
 
 ## Advanced Configuration Options
 
-### Sparse Row Handling
+### Missing KeyPath Behavior Reference
 
-Control how rows with missing list keyPath values are processed:
+For complete details on how rows with missing keyPath values are handled, see the **"Handling Missing KeyPaths"** section under [List Rules](#handling-missing-keypaths).
 
-```yaml
-allowSparseRows: true  # Default: false
-```
-
-**Effect:**
-- `allowSparseRows: false` (default): Rows missing keyPath values are skipped with warnings
-- `allowSparseRows: true`: Allow processing of incomplete rows
-
-**Example:**
-```yaml
-allowSparseRows: true
-lists:
-  - path: "users"
-    keyPaths: ["users/id"]
-```
-
-**Input with missing keyPath:**
-```
-users/name=John, users/email=john@example.com
-users/id=2, users/name=Jane, users/email=jane@example.com
-```
-
-**Result:**
-- With `allowSparseRows: false`: Only Jane's record is processed, warning logged
-- With `allowSparseRows: true`: Both records processed, John gets generated/null ID
+**Summary:**
+- Rows with missing/null keyPath values are always skipped
+- A warning is logged via the Reporter SPI
+- Child lists are also skipped when parent list processing is skipped
+- This is the only supported behavior - there is no configuration option to change it
 
 ### Custom Separators
 
@@ -411,7 +597,7 @@ separator: "->"       # Multi-character separator
 separator: "."
 lists:
   - path: "tasks"
-    keyPaths: ["tasks.id"]
+    keyPaths: ["id"]
 ```
 
 **Input:**
@@ -424,7 +610,6 @@ project.id=1, project.name=Alpha, tasks.id=t1, tasks.title=Setup
 ```yaml
 # Optimize for performance
 separator: "/"          # Single-character separators are fastest
-allowSparseRows: false  # Reduces processing overhead
 nullPolicy:
   blanksAsNulls: false  # Skip string trimming/conversion
 ```
@@ -473,7 +658,6 @@ MappingConfig config = MappingConfig.builder()
 // Complete monitoring and preprocessing
 MappingConfig config = MappingConfig.builder()
     .separator("/")
-    .allowSparseRows(false)
     .valuePreprocessor(Optional.of(dataCleaningPreprocessor))
     .reporter(Optional.of(auditTrailReporter))
     .lists(listRules)
@@ -490,15 +674,15 @@ MappingConfig config = MappingConfig.builder()
 separator: "/"
 lists:
   - path: "departments"
-    keyPaths: ["departments/id"]
+    keyPaths: ["id"]
   - path: "departments/employees"
-    keyPaths: ["departments/employees/id"]
+    keyPaths: ["id"]
 
 # ❌ Avoid: Mixed conventions
 separator: "/"
 lists:
   - path: "departments"
-    keyPaths: ["dept_id"]  # Inconsistent with path
+    keyPaths: ["dept_id"]  # Inconsistent naming (should be "id")
 ```
 
 ### 2. Explicit Conflict Policies
@@ -507,13 +691,13 @@ lists:
 # ✅ Good: Explicit policies for clarity
 lists:
   - path: "users"
-    keyPaths: ["users/id"]
+    keyPaths: ["id"]
     onConflict: lastWriteWins  # Clear intention
 
 # ❌ Unclear: Relying on defaults
 lists:
   - path: "users"
-    keyPaths: ["users/id"]
+    keyPaths: ["id"]
     # onConflict defaults - unclear to readers
 ```
 
@@ -522,13 +706,12 @@ lists:
 ```yaml
 # For high-throughput scenarios
 separator: "/"              # Single-character is fastest
-allowSparseRows: false      # Reduces validation overhead
 nullPolicy:
   blanksAsNulls: false      # Skip string processing
 
 lists:
   - path: "items"
-    keyPaths: ["items/id"]
+    keyPaths: ["id"]
     dedupe: false           # Skip deduplication if not needed
     orderBy: []             # Skip sorting if not required
 ```
@@ -561,3 +744,10 @@ if (!conflicts.isEmpty()) {
     logger.info("Conflicts resolved: {}", conflicts.size());
 }
 ```
+
+## Related Documentation
+
+- [OPERATIONS.md](OPERATIONS.md) - API reference, performance tuning, and production operations
+- [ARCHITECTURE.md](ARCHITECTURE.md) - Design decisions and system architecture
+- [PSEUDOCODE.md](PSEUDOCODE.md) - Internal algorithm flow and component interactions
+- [README.md](README.md) - Project overview and quick start guide

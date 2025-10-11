@@ -6,7 +6,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 final class PojoJsonAssert {
-  private PojoJsonAssert() {}
+
+  // Utility class: no instances
+  private PojoJsonAssert() {
+    throw new AssertionError("No PojoJsonAssert instances");
+  }
 
   static void assertPojoJsonEquals(ObjectMapper om, String expectedJson, Object pojo) {
     try {
