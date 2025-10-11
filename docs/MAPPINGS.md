@@ -10,17 +10,17 @@ The `MappingConfig` object defines all mapping behavior:
 separator: "/"                    # Path segment delimiter (default: "/")
 rootKeys: []                      # Keys for grouping rows (empty = single group)
 
-lists: []                         # List rules (processed in declaration order)
+lists:                            # List rules (processed in declaration order)
   - path: "definitions/modules"   # Absolute path to list
-    keyPaths: ["id"]              # Relative paths for composite key
-    orderBy: []                   # Sort specifications
+    keyPaths: ["id"]              # Relative paths for a composite key
+    orderBy:                      # Sort specifications
       - path: "name"              # Relative path
         direction: asc|desc
         nulls: first|last
     dedupe: true                  # Enable deduplication
     onConflict: firstWriteWins    # error | firstWriteWins | lastWriteWins | merge
 
-primitives: []                    # String-to-array split rules
+primitives:                       # String-to-array split rules
   - path: "tags"                  # Absolute path
     delimiter: ","                # Split delimiter
     trim: true                    # Trim whitespace from elements
@@ -72,12 +72,12 @@ Result: [{id: "A", name: "Widget", qty: 10}]  // Single element, merged from bot
 
 Applied when writing values to existing fields:
 
-| Policy | Behavior | When to Use |
-|--------|----------|-------------|
-| `error` | Throw exception on scalar conflicts | Strict validation, detect data inconsistencies |
-| `firstWriteWins` | Keep existing value, ignore new value | Stable defaults, preserve initial values |
-| `lastWriteWins` | Overwrite with new value | Override behavior, use most recent data |
-| `merge` | Deep merge objects, overwrite scalars | Flexible merging, combine nested structures |
+| Policy           | Behavior                              | When to Use                                    |
+|------------------|---------------------------------------|------------------------------------------------|
+| `error`          | Throw exception on scalar conflicts   | Strict validation, detect data inconsistencies |
+| `firstWriteWins` | Keep existing value, ignore new value | Stable defaults, preserve initial values       |
+| `lastWriteWins`  | Overwrite with new value              | Override behavior, use most recent data        |
+| `merge`          | Deep merge objects, overwrite scalars | Flexible merging, combine nested structures    |
 
 **Merge Policy Details:**
 - Objects are recursively merged (fields combined)

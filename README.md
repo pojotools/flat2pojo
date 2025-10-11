@@ -149,14 +149,14 @@ List<ProjectRoot> projects = converter.convertAll(flatData, ProjectRoot.class, c
 
 ### For Users
 
-- **[MAPPINGS.md](MAPPINGS.md)** - Complete mapping DSL specification
+- **[docs/MAPPINGS.md](docs/MAPPINGS.md)** - Complete mapping DSL specification
   - Configuration schema and YAML properties
   - Field mapping rules and path conventions
   - List rules, ordering, and deduplication
   - Conflict resolution policies
   - Validation rules and examples
 
-- **[OPERATIONS.md](OPERATIONS.md)** - API reference and operations guide
+- **[docs/OPERATIONS.md](docs/OPERATIONS.md)** - API reference and operations guide
   - API entry points (convertAll, convert, stream)
   - Performance tuning and memory management
   - Monitoring, logging, and observability
@@ -165,15 +165,15 @@ List<ProjectRoot> projects = converter.convertAll(flatData, ProjectRoot.class, c
 
 ### For Contributors
 
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** - Architecture and design decisions
-- **[PSEUDOCODE.md](PSEUDOCODE.md)** - Internal algorithm flow and component design
-- **[DEVELOPMENT.md](DEVELOPMENT.md)** - Development environment setup and build instructions
-- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Contribution guidelines and code standards
-- **[RELEASE.md](RELEASE.md)** - Release process and versioning
+- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** - Architecture and design decisions
+- **[docs/PSEUDOCODE.md](docs/PSEUDOCODE.md)** - Internal algorithm flow and component design
+- **[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)** - Development environment setup and build instructions
+- **[docs/CONTRIBUTING.md](docs/CONTRIBUTING.md)** - Contribution guidelines and code standards
+- **[docs/RELEASE.md](docs/RELEASE.md)** - Release process and versioning
 
 ### Version History
 
-- **[CHANGELOG.md](CHANGELOG.md)** - Version history and release notes
+- **[docs/CHANGELOG.md](docs/CHANGELOG.md)** - Version history and release notes
 
 ### Refactoring Documentation
 
@@ -181,7 +181,7 @@ List<ProjectRoot> projects = converter.convertAll(flatData, ProjectRoot.class, c
 
 ## Configuration
 
-For complete configuration schema, field mapping rules, and examples, see **[MAPPINGS.md](MAPPINGS.md)**.
+For complete configuration schema, field mapping rules, and examples, see **[docs/MAPPINGS.md](docs/MAPPINGS.md)**.
 
 Quick overview of key configuration options:
 
@@ -194,7 +194,7 @@ Quick overview of key configuration options:
 
 ## API Usage
 
-See **[OPERATIONS.md](OPERATIONS.md)** for complete API reference, performance tuning, and production deployment patterns.
+See **[docs/OPERATIONS.md](docs/OPERATIONS.md)** for complete API reference, performance tuning, and production deployment patterns.
 
 Quick API overview:
 
@@ -211,7 +211,7 @@ Stream<MyPojo> stream = converter.stream(rowIterator, MyPojo.class, config);
 
 ## Development
 
-See **[DEVELOPMENT.md](DEVELOPMENT.md)** for complete development setup, build instructions, and code quality tools.
+See **[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)** for complete development setup, build instructions, and code quality tools.
 
 Quick start for contributors:
 
