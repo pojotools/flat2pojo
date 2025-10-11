@@ -2150,4 +2150,287 @@ class SpecSuiteTest {
         """,
         out);
   }
+
+  @Test
+  void test38_default_separator_is_slash() {
+    // Test that separator defaults to "/" when omitted from config
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            allowSparseRows: false
+            lists: []
+          """);
+
+    List<Map<String, ?>> rows = List.of(Map.of("metadata/name", "Alpha", "metadata/version", "1.0"));
+
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "metadata": {
+            "name": "Alpha",
+            "version": "1.0"
+          }
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test39_default_blanksAsNulls_is_false() {
+    // Test that blanksAsNulls defaults to false when nullPolicy is omitted
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists: []
+          """);
+
+    List<Map<String, ?>> rows = List.of(Map.of("text/emptyField", "", "text/blankField", "   "));
+
+    JsonNode out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
+
+    // Without nullPolicy (defaults to blanksAsNulls: false), blanks remain as empty strings
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "text": {
+            "emptyField": "",
+            "blankField": "   "
+          }
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test40_default_dedupe_is_true() {
+    // Test that dedupe defaults to true when omitted from list rule
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists:
+              - path: "definitions"
+                keyPaths: ["id/identifier"]
+                onConflict: "merge"
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of("definitions/id/identifier", "D-1", "definitions/name", "Alpha"),
+            Map.of("definitions/id/identifier", "D-1", "definitions/priority", 5));
+
+    var out =
+        TestSupport.firstElementOrThrow(
+            converter.convertAll(rows, ImmutableProductRoot.class, cfg));
+
+    // With default dedupe: true, duplicate entries are merged
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "definitions": [
+            {
+              "id": { "identifier": "D-1" },
+              "name": "Alpha",
+              "priority": 5
+            }
+          ]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test41_default_onConflict_is_error() {
+    // Test that onConflict defaults to "error" when omitted from list rule
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists:
+              - path: "definitions"
+                keyPaths: ["id/identifier"]
+                dedupe: true
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of("definitions/id/identifier", "D-1", "definitions/name", "Alpha"),
+            Map.of("definitions/id/identifier", "D-1", "definitions/name", "Beta"));
+
+    // With default onConflict: error, conflicting scalar values should throw
+    assertThatThrownBy(() -> converter.convertAll(rows, JsonNode.class, cfg))
+        .isInstanceOf(RuntimeException.class);
+  }
+
+  @Test
+  void test42_default_orderBy_direction_is_asc() {
+    // Test that direction defaults to "asc" when omitted from orderBy
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists:
+              - path: "definitions"
+                keyPaths: ["id/identifier"]
+                orderBy:
+                  - path: "priority"
+                    nulls: "last"
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of("definitions/id/identifier", "D-1", "definitions/priority", 3),
+            Map.of("definitions/id/identifier", "D-2", "definitions/priority", 1),
+            Map.of("definitions/id/identifier", "D-3", "definitions/priority", 2));
+
+    var out =
+        TestSupport.firstElementOrThrow(
+            converter.convertAll(rows, ImmutableProductRoot.class, cfg));
+
+    // With default direction: asc, items should be sorted in ascending order
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "definitions": [
+            { "id": { "identifier": "D-2" }, "priority": 1 },
+            { "id": { "identifier": "D-3" }, "priority": 2 },
+            { "id": { "identifier": "D-1" }, "priority": 3 }
+          ]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test43_default_orderBy_nulls_is_last() {
+    // Test that nulls defaults to "last" when omitted from orderBy
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists:
+              - path: "definitions"
+                keyPaths: ["id/identifier"]
+                orderBy:
+                  - path: "priority"
+                    direction: "asc"
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of("definitions/id/identifier", "D-1", "definitions/priority", 2),
+            Map.of("definitions/id/identifier", "D-2"), // null priority
+            Map.of("definitions/id/identifier", "D-3", "definitions/priority", 1));
+
+    var out =
+        TestSupport.firstElementOrThrow(
+            converter.convertAll(rows, ImmutableProductRoot.class, cfg));
+
+    // With default nulls: last, null values should appear at the end
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "definitions": [
+            { "id": { "identifier": "D-3" }, "priority": 1 },
+            { "id": { "identifier": "D-1" }, "priority": 2 },
+            { "id": { "identifier": "D-2" } }
+          ]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test44_default_split_delimiter_is_comma() {
+    // Test that delimiter defaults to "," when omitted from split config
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists:
+              - path: "definitions"
+                keyPaths: ["id/identifier"]
+            primitives:
+              - path: "definitions/tags"
+                split:
+                  trim: true
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(Map.of("definitions/id/identifier", "D-1", "definitions/tags", "java,spring,boot"));
+
+    var out =
+        TestSupport.firstElementOrThrow(
+            converter.convertAll(rows, ImmutableProductRoot.class, cfg));
+
+    // With default delimiter: ",", the string should be split on commas
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "definitions": [
+            {
+              "id": { "identifier": "D-1" },
+              "tags": ["java", "spring", "boot"]
+            }
+          ]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test45_default_split_trim_is_false() {
+    // Test that trim defaults to false when omitted from split config
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists:
+              - path: "definitions"
+                keyPaths: ["id/identifier"]
+            primitives:
+              - path: "definitions/tags"
+                split:
+                  delimiter: ","
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of("definitions/id/identifier", "D-1", "definitions/tags", "java, spring, boot"));
+
+    var out =
+        TestSupport.firstElementOrThrow(
+            converter.convertAll(rows, ImmutableProductRoot.class, cfg));
+
+    // With default trim: false, spaces should be preserved
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "definitions": [
+            {
+              "id": { "identifier": "D-1" },
+              "tags": ["java", " spring", " boot"]
+            }
+          ]
+        }
+        """,
+        out);
+  }
 }

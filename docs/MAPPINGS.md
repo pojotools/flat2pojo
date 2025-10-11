@@ -13,20 +13,21 @@ rootKeys: []                      # Keys for grouping rows (empty = single group
 lists:                            # List rules (processed in declaration order)
   - path: "definitions/modules"   # Absolute path to list
     keyPaths: ["id"]              # Relative paths for a composite key
-    orderBy:                      # Sort specifications
+    orderBy:                      # Sort specifications (defaults: direction=asc, nulls=last)
       - path: "name"              # Relative path
         direction: asc|desc
         nulls: first|last
-    dedupe: true                  # Enable deduplication
-    onConflict: firstWriteWins    # error | firstWriteWins | lastWriteWins | merge
+    dedupe: true                  # Enable deduplication (default: true)
+    onConflict: error             # error | firstWriteWins | lastWriteWins | merge (default: error)
 
 primitives:                       # String-to-array split rules
   - path: "tags"                  # Absolute path
-    delimiter: ","                # Split delimiter
-    trim: true                    # Trim whitespace from elements
+    split:
+      delimiter: ","              # Split delimiter (default: ",")
+      trim: false                 # Trim whitespace from elements (default: false)
 
 nullPolicy:
-  blanksAsNulls: true             # Treat blank strings as null
+  blanksAsNulls: false            # Treat blank strings as null (default: false when omitted)
 
 reporter: Optional<Reporter>      # SPI for warnings/errors
 valuePreprocessor: Optional<ValuePreprocessor>  # SPI for row transformation
@@ -70,7 +71,7 @@ Result: [{id: "A", name: "Widget", qty: 10}]  // Single element, merged from bot
 
 ### Conflict Resolution Policies
 
-Applied when writing values to existing fields:
+Applied when writing values to existing fields. Default policy: `error` (if `onConflict` is omitted).
 
 | Policy           | Behavior                              | When to Use                                    |
 |------------------|---------------------------------------|------------------------------------------------|
@@ -223,9 +224,9 @@ List rules define how flat data is grouped into lists and nested structures.
 lists:
   - path: "tasks"                    # Target path for the list
     keyPaths: ["id"]                 # Fields that uniquely identify list elements (relative)
-    orderBy: []                      # Optional sorting rules
-    dedupe: true                     # Remove duplicate elements (default: true)
-    onConflict: lastWriteWins        # How to handle field conflicts
+    orderBy: []                       # Optional sorting rules (defaults: direction=asc, nulls=last)
+    dedupe: true                      # Remove duplicate elements (default: true)
+    onConflict: error                 # How to handle field conflicts (default: error)
 ```
 
 ### Hierarchical Grouping
@@ -347,8 +348,8 @@ lists:
     keyPaths: ["id"]
     orderBy:
       - path: "priority"            # Primary sort (relative)
-        direction: desc             # desc or asc
-        nulls: last                 # first or last
+        direction: desc             # desc or asc (default if omitted: asc)
+        nulls: last                 # first or last (default if omitted: last)
       - path: "created"             # Secondary sort (relative)
         direction: asc
         nulls: first
@@ -359,10 +360,11 @@ lists:
 - Numeric values are compared numerically
 - String values are compared lexicographically
 - Null handling is configurable per field
+- Defaults when omitted: `direction=asc`, `nulls=last`
 
 ### Conflict Policies
 
-When multiple rows contribute to the same list element, conflicts may arise. The `onConflict` policy determines resolution:
+When multiple rows contribute to the same list element, conflicts may arise. The `onConflict` policy determines resolution. Default policy: `error` (when `onConflict` is omitted).
 
 | Policy | Behavior | Use Case |
 |--------|----------|----------|
@@ -433,8 +435,8 @@ coordinates=40.7128|-74.0060
 ```
 
 **Split Options:**
-- `delimiter`: String to split on (can be multiple characters)
-- `trim`: Whether to trim whitespace from each part
+- `delimiter`: String to split on (can be multiple characters) — default: ","
+- `trim`: Whether to trim whitespace from each part — default: false
 - Empty parts are preserved (e.g., `"a,,b"` → `["a", "", "b"]`)
 - Respects `nullPolicy.blanksAsNulls` for empty parts
 
@@ -451,6 +453,7 @@ nullPolicy:
 - `blanksAsNulls: true`: Empty strings become `null` in JSON
 - `blanksAsNulls: false`: Empty strings remain as `""`
 - Applies to both regular fields and split array elements
+- Default when `nullPolicy` is omitted: `blanksAsNulls=false`
 
 ## Path Conventions
 
@@ -691,7 +694,7 @@ lists:
 lists:
   - path: "users"
     keyPaths: ["id"]
-    onConflict: lastWriteWins  # Clear intention
+    onConflict: lastWriteWins  # Clear intention (default is error if omitted)
 
 # ❌ Unclear: Relying on defaults
 lists:
