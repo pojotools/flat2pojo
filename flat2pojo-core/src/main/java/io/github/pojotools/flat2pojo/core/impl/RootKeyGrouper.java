@@ -18,6 +18,8 @@ final class RootKeyGrouper {
   /**
    * Groups rows by root keys, preserving the order in which groups are first encountered.
    *
+   * <p>Rows with missing or null root key values are skipped entirely.
+   *
    * @param rows input rows to group
    * @param rootKeys keys to group by (single or composite)
    * @return map of key values to row lists, ordered by first appearance
@@ -34,7 +36,9 @@ final class RootKeyGrouper {
     final Map<Object, List<Map<String, ?>>> groups = new LinkedHashMap<>();
     for (final Map<String, ?> row : rows) {
       final Object keyValue = row.get(key);
-      groups.computeIfAbsent(keyValue, k -> new ArrayList<>()).add(row);
+      if (keyValue != null) {
+        groups.computeIfAbsent(keyValue, k -> new ArrayList<>()).add(row);
+      }
     }
     return groups;
   }
@@ -44,16 +48,23 @@ final class RootKeyGrouper {
     final Map<Object, List<Map<String, ?>>> groups = new LinkedHashMap<>();
     for (final Map<String, ?> row : rows) {
       final List<Object> compositeKey = buildCompositeKey(row, rootKeys);
-      groups.computeIfAbsent(compositeKey, k -> new ArrayList<>()).add(row);
+      if (compositeKey != null) {
+        groups.computeIfAbsent(compositeKey, k -> new ArrayList<>()).add(row);
+      }
     }
     return groups;
   }
 
+  @SuppressWarnings("PMD.ReturnEmptyCollectionRatherThanNull")
   private static List<Object> buildCompositeKey(
       final Map<String, ?> row, final List<String> rootKeys) {
     final List<Object> compositeKey = new ArrayList<>(rootKeys.size());
     for (final String rootKey : rootKeys) {
-      compositeKey.add(row.get(rootKey));
+      final Object value = row.get(rootKey);
+      if (value == null) {
+        return null;
+      }
+      compositeKey.add(value);
     }
     return compositeKey;
   }
