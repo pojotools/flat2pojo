@@ -36,13 +36,14 @@ jobs:
     - name: Extract and upload coverage
       if: success() && github.ref == 'refs/heads/main'
       run: |
-        # Extract coverage percentage from JaCoCo CSV
-        COVERAGE=$(awk -F',' 'NR==2 {
-          instructions_covered = $5
-          instructions_missed = $4
-          total = instructions_covered + instructions_missed
+        # Extract coverage percentage from JaCoCo CSV (sum all rows)
+        COVERAGE=$(awk -F',' 'NR>1 {
+          missed += $4
+          covered += $5
+        } END {
+          total = missed + covered
           if (total > 0) {
-            percentage = (instructions_covered / total) * 100
+            percentage = (covered / total) * 100
             printf "%.0f", percentage
           } else {
             print "0"
@@ -79,13 +80,24 @@ jobs:
           echo "⚠️  GIST_SECRET not configured - skipping badge update"
         fi
 
+    - name: Verify test artifacts exist
+      if: always()
+      run: |
+        echo "Checking for test artifacts..."
+        find . -name "surefire-reports" -type d | head -10
+        find . -path "*/target/site/jacoco" -type d | head -10
+        ls -la flat2pojo-coverage/target/site/jacoco-aggregate/ || echo "No aggregate coverage found"
+
     - name: Upload test reports
       uses: actions/upload-artifact@v4
       if: always()
       with:
         name: test-reports
         path: |
-          **/target/surefire-reports/
-          **/target/site/jacoco/
-          flat2pojo-coverage/target/site/jacoco-aggregate/
+          flat2pojo-core/target/surefire-reports/**
+          flat2pojo-examples/target/surefire-reports/**
+          flat2pojo-core/target/site/jacoco/**
+          flat2pojo-examples/target/site/jacoco/**
+          flat2pojo-coverage/target/site/jacoco-aggregate/**
         retention-days: 30
+        if-no-files-found: warn
