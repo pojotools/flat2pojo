@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>RootKeyGrouper.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">flat2pojo-coverage</a> &gt; <a href="../index.html" class="el_bundle">flat2pojo-core</a> &gt; <a href="index.source.html" class="el_package">io.github.pojotools.flat2pojo.core.impl</a> &gt; <span class="el_source">RootKeyGrouper.java</span></div><h1>RootKeyGrouper.java</h1><pre class="source lang-java linenums">package io.github.pojotools.flat2pojo.core.impl;
+
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Groups flat rows by root keys (single or composite). Single Responsibility: Root key-based
+ * grouping logic only.
+ *
+ * &lt;p&gt;Implementation note: Uses LinkedHashMap to preserve insertion order of groups, ensuring
+ * deterministic output when processing rows in sequence.
+ */
+final class RootKeyGrouper {
+  private RootKeyGrouper() {}
+
+  /**
+   * Groups rows by root keys, preserving the order in which groups are first encountered.
+   *
+   * @param rows input rows to group
+   * @param rootKeys keys to group by (single or composite)
+   * @return map of key values to row lists, ordered by first appearance
+   */
+  static Map&lt;Object, List&lt;Map&lt;String, ?&gt;&gt;&gt; groupByRootKeys(
+      final List&lt;? extends Map&lt;String, ?&gt;&gt; rows, final List&lt;String&gt; rootKeys) {
+<span class="pc bpc" id="L27" title="1 of 2 branches missed.">    return rootKeys.size() == 1</span>
+<span class="fc" id="L28">        ? groupBySingleKey(rows, rootKeys.getFirst())</span>
+<span class="nc" id="L29">        : groupByCompositeKey(rows, rootKeys);</span>
+  }
+
+  private static Map&lt;Object, List&lt;Map&lt;String, ?&gt;&gt;&gt; groupBySingleKey(
+      final List&lt;? extends Map&lt;String, ?&gt;&gt; rows, final String key) {
+<span class="fc" id="L34">    final Map&lt;Object, List&lt;Map&lt;String, ?&gt;&gt;&gt; groups = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L35" title="All 2 branches covered.">    for (final Map&lt;String, ?&gt; row : rows) {</span>
+<span class="fc" id="L36">      final Object keyValue = row.get(key);</span>
+<span class="fc" id="L37">      groups.computeIfAbsent(keyValue, k -&gt; new ArrayList&lt;&gt;()).add(row);</span>
+<span class="fc" id="L38">    }</span>
+<span class="fc" id="L39">    return groups;</span>
+  }
+
+  private static Map&lt;Object, List&lt;Map&lt;String, ?&gt;&gt;&gt; groupByCompositeKey(
+      final List&lt;? extends Map&lt;String, ?&gt;&gt; rows, final List&lt;String&gt; rootKeys) {
+<span class="nc" id="L44">    final Map&lt;Object, List&lt;Map&lt;String, ?&gt;&gt;&gt; groups = new LinkedHashMap&lt;&gt;();</span>
+<span class="nc bnc" id="L45" title="All 2 branches missed.">    for (final Map&lt;String, ?&gt; row : rows) {</span>
+<span class="nc" id="L46">      final List&lt;Object&gt; compositeKey = buildCompositeKey(row, rootKeys);</span>
+<span class="nc" id="L47">      groups.computeIfAbsent(compositeKey, k -&gt; new ArrayList&lt;&gt;()).add(row);</span>
+<span class="nc" id="L48">    }</span>
+<span class="nc" id="L49">    return groups;</span>
+  }
+
+  private static List&lt;Object&gt; buildCompositeKey(
+      final Map&lt;String, ?&gt; row, final List&lt;String&gt; rootKeys) {
+<span class="nc" id="L54">    final List&lt;Object&gt; compositeKey = new ArrayList&lt;&gt;(rootKeys.size());</span>
+<span class="nc bnc" id="L55" title="All 2 branches missed.">    for (final String rootKey : rootKeys) {</span>
+<span class="nc" id="L56">      compositeKey.add(row.get(rootKey));</span>
+<span class="nc" id="L57">    }</span>
+<span class="nc" id="L58">    return compositeKey;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

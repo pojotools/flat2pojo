@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>ArrayFinalizer.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">flat2pojo-coverage</a> &gt; <a href="../index.html" class="el_bundle">flat2pojo-core</a> &gt; <a href="index.source.html" class="el_package">io.github.pojotools.flat2pojo.core.engine</a> &gt; <span class="el_source">ArrayFinalizer.java</span></div><h1>ArrayFinalizer.java</h1><pre class="source lang-java linenums">package io.github.pojotools.flat2pojo.core.engine;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Deque;
+import java.util.IdentityHashMap;
+import java.util.Iterator;
+import java.util.List;
+
+/**
+ * Finalizes array nodes by applying sorting and deduplication. Single Responsibility: Array
+ * finalization logic only.
+ */
+final class ArrayFinalizer {
+  private final IdentityHashMap&lt;ArrayNode, ArrayBucket&gt; buckets;
+  private final IdentityHashMap&lt;ArrayNode, List&lt;Comparator&lt;ObjectNode&gt;&gt;&gt; comparators;
+
+  ArrayFinalizer(
+      final IdentityHashMap&lt;ArrayNode, ArrayBucket&gt; buckets,
+<span class="fc" id="L24">      final IdentityHashMap&lt;ArrayNode, List&lt;Comparator&lt;ObjectNode&gt;&gt;&gt; comparators) {</span>
+<span class="fc" id="L25">    this.buckets = buckets;</span>
+<span class="fc" id="L26">    this.comparators = comparators;</span>
+<span class="fc" id="L27">  }</span>
+
+  void finalizeArrays(final ObjectNode root) {
+<span class="fc" id="L30">    final Deque&lt;JsonNode&gt; stack = new ArrayDeque&lt;&gt;();</span>
+<span class="fc" id="L31">    stack.push(root);</span>
+<span class="fc bfc" id="L32" title="All 2 branches covered.">    while (!stack.isEmpty()) {</span>
+<span class="fc" id="L33">      final JsonNode current = stack.pop();</span>
+<span class="fc bfc" id="L34" title="All 2 branches covered.">      if (current instanceof ObjectNode objectNode) {</span>
+<span class="fc" id="L35">        processObjectNode(objectNode, stack);</span>
+<span class="fc bfc" id="L36" title="All 2 branches covered.">      } else if (current instanceof ArrayNode arrayNode) {</span>
+<span class="fc" id="L37">        finalizeArrayNode(arrayNode, stack);</span>
+      }
+<span class="fc" id="L39">    }</span>
+<span class="fc" id="L40">  }</span>
+
+  private void processObjectNode(final ObjectNode objectNode, final Deque&lt;JsonNode&gt; stack) {
+<span class="fc" id="L43">    final Iterator&lt;String&gt; fieldIterator = objectNode.fieldNames();</span>
+<span class="fc" id="L44">    final List&lt;String&gt; fieldNames = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L45">    fieldIterator.forEachRemaining(fieldNames::add);</span>
+<span class="fc bfc" id="L46" title="All 2 branches covered.">    for (final String fieldName : fieldNames) {</span>
+<span class="fc" id="L47">      final JsonNode value = objectNode.get(fieldName);</span>
+<span class="fc bfc" id="L48" title="All 4 branches covered.">      if (value instanceof ObjectNode || value instanceof ArrayNode) {</span>
+<span class="fc" id="L49">        stack.push(value);</span>
+      }
+<span class="fc" id="L51">    }</span>
+<span class="fc" id="L52">  }</span>
+
+  private void finalizeArrayNode(final ArrayNode arrayNode, final Deque&lt;JsonNode&gt; stack) {
+<span class="fc" id="L55">    applyBucketOrdering(arrayNode);</span>
+<span class="fc" id="L56">    pushChildrenToStack(arrayNode, stack);</span>
+<span class="fc" id="L57">  }</span>
+
+  private void applyBucketOrdering(final ArrayNode arrayNode) {
+<span class="fc" id="L60">    final ArrayBucket bucket = buckets.get(arrayNode);</span>
+<span class="fc bfc" id="L61" title="All 2 branches covered.">    if (bucket == null) {</span>
+<span class="fc" id="L62">      return;</span>
+    }
+<span class="fc" id="L64">    final List&lt;Comparator&lt;ObjectNode&gt;&gt; nodeComparators =</span>
+<span class="fc" id="L65">        comparators.getOrDefault(arrayNode, List.of());</span>
+<span class="fc" id="L66">    arrayNode.removeAll();</span>
+<span class="fc bfc" id="L67" title="All 2 branches covered.">    for (final ObjectNode element : bucket.ordered(nodeComparators)) {</span>
+<span class="fc" id="L68">      arrayNode.add(element);</span>
+<span class="fc" id="L69">    }</span>
+<span class="fc" id="L70">  }</span>
+
+  private void pushChildrenToStack(final ArrayNode arrayNode, final Deque&lt;JsonNode&gt; stack) {
+<span class="fc bfc" id="L73" title="All 2 branches covered.">    for (final JsonNode child : arrayNode) {</span>
+<span class="fc" id="L74">      stack.push(child);</span>
+<span class="fc" id="L75">    }</span>
+<span class="fc" id="L76">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

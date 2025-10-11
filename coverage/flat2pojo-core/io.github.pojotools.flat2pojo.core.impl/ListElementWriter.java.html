@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>ListElementWriter.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">flat2pojo-coverage</a> &gt; <a href="../index.html" class="el_bundle">flat2pojo-core</a> &gt; <a href="index.source.html" class="el_package">io.github.pojotools.flat2pojo.core.impl</a> &gt; <span class="el_source">ListElementWriter.java</span></div><h1>ListElementWriter.java</h1><pre class="source lang-java linenums">package io.github.pojotools.flat2pojo.core.impl;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.github.pojotools.flat2pojo.core.config.MappingConfig;
+import io.github.pojotools.flat2pojo.core.util.ConflictContext;
+import io.github.pojotools.flat2pojo.core.util.ConflictHandler;
+
+/**
+ * Writes values into list elements with appropriate conflict handling. Single Responsibility: Value
+ * writing logic only.
+ */
+final class ListElementWriter {
+  private final ProcessingContext context;
+
+<span class="fc" id="L16">  ListElementWriter(final ProcessingContext context) {</span>
+<span class="fc" id="L17">    this.context = context;</span>
+<span class="fc" id="L18">  }</span>
+
+  void writeWithConflictPolicy(
+      final ObjectNode target,
+      final String path,
+      final JsonNode value,
+      final MappingConfig.ConflictPolicy policy,
+      final String absolutePath) {
+<span class="pc bpc" id="L26" title="1 of 2 branches missed.">    if (path.isEmpty()) {</span>
+<span class="nc" id="L27">      return;</span>
+    }
+
+<span class="fc" id="L30">    final ObjectNode parent = context.pathResolver().traverseAndEnsurePath(target, path);</span>
+<span class="fc" id="L31">    final String lastSegment = context.pathResolver().getFinalSegment(path);</span>
+<span class="fc" id="L32">    final ConflictContext conflictContext =</span>
+<span class="fc" id="L33">        new ConflictContext(policy, absolutePath, context.config().reporter().orElse(null));</span>
+
+<span class="fc" id="L35">    ConflictHandler.writeScalarWithPolicy(parent, lastSegment, value, conflictContext);</span>
+<span class="fc" id="L36">  }</span>
+
+  void writeDirectly(final ObjectNode target, final String path, final JsonNode value) {
+<span class="pc bpc" id="L39" title="1 of 2 branches missed.">    if (path.isEmpty()) {</span>
+<span class="nc" id="L40">      return;</span>
+    }
+
+<span class="fc" id="L43">    final ObjectNode parent = context.pathResolver().traverseAndEnsurePath(target, path);</span>
+<span class="fc" id="L44">    final String lastSegment = context.pathResolver().getFinalSegment(path);</span>
+<span class="fc" id="L45">    parent.set(lastSegment, value);</span>
+<span class="fc" id="L46">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

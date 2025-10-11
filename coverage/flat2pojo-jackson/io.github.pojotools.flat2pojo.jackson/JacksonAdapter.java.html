@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JacksonAdapter.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">flat2pojo-coverage</a> &gt; <a href="../index.html" class="el_bundle">flat2pojo-jackson</a> &gt; <a href="index.source.html" class="el_package">io.github.pojotools.flat2pojo.jackson</a> &gt; <span class="el_source">JacksonAdapter.java</span></div><h1>JacksonAdapter.java</h1><pre class="source lang-java linenums">package io.github.pojotools.flat2pojo.jackson;
+
+import com.fasterxml.jackson.databind.*;
+import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+
+/**
+ * Jackson integration utilities for flat2pojo.
+ *
+ * &lt;p&gt;This class provides pre-configured Jackson ObjectMapper instances and utilities optimized for
+ * flat2pojo's conversion process.
+ */
+public final class JacksonAdapter {
+
+<span class="nc" id="L15">  private JacksonAdapter() {</span>
+<span class="nc" id="L16">    throw new UnsupportedOperationException(&quot;Utility class&quot;);</span>
+  }
+
+  /**
+   * Creates a Jackson ObjectMapper with optimized settings for flat2pojo.
+   *
+   * &lt;p&gt;The returned mapper is configured with:
+   *
+   * &lt;ul&gt;
+   *   &lt;li&gt;JavaTimeModule for java.time support
+   *   &lt;li&gt;ISO-8601 date formatting (not timestamps)
+   *   &lt;li&gt;Case-insensitive enum handling
+   *   &lt;li&gt;Unknown property tolerance
+   * &lt;/ul&gt;
+   *
+   * @return a pre-configured ObjectMapper instance
+   */
+  public static ObjectMapper defaultObjectMapper() {
+<span class="fc" id="L34">    return JsonMapper.builder()</span>
+        // Register module for java.time types
+<span class="fc" id="L36">        .addModule(new JavaTimeModule())</span>
+
+        // ISO-8601 instead of timestamps for dates
+<span class="fc" id="L39">        .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)</span>
+
+        // Allow case-insensitive enums
+<span class="fc" id="L42">        .enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS)</span>
+
+        // Ignore unknown fields instead of failing
+<span class="fc" id="L45">        .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)</span>
+<span class="fc" id="L46">        .build();</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

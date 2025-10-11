@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>RowGraphAssembler.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">flat2pojo-coverage</a> &gt; <a href="../index.html" class="el_bundle">flat2pojo-core</a> &gt; <a href="index.source.html" class="el_package">io.github.pojotools.flat2pojo.core.impl</a> &gt; <span class="el_source">RowGraphAssembler.java</span></div><h1>RowGraphAssembler.java</h1><pre class="source lang-java linenums">package io.github.pojotools.flat2pojo.core.impl;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.github.pojotools.flat2pojo.core.config.MappingConfig;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
+
+/**
+ * Assembles object graphs from flat rows by processing list rules and direct values. Single
+ * Responsibility: Builds nested JSON tree structure from flat key-value rows.
+ */
+final class RowGraphAssembler implements RowProcessor {
+  private final ObjectNode root;
+  private final AssemblerDependencies dependencies;
+  private final ProcessingContext context;
+  private final ListRuleProcessor listRuleProcessor;
+  private final ListElementWriter writer;
+  private final Function&lt;Map&lt;String, ?&gt;, Map&lt;String, ?&gt;&gt; preprocessor;
+<span class="fc" id="L23">  private final Map&lt;String, ObjectNode&gt; listElementCache = new LinkedHashMap&lt;&gt;();</span>
+
+<span class="fc" id="L25">  RowGraphAssembler(final AssemblerDependencies dependencies, final ProcessingContext context) {</span>
+<span class="fc" id="L26">    this.dependencies = dependencies;</span>
+<span class="fc" id="L27">    this.root = dependencies.objectMapper().createObjectNode();</span>
+<span class="fc" id="L28">    this.context = context;</span>
+<span class="fc" id="L29">    this.listRuleProcessor =</span>
+<span class="fc" id="L30">        new ListRuleProcessor(dependencies.groupingEngine(), context, listElementCache);</span>
+<span class="fc" id="L31">    this.writer = new ListElementWriter(context);</span>
+<span class="fc" id="L32">    this.preprocessor = buildPreprocessor(context.config());</span>
+<span class="fc" id="L33">  }</span>
+
+  @Override
+  public void processRow(final Map&lt;String, ?&gt; row) {
+<span class="fc" id="L37">    final Map&lt;String, ?&gt; preprocessed = preprocessor.apply(row);</span>
+<span class="fc" id="L38">    final Map&lt;String, JsonNode&gt; rowValues =</span>
+<span class="fc" id="L39">        dependencies.valueTransformer().transformRowValuesToJsonNodes(preprocessed);</span>
+<span class="fc" id="L40">    final Set&lt;String&gt; skippedListPaths = processListRules(rowValues);</span>
+<span class="fc" id="L41">    processDirectValues(rowValues, skippedListPaths);</span>
+<span class="fc" id="L42">  }</span>
+
+  @Override
+  public &lt;T&gt; T materialize(final Class&lt;T&gt; type) {
+<span class="fc" id="L46">    dependencies.groupingEngine().finalizeArrays(root);</span>
+<span class="fc" id="L47">    return dependencies.materializer().materialize(root, type);</span>
+  }
+
+  private static Function&lt;Map&lt;String, ?&gt;, Map&lt;String, ?&gt;&gt; buildPreprocessor(
+      final MappingConfig config) {
+<span class="fc" id="L52">    return config</span>
+<span class="fc" id="L53">        .valuePreprocessor()</span>
+<span class="fc" id="L54">        .map(p -&gt; (Function&lt;Map&lt;String, ?&gt;, Map&lt;String, ?&gt;&gt;) p::process)</span>
+<span class="fc" id="L55">        .orElse(Function.identity());</span>
+  }
+
+  private Set&lt;String&gt; processListRules(final Map&lt;String, JsonNode&gt; rowValues) {
+<span class="fc" id="L59">    final Set&lt;String&gt; skippedListPaths = new HashSet&lt;&gt;();</span>
+<span class="fc bfc" id="L60" title="All 2 branches covered.">    for (final MappingConfig.ListRule rule : context.config().lists()) {</span>
+<span class="fc" id="L61">      listRuleProcessor.processRule(rowValues, skippedListPaths, rule, root);</span>
+<span class="fc" id="L62">    }</span>
+<span class="fc" id="L63">    return skippedListPaths;</span>
+  }
+
+  private void processDirectValues(
+      final Map&lt;String, JsonNode&gt; rowValues, final Set&lt;String&gt; skippedListPaths) {
+<span class="fc bfc" id="L68" title="All 2 branches covered.">    for (final var entry : rowValues.entrySet()) {</span>
+<span class="fc" id="L69">      final String path = entry.getKey();</span>
+<span class="fc bfc" id="L70" title="All 2 branches covered.">      if (isDirectValuePath(path, skippedListPaths)) {</span>
+<span class="fc" id="L71">        writer.writeDirectly(root, path, entry.getValue());</span>
+      }
+<span class="fc" id="L73">    }</span>
+<span class="fc" id="L74">  }</span>
+
+  private boolean isDirectValuePath(final String path, final Set&lt;String&gt; skippedListPaths) {
+<span class="fc" id="L77">    return isEligibleForDirectWrite(path, skippedListPaths);</span>
+  }
+
+  private boolean isEligibleForDirectWrite(final String path, final Set&lt;String&gt; skippedListPaths) {
+<span class="fc" id="L81">    final boolean underAnyList = context.hierarchyCache().isUnderAnyList(path);</span>
+<span class="fc" id="L82">    final boolean skipped = context.pathResolver().isUnderAny(path, skippedListPaths);</span>
+<span class="pc bpc" id="L83" title="1 of 4 branches missed.">    return !underAnyList &amp;&amp; !skipped;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

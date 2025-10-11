@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>Flat2PojoFactory.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">flat2pojo-coverage</a> &gt; <a href="../index.html" class="el_bundle">flat2pojo-jackson</a> &gt; <a href="index.source.html" class="el_package">io.github.pojotools.flat2pojo.jackson</a> &gt; <span class="el_source">Flat2PojoFactory.java</span></div><h1>Flat2PojoFactory.java</h1><pre class="source lang-java linenums">package io.github.pojotools.flat2pojo.jackson;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.github.pojotools.flat2pojo.core.api.Flat2Pojo;
+import io.github.pojotools.flat2pojo.core.impl.Flat2PojoCore;
+
+/**
+ * Factory for creating {@link Flat2Pojo} instances with Jackson integration.
+ *
+ * &lt;p&gt;This factory provides the main entry point for obtaining converter instances that work with
+ * Jackson {@link ObjectMapper} for POJO serialization and deserialization.
+ */
+public final class Flat2PojoFactory {
+  private Flat2PojoFactory() {}
+
+  /**
+   * Creates a new {@link Flat2Pojo} converter using the provided Jackson ObjectMapper.
+   *
+   * &lt;p&gt;The ObjectMapper should be configured with appropriate modules and settings for your use
+   * case. Consider using {@link JacksonAdapter#defaultObjectMapper()} for a pre-configured mapper
+   * with sensible defaults.
+   *
+   * @param om the Jackson ObjectMapper to use for POJO conversion
+   * @return a new Flat2Pojo converter instance
+   */
+  public static Flat2Pojo defaultMapper(final ObjectMapper om) {
+<span class="fc" id="L27">    return new Flat2PojoCore(om);</span>
+  }
+
+  /**
+   * Creates a new {@link Flat2Pojo} converter using the default Jackson configuration.
+   *
+   * @return a new Flat2Pojo converter with optimized Jackson settings
+   */
+  public static Flat2Pojo create() {
+<span class="nc" id="L36">    return new Flat2PojoCore(JacksonAdapter.defaultObjectMapper());</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

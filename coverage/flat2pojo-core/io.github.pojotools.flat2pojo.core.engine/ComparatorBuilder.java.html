@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>ComparatorBuilder.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">flat2pojo-coverage</a> &gt; <a href="../index.html" class="el_bundle">flat2pojo-core</a> &gt; <a href="index.source.html" class="el_package">io.github.pojotools.flat2pojo.core.engine</a> &gt; <span class="el_source">ComparatorBuilder.java</span></div><h1>ComparatorBuilder.java</h1><pre class="source lang-java linenums">package io.github.pojotools.flat2pojo.core.engine;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.NullNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.github.pojotools.flat2pojo.core.config.MappingConfig;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Builds and caches comparators for list ordering. Single Responsibility: Comparator construction
+ * logic only.
+ */
+final class ComparatorBuilder {
+  private final String separator;
+<span class="fc" id="L19">  private final Map&lt;String, List&lt;Comparator&lt;ObjectNode&gt;&gt;&gt; comparatorCache = new HashMap&lt;&gt;();</span>
+
+<span class="fc" id="L21">  ComparatorBuilder(final String separator) {</span>
+<span class="fc" id="L22">    this.separator = separator;</span>
+<span class="fc" id="L23">  }</span>
+
+  void precomputeComparators(final MappingConfig config) {
+<span class="fc bfc" id="L26" title="All 2 branches covered.">    for (final var rule : config.lists()) {</span>
+<span class="fc" id="L27">      final List&lt;Comparator&lt;ObjectNode&gt;&gt; ruleComparators = buildComparators(rule);</span>
+<span class="fc" id="L28">      comparatorCache.put(rule.path(), ruleComparators);</span>
+<span class="fc" id="L29">    }</span>
+<span class="fc" id="L30">  }</span>
+
+  List&lt;Comparator&lt;ObjectNode&gt;&gt; getComparatorsForPath(final String path) {
+<span class="fc" id="L33">    return comparatorCache.getOrDefault(path, List.of());</span>
+  }
+
+  private List&lt;Comparator&lt;ObjectNode&gt;&gt; buildComparators(final MappingConfig.ListRule rule) {
+<span class="fc" id="L37">    final List&lt;Comparator&lt;ObjectNode&gt;&gt; comparatorList = new ArrayList&lt;&gt;();</span>
+
+<span class="fc bfc" id="L39" title="All 2 branches covered.">    for (final var orderBy : rule.orderBy()) {</span>
+<span class="fc" id="L40">      final String relativePath = orderBy.path();</span>
+<span class="fc bfc" id="L41" title="All 2 branches covered.">      final boolean isAscending = orderBy.direction() == MappingConfig.Direction.asc;</span>
+<span class="fc bfc" id="L42" title="All 2 branches covered.">      final boolean nullsFirst = orderBy.nulls() == MappingConfig.Nulls.first;</span>
+
+<span class="fc" id="L44">      comparatorList.add(createFieldComparator(relativePath, isAscending, nullsFirst));</span>
+<span class="fc" id="L45">    }</span>
+
+<span class="fc" id="L47">    return comparatorList;</span>
+  }
+
+  private Comparator&lt;ObjectNode&gt; createFieldComparator(
+      final String relativePath, final boolean isAscending, final boolean nullsFirst) {
+<span class="fc" id="L52">    return (nodeA, nodeB) -&gt; {</span>
+<span class="fc" id="L53">      final JsonNode valueA = findValueAtPath(nodeA, relativePath);</span>
+<span class="fc" id="L54">      final JsonNode valueB = findValueAtPath(nodeB, relativePath);</span>
+<span class="fc" id="L55">      return compareWithNulls(valueA, valueB, isAscending, nullsFirst);</span>
+    };
+  }
+
+  private int compareWithNulls(
+      final JsonNode valueA,
+      final JsonNode valueB,
+      final boolean isAscending,
+      final boolean nullsFirst) {
+<span class="fc" id="L64">    final boolean isANull = isNullOrMissing(valueA);</span>
+<span class="fc" id="L65">    final boolean isBNull = isNullOrMissing(valueB);</span>
+
+<span class="pc bpc" id="L67" title="1 of 4 branches missed.">    if (isANull &amp;&amp; isBNull) {</span>
+<span class="nc" id="L68">      return 0;</span>
+    }
+<span class="fc bfc" id="L70" title="All 2 branches covered.">    if (isANull) {</span>
+<span class="fc bfc" id="L71" title="All 2 branches covered.">      return nullsFirst ? -1 : 1;</span>
+    }
+<span class="fc bfc" id="L73" title="All 2 branches covered.">    if (isBNull) {</span>
+<span class="fc bfc" id="L74" title="All 2 branches covered.">      return nullsFirst ? 1 : -1;</span>
+    }
+<span class="fc" id="L76">    return compareValues(valueA, valueB, isAscending);</span>
+  }
+
+  private int compareValues(
+      final JsonNode valueA, final JsonNode valueB, final boolean isAscending) {
+<span class="fc" id="L81">    final int comparison = compareJsonValues(valueA, valueB);</span>
+<span class="fc bfc" id="L82" title="All 2 branches covered.">    return isAscending ? comparison : -comparison;</span>
+  }
+
+  private JsonNode findValueAtPath(final ObjectNode base, final String relativePath) {
+<span class="pc bpc" id="L86" title="1 of 2 branches missed.">    if (relativePath.isEmpty()) {</span>
+<span class="nc" id="L87">      return base;</span>
+    }
+<span class="fc" id="L89">    return traversePath(base, relativePath);</span>
+  }
+
+  private JsonNode traversePath(final ObjectNode base, final String path) {
+<span class="fc" id="L93">    JsonNode current = base;</span>
+<span class="fc" id="L94">    int start = 0;</span>
+<span class="fc bfc" id="L95" title="All 2 branches covered.">    while (start &lt; path.length()) {</span>
+<span class="fc" id="L96">      current = navigateToNextSegment(current, path, start);</span>
+<span class="fc bfc" id="L97" title="All 2 branches covered.">      if (isNullOrMissing(current)) {</span>
+<span class="fc" id="L98">        return NullNode.getInstance();</span>
+      }
+<span class="fc" id="L100">      start = calculateNextStart(path, start);</span>
+    }
+<span class="fc" id="L102">    return current;</span>
+  }
+
+  private boolean isNullOrMissing(final JsonNode node) {
+<span class="fc bfc" id="L106" title="All 4 branches covered.">    return node == null || node.isNull();</span>
+  }
+
+  private JsonNode navigateToNextSegment(
+      final JsonNode current, final String path, final int start) {
+<span class="pc bpc" id="L111" title="1 of 2 branches missed.">    if (!(current instanceof ObjectNode objectNode)) {</span>
+<span class="nc" id="L112">      return null;</span>
+    }
+<span class="fc" id="L114">    final String segment = extractSegment(path, start);</span>
+<span class="fc" id="L115">    return objectNode.get(segment);</span>
+  }
+
+  private int calculateNextStart(final String path, final int start) {
+<span class="fc" id="L119">    final int separatorIndex = path.indexOf(separator, start);</span>
+<span class="fc bfc" id="L120" title="All 2 branches covered.">    return separatorIndex &gt;= 0 ? separatorIndex + separator.length() : path.length();</span>
+  }
+
+  private String extractSegment(final String path, final int start) {
+<span class="fc" id="L124">    final int separatorIndex = path.indexOf(separator, start);</span>
+<span class="fc bfc" id="L125" title="All 2 branches covered.">    return separatorIndex &gt;= 0 ? path.substring(start, separatorIndex) : path.substring(start);</span>
+  }
+
+  private static int compareJsonValues(final JsonNode a, final JsonNode b) {
+<span class="pc bpc" id="L129" title="1 of 4 branches missed.">    if (a.isNumber() &amp;&amp; b.isNumber()) {</span>
+<span class="fc" id="L130">      return Double.compare(a.asDouble(), b.asDouble());</span>
+    }
+<span class="fc" id="L132">    return a.asText().compareTo(b.asText());</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

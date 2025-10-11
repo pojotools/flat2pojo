@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>ValueTransformer.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">flat2pojo-coverage</a> &gt; <a href="../index.html" class="el_bundle">flat2pojo-core</a> &gt; <a href="index.source.html" class="el_package">io.github.pojotools.flat2pojo.core.engine</a> &gt; <span class="el_source">ValueTransformer.java</span></div><h1>ValueTransformer.java</h1><pre class="source lang-java linenums">package io.github.pojotools.flat2pojo.core.engine;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.BooleanNode;
+import com.fasterxml.jackson.databind.node.DoubleNode;
+import com.fasterxml.jackson.databind.node.IntNode;
+import com.fasterxml.jackson.databind.node.LongNode;
+import com.fasterxml.jackson.databind.node.NullNode;
+import com.fasterxml.jackson.databind.node.TextNode;
+import io.github.pojotools.flat2pojo.core.config.MappingConfig;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
+
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
+public final class ValueTransformer {
+  ObjectMapper objectMapper;
+  Map&lt;String, MappingConfig.PrimitiveSplitRule&gt; splitRulesCache;
+  boolean blanksAsNulls;
+
+<span class="fc" id="L25">  public ValueTransformer(final ObjectMapper objectMapper, final MappingConfig config) {</span>
+<span class="fc" id="L26">    this.objectMapper = objectMapper;</span>
+<span class="pc bpc" id="L27" title="1 of 4 branches missed.">    this.blanksAsNulls = config.nullPolicy() != null &amp;&amp; config.nullPolicy().blanksAsNulls();</span>
+<span class="fc" id="L28">    this.splitRulesCache = buildSplitRulesCache(config);</span>
+<span class="fc" id="L29">  }</span>
+
+  private static Map&lt;String, MappingConfig.PrimitiveSplitRule&gt; buildSplitRulesCache(
+      final MappingConfig config) {
+<span class="fc" id="L33">    final Map&lt;String, MappingConfig.PrimitiveSplitRule&gt; cache = new HashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L34" title="All 2 branches covered.">    for (final MappingConfig.PrimitiveSplitRule rule : config.primitives()) {</span>
+<span class="fc" id="L35">      cache.put(rule.path(), rule);</span>
+<span class="fc" id="L36">    }</span>
+<span class="fc" id="L37">    return cache;</span>
+  }
+
+  /**
+   * Transforms flat row values directly to JsonNode map without building intermediate tree. More
+   * efficient than build-then-flatten approach for list processing.
+   */
+  public Map&lt;String, JsonNode&gt; transformRowValuesToJsonNodes(final Map&lt;String, ?&gt; row) {
+<span class="fc" id="L45">    final Map&lt;String, JsonNode&gt; result = new LinkedHashMap&lt;&gt;(row.size());</span>
+<span class="fc bfc" id="L46" title="All 2 branches covered.">    for (final var entry : row.entrySet()) {</span>
+<span class="fc" id="L47">      transformEntry(entry, result);</span>
+<span class="fc" id="L48">    }</span>
+<span class="fc" id="L49">    return result;</span>
+  }
+
+  private void transformEntry(
+      final Map.Entry&lt;String, ?&gt; entry, final Map&lt;String, JsonNode&gt; result) {
+<span class="fc" id="L54">    final String key = entry.getKey();</span>
+<span class="fc" id="L55">    final Object normalized = normalizeBlankValue(entry.getValue());</span>
+<span class="fc" id="L56">    final JsonNode valueNode = createValueNode(key, normalized);</span>
+<span class="fc" id="L57">    result.put(key, valueNode);</span>
+<span class="fc" id="L58">  }</span>
+
+  private Object normalizeBlankValue(final Object rawValue) {
+<span class="fc bfc" id="L61" title="All 6 branches covered.">    if (rawValue instanceof String stringValue &amp;&amp; blanksAsNulls &amp;&amp; stringValue.isBlank()) {</span>
+<span class="fc" id="L62">      return null;</span>
+    }
+<span class="fc" id="L64">    return rawValue;</span>
+  }
+
+  private JsonNode createValueNode(final String key, final Object rawValue) {
+<span class="fc" id="L68">    final MappingConfig.PrimitiveSplitRule splitRule = splitRulesCache.get(key);</span>
+
+<span class="pc bpc" id="L70" title="1 of 4 branches missed.">    if (splitRule != null &amp;&amp; rawValue instanceof String stringValue) {</span>
+<span class="fc" id="L71">      return createSplitArrayNode(stringValue, splitRule);</span>
+    } else {
+<span class="fc" id="L73">      return createLeafNode(rawValue);</span>
+    }
+  }
+
+  private ArrayNode createSplitArrayNode(
+      final String stringValue, final MappingConfig.PrimitiveSplitRule splitRule) {
+<span class="fc" id="L79">    final String[] parts =</span>
+<span class="fc" id="L80">        stringValue.split(java.util.regex.Pattern.quote(splitRule.delimiter()), -1);</span>
+<span class="fc" id="L81">    final ArrayNode arrayNode = objectMapper.createArrayNode();</span>
+<span class="fc bfc" id="L82" title="All 2 branches covered.">    for (final String part : parts) {</span>
+<span class="fc" id="L83">      arrayNode.add(createArrayElement(part, splitRule.trim()));</span>
+    }
+<span class="fc" id="L85">    return arrayNode;</span>
+  }
+
+  private JsonNode createArrayElement(final String part, final boolean shouldTrim) {
+<span class="pc bpc" id="L89" title="1 of 2 branches missed.">    final String processed = shouldTrim ? part.trim() : part;</span>
+<span class="fc bfc" id="L90" title="All 4 branches covered.">    if (blanksAsNulls &amp;&amp; processed.isBlank()) {</span>
+<span class="fc" id="L91">      return NullNode.getInstance();</span>
+    }
+<span class="fc" id="L93">    return TextNode.valueOf(processed);</span>
+  }
+
+  private JsonNode createLeafNode(final Object rawValue) {
+<span class="pc bpc" id="L97" title="1 of 7 branches missed.">    return switch (rawValue) {</span>
+<span class="fc" id="L98">      case null -&gt; NullNode.getInstance();</span>
+<span class="fc" id="L99">      case String stringValue -&gt; createStringNode(stringValue);</span>
+<span class="fc" id="L100">      case Integer intValue -&gt; IntNode.valueOf(intValue);</span>
+<span class="fc" id="L101">      case Long longValue -&gt; LongNode.valueOf(longValue);</span>
+<span class="fc" id="L102">      case Double doubleValue -&gt; DoubleNode.valueOf(doubleValue);</span>
+<span class="fc" id="L103">      case Boolean boolValue -&gt; BooleanNode.valueOf(boolValue);</span>
+<span class="nc" id="L104">      default -&gt; objectMapper.valueToTree(rawValue);</span>
+    };
+  }
+
+  private JsonNode createStringNode(final String stringValue) {
+<span class="pc bpc" id="L109" title="1 of 4 branches missed.">    if (blanksAsNulls &amp;&amp; stringValue.isBlank()) {</span>
+<span class="nc" id="L110">      return NullNode.getInstance();</span>
+    }
+<span class="fc" id="L112">    return TextNode.valueOf(stringValue);</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

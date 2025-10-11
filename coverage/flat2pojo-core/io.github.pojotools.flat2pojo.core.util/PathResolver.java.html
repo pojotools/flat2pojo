@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>PathResolver.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">flat2pojo-coverage</a> &gt; <a href="../index.html" class="el_bundle">flat2pojo-core</a> &gt; <a href="index.source.html" class="el_package">io.github.pojotools.flat2pojo.core.util</a> &gt; <span class="el_source">PathResolver.java</span></div><h1>PathResolver.java</h1><pre class="source lang-java linenums">package io.github.pojotools.flat2pojo.core.util;
+
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.util.Set;
+
+/**
+ * Encapsulates all path-related operations with a specific separator. Eliminates primitive
+ * obsession by bundling the separator with path operations.
+ */
+<span class="fc" id="L10">public record PathResolver(String separator) {</span>
+
+  /** Checks if a path is under any of the given parent paths. */
+  public boolean isUnderAny(final String path, final Set&lt;String&gt; parentPaths) {
+<span class="fc" id="L14">    return PathOps.isUnderAny(path, parentPaths, separator);</span>
+  }
+
+  /** Gets the portion of a path after a prefix. Example: tailAfter(&quot;a/b/c&quot;, &quot;a&quot;) returns &quot;b/c&quot; */
+  public String tailAfter(final String path, final String prefix) {
+<span class="fc" id="L19">    return PathOps.tailAfter(path, prefix, separator);</span>
+  }
+
+  /** Gets the final segment of a path. Example: getFinalSegment(&quot;a/b/c&quot;) returns &quot;c&quot; */
+  public String getFinalSegment(final String path) {
+<span class="fc" id="L24">    return PathOps.getFinalSegment(path, separator);</span>
+  }
+
+  /** Builds a path prefix by appending the separator. Example: buildPrefix(&quot;a/b&quot;) returns &quot;a/b/&quot; */
+  public String buildPrefix(final String path) {
+<span class="fc" id="L29">    return path + separator;</span>
+  }
+
+  /** Strips the prefix from a path. Example: stripPrefix(&quot;a/b/c&quot;, &quot;a/b/&quot;) returns &quot;c&quot; */
+  public String stripPrefix(final String path, final String prefix) {
+<span class="fc" id="L34">    return path.substring(prefix.length());</span>
+  }
+
+  /** Traverses and ensures the path exists in the target node, creating objects as needed. */
+  public ObjectNode traverseAndEnsurePath(final ObjectNode target, final String path) {
+<span class="fc" id="L39">    return PathOps.traverseAndEnsurePath(target, path, separator, PathOps::ensureObject);</span>
+  }
+
+  /**
+   * Checks if a relative suffix is under any child list of the parent. Example: For parent
+   * &quot;definitions&quot;, checks if suffix &quot;modules/name&quot; starts with &quot;modules/&quot;
+   */
+  public boolean isSuffixUnderAnyChild(
+      final String suffix, final String parentPath, final Set&lt;String&gt; allListPaths) {
+<span class="fc" id="L48">    final String parentPrefix = buildPrefix(parentPath);</span>
+<span class="fc bfc" id="L49" title="All 2 branches covered.">    for (final String listPath : allListPaths) {</span>
+<span class="fc bfc" id="L50" title="All 2 branches covered.">      if (listPath.startsWith(parentPrefix)) {</span>
+<span class="fc" id="L51">        final String childRelativePath = buildPrefix(listPath.substring(parentPrefix.length()));</span>
+<span class="fc bfc" id="L52" title="All 2 branches covered.">        if (suffix.startsWith(childRelativePath)) {</span>
+<span class="fc" id="L53">          return true;</span>
+        }
+      }
+<span class="fc" id="L56">    }</span>
+<span class="fc" id="L57">    return false;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

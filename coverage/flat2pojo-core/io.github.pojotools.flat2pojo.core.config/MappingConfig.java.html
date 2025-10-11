@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>MappingConfig.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">flat2pojo-coverage</a> &gt; <a href="../index.html" class="el_bundle">flat2pojo-core</a> &gt; <a href="index.source.html" class="el_package">io.github.pojotools.flat2pojo.core.config</a> &gt; <span class="el_source">MappingConfig.java</span></div><h1>MappingConfig.java</h1><pre class="source lang-java linenums">package io.github.pojotools.flat2pojo.core.config;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import io.github.pojotools.flat2pojo.spi.Reporter;
+import io.github.pojotools.flat2pojo.spi.ValuePreprocessor;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import org.immutables.value.Value;
+
+/**
+ * Immutable configuration for flat-to-POJO conversion.
+ *
+ * &lt;p&gt;This class defines how flat key-value maps should be transformed into structured objects,
+ * including rules for grouping related data into lists, handling conflicts, and processing
+ * primitive values.
+ *
+ * &lt;p&gt;Instances are thread-safe and should be reused across multiple conversions for optimal
+ * performance. Use {@link ImmutableMappingConfig#builder()} to create new configurations.
+ */
+@Value.Immutable
+@JsonSerialize(as = ImmutableMappingConfig.class)
+@JsonDeserialize(as = ImmutableMappingConfig.class)
+@JsonIgnoreProperties(ignoreUnknown = true)
+<span class="fc" id="L31">public abstract class MappingConfig {</span>
+
+  // ======= ABSTRACT GETTERS (implemented by Immutables) =======
+
+  @Value.Default
+  public String separator() {
+<span class="nc" id="L37">    return &quot;/&quot;;</span>
+  }
+
+  @Value.Default
+  public boolean allowSparseRows() {
+<span class="nc" id="L42">    return false;</span>
+  }
+
+  @Value.Default
+  public List&lt;String&gt; rootKeys() {
+<span class="fc" id="L47">    return List.of();</span>
+  }
+
+  @Value.Default
+  public List&lt;ListRule&gt; lists() {
+<span class="fc" id="L52">    return List.of();</span>
+  }
+
+  @Value.Default
+  public List&lt;PrimitiveSplitRule&gt; primitives() {
+<span class="fc" id="L57">    return List.of();</span>
+  }
+
+  @Value.Default
+  public NullPolicy nullPolicy() {
+<span class="fc" id="L62">    return new NullPolicy(false);</span>
+  }
+
+  @Value.Default
+  public Optional&lt;Reporter&gt; reporter() {
+<span class="fc" id="L67">    return Optional.empty();</span>
+  }
+
+  @Value.Default
+  public Optional&lt;ValuePreprocessor&gt; valuePreprocessor() {
+<span class="fc" id="L72">    return Optional.empty();</span>
+  }
+
+  // ======= DERIVED/CACHED FIELDS =======
+
+  @Value.Derived
+  public char separatorChar() {
+<span class="fc bfc" id="L79" title="All 2 branches covered.">    return separator().length() == 1 ? separator().charAt(0) : '/';</span>
+  }
+
+  @Value.Derived
+  public Set&lt;String&gt; listPaths() {
+<span class="fc" id="L84">    return precomputeListPaths();</span>
+  }
+
+  @Value.Derived
+  public Map&lt;String, Set&lt;String&gt;&gt; childListPrefixesMap() {
+<span class="fc" id="L89">    return precomputeChildListPrefixes();</span>
+  }
+
+  public Set&lt;String&gt; getChildListPrefixes(final String listPath) {
+<span class="nc" id="L93">    return childListPrefixesMap().getOrDefault(listPath, Set.of());</span>
+  }
+
+  // ======= CONVENIENCE BUILDER =======
+
+  public static ImmutableMappingConfig.Builder builder() {
+<span class="fc" id="L99">    return ImmutableMappingConfig.builder();</span>
+  }
+
+  // ======= HELPER METHODS FOR DERIVED FIELDS =======
+
+  private Set&lt;String&gt; precomputeListPaths() {
+<span class="fc" id="L105">    final Set&lt;String&gt; paths = new HashSet&lt;&gt;();</span>
+<span class="fc bfc" id="L106" title="All 2 branches covered.">    for (final ListRule rule : lists()) {</span>
+<span class="fc" id="L107">      paths.add(rule.path());</span>
+<span class="fc" id="L108">    }</span>
+<span class="fc" id="L109">    return Set.copyOf(paths);</span>
+  }
+
+  private Map&lt;String, Set&lt;String&gt;&gt; precomputeChildListPrefixes() {
+<span class="fc" id="L113">    final List&lt;ListRule&gt; rules = lists();</span>
+<span class="fc bfc" id="L114" title="All 2 branches covered.">    if (rules.isEmpty()) {</span>
+<span class="fc" id="L115">      return Map.of();</span>
+    }
+
+<span class="fc" id="L118">    final Map&lt;String, Set&lt;String&gt;&gt; prefixMap = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L119">    final String sep = separator();</span>
+
+    // Sort rules by path length (shorter first) to optimize parent-child detection
+    // This allows us to build the map in a single pass: O(n log n) instead of O(n²)
+<span class="fc" id="L123">    final List&lt;String&gt; sortedPaths =</span>
+<span class="fc" id="L124">        rules.stream().map(ListRule::path).sorted(Comparator.comparingInt(String::length)).toList();</span>
+
+<span class="fc bfc" id="L126" title="All 2 branches covered.">    for (final String rulePath : sortedPaths) {</span>
+<span class="fc" id="L127">      prefixMap.put(rulePath, new HashSet&lt;&gt;());</span>
+<span class="fc" id="L128">    }</span>
+
+    // For each path, find its DIRECT parent (longest matching prefix)
+<span class="fc bfc" id="L131" title="All 2 branches covered.">    for (int i = 0; i &lt; sortedPaths.size(); i++) {</span>
+<span class="fc" id="L132">      final String childPath = sortedPaths.get(i);</span>
+<span class="fc" id="L133">      final String childPrefix = childPath + sep;</span>
+
+      // Find the longest (most specific) parent
+<span class="fc" id="L136">      String directParent = null;</span>
+<span class="fc bfc" id="L137" title="All 2 branches covered.">      for (int j = i - 1; j &gt;= 0; j--) { // Iterate backwards to find longest match first</span>
+<span class="fc" id="L138">        final String potentialParent = sortedPaths.get(j);</span>
+<span class="fc bfc" id="L139" title="All 2 branches covered.">        if (childPath.startsWith(potentialParent + sep)) {</span>
+<span class="fc" id="L140">          directParent = potentialParent;</span>
+<span class="fc" id="L141">          break; // Found the direct parent, stop searching</span>
+        }
+      }
+
+      // Add this child to its direct parent's set (if found)
+<span class="fc bfc" id="L146" title="All 2 branches covered.">      if (directParent != null) {</span>
+<span class="fc" id="L147">        prefixMap.get(directParent).add(childPrefix);</span>
+      }
+    }
+
+    // Make sets immutable
+<span class="fc" id="L152">    final Map&lt;String, Set&lt;String&gt;&gt; immutableMap = new HashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L153" title="All 2 branches covered.">    for (final var entry : prefixMap.entrySet()) {</span>
+<span class="fc" id="L154">      immutableMap.put(entry.getKey(), Set.copyOf(entry.getValue()));</span>
+<span class="fc" id="L155">    }</span>
+
+<span class="fc" id="L157">    return Map.copyOf(immutableMap);</span>
+  }
+
+  // ======= VALUE TYPES =======
+
+<span class="fc" id="L162">  public record NullPolicy(boolean blanksAsNulls) {}</span>
+
+<span class="fc" id="L164">  public record ListRule(</span>
+      String path,
+      List&lt;String&gt; keyPaths,
+      List&lt;OrderBy&gt; orderBy,
+      boolean dedupe,
+      ConflictPolicy onConflict) {}
+
+<span class="fc" id="L171">  public enum ConflictPolicy {</span>
+<span class="fc" id="L172">    error,</span>
+<span class="fc" id="L173">    lastWriteWins,</span>
+<span class="fc" id="L174">    firstWriteWins,</span>
+<span class="fc" id="L175">    merge</span>
+  }
+
+<span class="fc" id="L178">  public record OrderBy(String path, Direction direction, Nulls nulls) {}</span>
+
+<span class="fc" id="L180">  public enum Direction {</span>
+<span class="fc" id="L181">    asc,</span>
+<span class="fc" id="L182">    desc</span>
+  }
+
+<span class="fc" id="L185">  public enum Nulls {</span>
+<span class="fc" id="L186">    first,</span>
+<span class="fc" id="L187">    last</span>
+  }
+
+<span class="fc" id="L190">  public record PrimitiveSplitRule(String path, String delimiter, boolean trim) {}</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>MappingConfigLoader.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">flat2pojo-coverage</a> &gt; <a href="../index.html" class="el_bundle">flat2pojo-core</a> &gt; <a href="index.source.html" class="el_package">io.github.pojotools.flat2pojo.core.config</a> &gt; <span class="el_source">MappingConfigLoader.java</span></div><h1>MappingConfigLoader.java</h1><pre class="source lang-java linenums">package io.github.pojotools.flat2pojo.core.config;
+
+import io.github.pojotools.flat2pojo.core.config.MappingConfig.ListRule;
+import io.github.pojotools.flat2pojo.core.config.MappingConfig.OrderBy;
+import io.github.pojotools.flat2pojo.core.util.PathOps;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+public final class MappingConfigLoader {
+  private MappingConfigLoader() {}
+
+  public static MappingConfig fromYaml(final String yaml) {
+<span class="fc" id="L16">    return YamlConfigParser.parse(yaml);</span>
+  }
+
+  public static void validateHierarchy(final MappingConfig config) {
+<span class="fc" id="L20">    final HierarchyValidator validator = new HierarchyValidator(config);</span>
+<span class="fc" id="L21">    validator.validate();</span>
+<span class="fc" id="L22">  }</span>
+
+  private static class HierarchyValidator {
+    private final String separator;
+    private final Map&lt;String, Integer&gt; declarationOrder;
+    private final Set&lt;String&gt; listPaths;
+    private final List&lt;ListRule&gt; listRules;
+
+<span class="fc" id="L30">    HierarchyValidator(MappingConfig cfg) {</span>
+<span class="fc" id="L31">      this.separator = cfg.separator();</span>
+<span class="fc" id="L32">      this.listRules = cfg.lists();</span>
+<span class="fc" id="L33">      this.declarationOrder = buildDeclarationOrderMap();</span>
+<span class="fc" id="L34">      this.listPaths = buildListPathsSet();</span>
+<span class="fc" id="L35">    }</span>
+
+    private Map&lt;String, Integer&gt; buildDeclarationOrderMap() {
+<span class="fc" id="L38">      Map&lt;String, Integer&gt; order = new HashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L39" title="All 2 branches covered.">      for (int i = 0; i &lt; listRules.size(); i++) {</span>
+<span class="fc" id="L40">        order.put(listRules.get(i).path(), i);</span>
+      }
+<span class="fc" id="L42">      return order;</span>
+    }
+
+    private Set&lt;String&gt; buildListPathsSet() {
+<span class="fc" id="L46">      Set&lt;String&gt; paths = new HashSet&lt;&gt;();</span>
+<span class="fc bfc" id="L47" title="All 2 branches covered.">      for (ListRule rule : listRules) {</span>
+<span class="fc" id="L48">        paths.add(rule.path());</span>
+<span class="fc" id="L49">      }</span>
+<span class="fc" id="L50">      return paths;</span>
+    }
+
+    void validate() {
+<span class="fc bfc" id="L54" title="All 2 branches covered.">      for (ListRule rule : listRules) {</span>
+<span class="fc" id="L55">        validateSingleListRule(rule);</span>
+<span class="fc" id="L56">      }</span>
+<span class="fc" id="L57">    }</span>
+
+    private void validateSingleListRule(ListRule rule) {
+<span class="fc" id="L60">      validateParentChildOrder(rule);</span>
+<span class="fc" id="L61">      validateKeyPathsAreRelative(rule);</span>
+<span class="fc" id="L62">      validateOrderByPathsAreRelative(rule);</span>
+      // validateImpliedParentLists is no longer needed with relative paths
+<span class="fc" id="L64">    }</span>
+
+    private void validateKeyPathsAreRelative(ListRule rule) {
+<span class="fc" id="L67">      String listPath = rule.path();</span>
+<span class="fc" id="L68">      String listPathPrefix = listPath + separator;</span>
+
+<span class="fc bfc" id="L70" title="All 2 branches covered.">      for (String keyPath : rule.keyPaths()) {</span>
+        // keyPath must be relative (not start with listPath prefix)
+<span class="fc bfc" id="L72" title="All 2 branches covered.">        if (keyPath.startsWith(listPathPrefix)) {</span>
+<span class="fc" id="L73">          throw new ValidationException(</span>
+              &quot;keyPath '&quot;
+                  + keyPath
+                  + &quot;' in list rule '&quot;
+                  + listPath
+                  + &quot;' must be relative, not absolute. Use '&quot;
+<span class="fc" id="L79">                  + keyPath.substring(listPathPrefix.length())</span>
+                  + &quot;' instead.&quot;);
+        }
+<span class="fc" id="L82">      }</span>
+<span class="fc" id="L83">    }</span>
+
+    private void validateOrderByPathsAreRelative(ListRule rule) {
+<span class="fc" id="L86">      String listPath = rule.path();</span>
+<span class="fc" id="L87">      String listPathPrefix = listPath + separator;</span>
+
+<span class="fc bfc" id="L89" title="All 2 branches covered.">      for (OrderBy orderBy : rule.orderBy()) {</span>
+<span class="fc" id="L90">        String orderPath = orderBy.path();</span>
+        // orderBy path must be relative (not start with listPath prefix)
+<span class="pc bpc" id="L92" title="1 of 2 branches missed.">        if (orderPath.startsWith(listPathPrefix)) {</span>
+<span class="nc" id="L93">          throw new ValidationException(</span>
+              &quot;orderBy path '&quot;
+                  + orderPath
+                  + &quot;' in list rule '&quot;
+                  + listPath
+                  + &quot;' must be relative, not absolute. Use '&quot;
+<span class="nc" id="L99">                  + orderPath.substring(listPathPrefix.length())</span>
+                  + &quot;' instead.&quot;);
+        }
+<span class="fc" id="L102">      }</span>
+<span class="fc" id="L103">    }</span>
+
+    private void validateParentChildOrder(ListRule rule) {
+<span class="fc" id="L106">      String path = rule.path();</span>
+<span class="fc" id="L107">      String nearestAncestor = findNearestListAncestor(path);</span>
+
+<span class="fc bfc" id="L109" title="All 2 branches covered.">      if (nearestAncestor != null</span>
+<span class="pc bpc" id="L110" title="1 of 2 branches missed.">          &amp;&amp; declarationOrder.get(nearestAncestor) &gt; declarationOrder.get(path)) {</span>
+<span class="nc" id="L111">        throw new ValidationException(</span>
+            &quot;List '&quot; + path + &quot;' must be declared after its parent list '&quot; + nearestAncestor + &quot;'&quot;);
+      }
+<span class="fc" id="L114">    }</span>
+
+    private String findNearestListAncestor(String path) {
+<span class="fc" id="L117">      return PathOps.findParentPath(path, listPaths, separator);</span>
+    }
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

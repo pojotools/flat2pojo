@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>ResultMaterializer.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">flat2pojo-coverage</a> &gt; <a href="../index.html" class="el_bundle">flat2pojo-core</a> &gt; <a href="index.source.html" class="el_package">io.github.pojotools.flat2pojo.core.impl</a> &gt; <span class="el_source">ResultMaterializer.java</span></div><h1>ResultMaterializer.java</h1><pre class="source lang-java linenums">package io.github.pojotools.flat2pojo.core.impl;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.github.pojotools.flat2pojo.core.api.Flat2PojoException;
+
+/**
+ * Converts JSON tree structure to typed POJOs. Single Responsibility: JSON-to-POJO materialization
+ * only.
+ */
+final class ResultMaterializer {
+  private final ObjectMapper objectMapper;
+
+<span class="fc" id="L15">  ResultMaterializer(final ObjectMapper objectMapper) {</span>
+<span class="fc" id="L16">    this.objectMapper = objectMapper;</span>
+<span class="fc" id="L17">  }</span>
+
+  &lt;T&gt; T materialize(final ObjectNode root, final Class&lt;T&gt; type) {
+    try {
+<span class="fc bfc" id="L21" title="All 2 branches covered.">      if (JsonNode.class.isAssignableFrom(type)) {</span>
+        @SuppressWarnings(&quot;unchecked&quot;)
+<span class="fc" id="L23">        final T cast = (T) root;</span>
+<span class="fc" id="L24">        return cast;</span>
+      } else {
+<span class="fc" id="L26">        return objectMapper.treeToValue(root, type);</span>
+      }
+<span class="nc" id="L28">    } catch (final Exception exception) {</span>
+<span class="nc" id="L29">      throw new Flat2PojoException(&quot;Failed to map result to &quot; + type.getName(), exception);</span>
+    }
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>
