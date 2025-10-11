@@ -1,5 +1,11 @@
 # flat2pojo
 
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.pojotools/flat2pojo-jackson.svg?label=Maven%20Central&color=blue)](https://central.sonatype.com/artifact/io.github.pojotools/flat2pojo-jackson)
+[![Build Status](https://github.com/pojotools/flat2pojo/actions/workflows/ci.yml/badge.svg)](https://github.com/pojotools/flat2pojo/actions/workflows/ci.yml)
+[![Coverage Status](https://coveralls.io/repos/github/pojotools/flat2pojo/badge.svg?branch=main)](https://coveralls.io/github/pojotools/flat2pojo?branch=main)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Java Version](https://img.shields.io/badge/Java-21%2B-orange.svg)](https://openjdk.org/projects/jdk/21/)
+
 A high-performance Java library for converting flat maps to structured POJOs using declarative YAML configuration. Built with Jackson-first architecture for maximum compatibility and performance.
 
 ## What & Why
@@ -217,4 +223,4 @@ mvn clean verify
 
 ## License
 
-Apache License 2.0 - See LICENSE file for details.
+MIT License - See [LICENSE](LICENSE) file for details.
