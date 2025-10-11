@@ -142,10 +142,10 @@ rootKeys: ["region", "organizationId"]
 When a root key field is missing or has a null value in a row:
 
 **Behavior:**
-- The row is grouped under a `null` key value
-- All rows with missing/null root keys are grouped together
-- Processing continues normally - no warnings are logged
-- The resulting object will have `null` or missing fields for those root keys
+- The row is **skipped entirely** (not processed)
+- No output object is created for rows with missing root keys
+- This matches the behavior of missing list keyPaths
+- Processing continues with other rows - no exceptions are thrown
 
 **Example:**
 ```yaml
@@ -159,7 +159,7 @@ organizationId=acme, name=ACME Corp, departments/id=sales
 name=Unnamed Org, departments/id=dev    # Missing organizationId
 ```
 
-**Output (2 objects):**
+**Output (1 object):**
 ```json
 [
   {
@@ -169,16 +169,15 @@ name=Unnamed Org, departments/id=dev    # Missing organizationId
       {"id": "eng"},
       {"id": "sales"}
     ]
-  },
-  {
-    "organizationId": null,              // Missing key treated as null
-    "name": "Unnamed Org",
-    "departments": [
-      {"id": "dev"}
-    ]
   }
 ]
 ```
+
+**What happened:**
+- Rows 1 and 2 have `organizationId=acme` → grouped together into one object
+- Row 3 has missing `organizationId` → skipped entirely (not in output)
+
+**Important:** This is consistent with list keyPath behavior. Missing root keys always cause the entire row to be skipped.
 
 ### Root Keys vs List Rules
 

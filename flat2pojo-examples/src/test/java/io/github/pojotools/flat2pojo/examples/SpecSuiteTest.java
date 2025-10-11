@@ -1907,4 +1907,247 @@ class SpecSuiteTest {
         """,
         out);
   }
+
+  @Test
+  void test34_missing_rootKeys_should_skip_entry() {
+    // Test case: root keys are missing -> entry is skipped (no exception thrown)
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            rootKeys: ["referencedProductId/identifier"]
+            lists:
+              - path: "definitions"
+                keyPaths: ["id/identifier"]
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of(
+                "referencedProductId/identifier",
+                "P-1",
+                "definitions/id/identifier",
+                "D-1",
+                "definitions/name",
+                "Definition 1"),
+            Map.of(
+                "definitions/id/identifier", "D-2", "definitions/name", "Definition 2"
+                // Note: referencedProductId/identifier is missing → entry should be skipped
+                ));
+
+    var out = converter.convertAll(rows, ImmutableProductRoot.class, cfg);
+
+    // Only P-1 should be present, the row with missing root key should be skipped
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        [
+          {
+            "referencedProductId": { "identifier": "P-1" },
+            "definitions": [
+              {
+                "id": { "identifier": "D-1" },
+                "name": "Definition 1"
+              }
+            ]
+          }
+        ]
+        """,
+        out);
+  }
+
+  @Test
+  void test35_rootKeys_present_all_entries_processed() {
+    // Test case: root keys are present -> all entries are processed normally
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            rootKeys: ["referencedProductId/identifier"]
+            lists:
+              - path: "definitions"
+                keyPaths: ["id/identifier"]
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of(
+                "referencedProductId/identifier",
+                "P-1",
+                "definitions/id/identifier",
+                "D-1",
+                "definitions/name",
+                "Definition 1"),
+            Map.of(
+                "referencedProductId/identifier",
+                "P-2",
+                "definitions/id/identifier",
+                "D-2",
+                "definitions/name",
+                "Definition 2"));
+
+    var out = converter.convertAll(rows, ImmutableProductRoot.class, cfg);
+
+    // Both entries should be processed
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        [
+          {
+            "referencedProductId": { "identifier": "P-1" },
+            "definitions": [
+              {
+                "id": { "identifier": "D-1" },
+                "name": "Definition 1"
+              }
+            ]
+          },
+          {
+            "referencedProductId": { "identifier": "P-2" },
+            "definitions": [
+              {
+                "id": { "identifier": "D-2" },
+                "name": "Definition 2"
+              }
+            ]
+          }
+        ]
+        """,
+        out);
+  }
+
+  @Test
+  void test36_mixed_rootKeys_some_present_some_missing() {
+    // Test case: mixed scenario - some entries have root keys, some don't → only valid entries are
+    // processed
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            rootKeys: ["referencedProductId/identifier"]
+            lists:
+              - path: "definitions"
+                keyPaths: ["id/identifier"]
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            // P-1: valid entry with root key
+            Map.of(
+                "referencedProductId/identifier", "P-1",
+                "definitions/id/identifier", "D-1",
+                "definitions/name", "Definition 1"),
+            // Missing root key → should be skipped
+            Map.of("definitions/id/identifier", "D-2", "definitions/name", "Definition 2"),
+            // P-2: valid entry with root key
+            Map.of(
+                "referencedProductId/identifier", "P-2",
+                "definitions/id/identifier", "D-3",
+                "definitions/name", "Definition 3"),
+            // Another missing root key → should be skipped
+            Map.of("definitions/id/identifier", "D-4", "definitions/name", "Definition 4"));
+
+    var out = converter.convertAll(rows, ImmutableProductRoot.class, cfg);
+
+    // Only P-1 and P-2 should be present
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        [
+          {
+            "referencedProductId": { "identifier": "P-1" },
+            "definitions": [
+              {
+                "id": { "identifier": "D-1" },
+                "name": "Definition 1"
+              }
+            ]
+          },
+          {
+            "referencedProductId": { "identifier": "P-2" },
+            "definitions": [
+              {
+                "id": { "identifier": "D-3" },
+                "name": "Definition 3"
+              }
+            ]
+          }
+        ]
+        """,
+        out);
+  }
+
+  @Test
+  void test37_composite_rootKeys_all_parts_required() {
+    // Test case: composite root keys - all parts must be present
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            rootKeys: ["referencedProductId/identifier", "metadata/name"]
+            lists:
+              - path: "definitions"
+                keyPaths: ["id/identifier"]
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            // Both root keys present → valid
+            Map.of(
+                "referencedProductId/identifier", "P-1",
+                "metadata/name", "Product Alpha",
+                "definitions/id/identifier", "D-1",
+                "definitions/name", "Definition 1"),
+            // Missing second root key → should be skipped
+            Map.of(
+                "referencedProductId/identifier", "P-2",
+                "definitions/id/identifier", "D-2",
+                "definitions/name", "Definition 2"),
+            // Missing first root key → should be skipped
+            Map.of(
+                "metadata/name", "Product Gamma",
+                "definitions/id/identifier", "D-3",
+                "definitions/name", "Definition 3"),
+            // Both root keys present → valid
+            Map.of(
+                "referencedProductId/identifier", "P-4",
+                "metadata/name", "Product Delta",
+                "definitions/id/identifier", "D-4",
+                "definitions/name", "Definition 4"));
+
+    var out = converter.convertAll(rows, ImmutableProductRoot.class, cfg);
+
+    // Only the first and fourth entries should be processed
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        [
+          {
+            "referencedProductId": { "identifier": "P-1" },
+            "metadata": { "name": "Product Alpha" },
+            "definitions": [
+              {
+                "id": { "identifier": "D-1" },
+                "name": "Definition 1"
+              }
+            ]
+          },
+          {
+            "referencedProductId": { "identifier": "P-4" },
+            "metadata": { "name": "Product Delta" },
+            "definitions": [
+              {
+                "id": { "identifier": "D-4" },
+                "name": "Definition 4"
+              }
+            ]
+          }
+        ]
+        """,
+        out);
+  }
 }
