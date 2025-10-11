@@ -11,6 +11,8 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Required for pushing to gh-pages
 
     steps:
     - name: Checkout code
