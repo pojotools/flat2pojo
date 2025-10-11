@@ -2,7 +2,7 @@ GROUP,PACKAGE,CLASS,INSTRUCTION_MISSED,INSTRUCTION_COVERED,BRANCH_MISSED,BRANCH_
 flat2pojo-coverage/flat2pojo-core,io.github.pojotools.flat2pojo.core.engine,ArrayBucket,0,140,1,9,0,31,1,15,0,11
 flat2pojo-coverage/flat2pojo-core,io.github.pojotools.flat2pojo.core.engine,CompositeKey,1,38,3,3,0,6,3,3,0,3
 flat2pojo-coverage/flat2pojo-core,io.github.pojotools.flat2pojo.core.engine,ArrayFinalizer,0,145,0,18,0,40,0,15,0,6
-flat2pojo-coverage/flat2pojo-core,io.github.pojotools.flat2pojo.core.engine,ValueTransformer,7,238,5,32,2,46,5,26,0,10
+flat2pojo-coverage/flat2pojo-core,io.github.pojotools.flat2pojo.core.engine,ValueTransformer,6,239,4,33,2,46,4,27,0,10
 flat2pojo-coverage/flat2pojo-core,io.github.pojotools.flat2pojo.core.engine,ComparatorBuilder,6,268,4,38,3,53,4,32,0,15
 flat2pojo-coverage/flat2pojo-core,io.github.pojotools.flat2pojo.core.engine,GroupingEngine,0,183,1,9,0,38,1,14,0,10
 flat2pojo-coverage/flat2pojo-core,io.github.pojotools.flat2pojo.core.api,Flat2PojoException,9,0,0,0,4,0,2,0,2,0

@@ -86,7 +86,7 @@ public final class ValueTransformer {
   }
 
   private JsonNode createArrayElement(final String part, final boolean shouldTrim) {
-<span class="pc bpc" id="L89" title="1 of 2 branches missed.">    final String processed = shouldTrim ? part.trim() : part;</span>
+<span class="fc bfc" id="L89" title="All 2 branches covered.">    final String processed = shouldTrim ? part.trim() : part;</span>
 <span class="fc bfc" id="L90" title="All 4 branches covered.">    if (blanksAsNulls &amp;&amp; processed.isBlank()) {</span>
 <span class="fc" id="L91">      return NullNode.getInstance();</span>
     }
