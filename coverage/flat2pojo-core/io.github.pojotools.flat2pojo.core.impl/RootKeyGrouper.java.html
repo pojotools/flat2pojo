@@ -18,44 +18,55 @@ final class RootKeyGrouper {
   /**
    * Groups rows by root keys, preserving the order in which groups are first encountered.
    *
+   * &lt;p&gt;Rows with missing or null root key values are skipped entirely.
+   *
    * @param rows input rows to group
    * @param rootKeys keys to group by (single or composite)
    * @return map of key values to row lists, ordered by first appearance
    */
   static Map&lt;Object, List&lt;Map&lt;String, ?&gt;&gt;&gt; groupByRootKeys(
       final List&lt;? extends Map&lt;String, ?&gt;&gt; rows, final List&lt;String&gt; rootKeys) {
-<span class="pc bpc" id="L27" title="1 of 2 branches missed.">    return rootKeys.size() == 1</span>
-<span class="fc" id="L28">        ? groupBySingleKey(rows, rootKeys.getFirst())</span>
-<span class="nc" id="L29">        : groupByCompositeKey(rows, rootKeys);</span>
+<span class="fc bfc" id="L29" title="All 2 branches covered.">    return rootKeys.size() == 1</span>
+<span class="fc" id="L30">        ? groupBySingleKey(rows, rootKeys.getFirst())</span>
+<span class="fc" id="L31">        : groupByCompositeKey(rows, rootKeys);</span>
   }
 
   private static Map&lt;Object, List&lt;Map&lt;String, ?&gt;&gt;&gt; groupBySingleKey(
       final List&lt;? extends Map&lt;String, ?&gt;&gt; rows, final String key) {
-<span class="fc" id="L34">    final Map&lt;Object, List&lt;Map&lt;String, ?&gt;&gt;&gt; groups = new LinkedHashMap&lt;&gt;();</span>
-<span class="fc bfc" id="L35" title="All 2 branches covered.">    for (final Map&lt;String, ?&gt; row : rows) {</span>
-<span class="fc" id="L36">      final Object keyValue = row.get(key);</span>
-<span class="fc" id="L37">      groups.computeIfAbsent(keyValue, k -&gt; new ArrayList&lt;&gt;()).add(row);</span>
-<span class="fc" id="L38">    }</span>
-<span class="fc" id="L39">    return groups;</span>
+<span class="fc" id="L36">    final Map&lt;Object, List&lt;Map&lt;String, ?&gt;&gt;&gt; groups = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L37" title="All 2 branches covered.">    for (final Map&lt;String, ?&gt; row : rows) {</span>
+<span class="fc" id="L38">      final Object keyValue = row.get(key);</span>
+<span class="fc bfc" id="L39" title="All 2 branches covered.">      if (keyValue != null) {</span>
+<span class="fc" id="L40">        groups.computeIfAbsent(keyValue, k -&gt; new ArrayList&lt;&gt;()).add(row);</span>
+      }
+<span class="fc" id="L42">    }</span>
+<span class="fc" id="L43">    return groups;</span>
   }
 
   private static Map&lt;Object, List&lt;Map&lt;String, ?&gt;&gt;&gt; groupByCompositeKey(
       final List&lt;? extends Map&lt;String, ?&gt;&gt; rows, final List&lt;String&gt; rootKeys) {
-<span class="nc" id="L44">    final Map&lt;Object, List&lt;Map&lt;String, ?&gt;&gt;&gt; groups = new LinkedHashMap&lt;&gt;();</span>
-<span class="nc bnc" id="L45" title="All 2 branches missed.">    for (final Map&lt;String, ?&gt; row : rows) {</span>
-<span class="nc" id="L46">      final List&lt;Object&gt; compositeKey = buildCompositeKey(row, rootKeys);</span>
-<span class="nc" id="L47">      groups.computeIfAbsent(compositeKey, k -&gt; new ArrayList&lt;&gt;()).add(row);</span>
-<span class="nc" id="L48">    }</span>
-<span class="nc" id="L49">    return groups;</span>
+<span class="fc" id="L48">    final Map&lt;Object, List&lt;Map&lt;String, ?&gt;&gt;&gt; groups = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L49" title="All 2 branches covered.">    for (final Map&lt;String, ?&gt; row : rows) {</span>
+<span class="fc" id="L50">      final List&lt;Object&gt; compositeKey = buildCompositeKey(row, rootKeys);</span>
+<span class="fc bfc" id="L51" title="All 2 branches covered.">      if (compositeKey != null) {</span>
+<span class="fc" id="L52">        groups.computeIfAbsent(compositeKey, k -&gt; new ArrayList&lt;&gt;()).add(row);</span>
+      }
+<span class="fc" id="L54">    }</span>
+<span class="fc" id="L55">    return groups;</span>
   }
 
+  @SuppressWarnings(&quot;PMD.ReturnEmptyCollectionRatherThanNull&quot;)
   private static List&lt;Object&gt; buildCompositeKey(
       final Map&lt;String, ?&gt; row, final List&lt;String&gt; rootKeys) {
-<span class="nc" id="L54">    final List&lt;Object&gt; compositeKey = new ArrayList&lt;&gt;(rootKeys.size());</span>
-<span class="nc bnc" id="L55" title="All 2 branches missed.">    for (final String rootKey : rootKeys) {</span>
-<span class="nc" id="L56">      compositeKey.add(row.get(rootKey));</span>
-<span class="nc" id="L57">    }</span>
-<span class="nc" id="L58">    return compositeKey;</span>
+<span class="fc" id="L61">    final List&lt;Object&gt; compositeKey = new ArrayList&lt;&gt;(rootKeys.size());</span>
+<span class="fc bfc" id="L62" title="All 2 branches covered.">    for (final String rootKey : rootKeys) {</span>
+<span class="fc" id="L63">      final Object value = row.get(rootKey);</span>
+<span class="fc bfc" id="L64" title="All 2 branches covered.">      if (value == null) {</span>
+<span class="fc" id="L65">        return null;</span>
+      }
+<span class="fc" id="L67">      compositeKey.add(value);</span>
+<span class="fc" id="L68">    }</span>
+<span class="fc" id="L69">    return compositeKey;</span>
   }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

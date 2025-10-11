@@ -19,7 +19,7 @@ flat2pojo-coverage/flat2pojo-core,io.github.pojotools.flat2pojo.core.config,Mapp
 flat2pojo-coverage/flat2pojo-core,io.github.pojotools.flat2pojo.core.config,MappingConfig,11,183,0,18,3,42,3,22,3,13
 flat2pojo-coverage/flat2pojo-core,io.github.pojotools.flat2pojo.core.config,MappingConfigLoader.HierarchyValidator,18,188,2,16,3,44,2,16,0,9
 flat2pojo-coverage/flat2pojo-core,io.github.pojotools.flat2pojo.core.config,MappingConfig.ConflictPolicy,0,27,0,0,0,5,0,1,0,1
-flat2pojo-coverage/flat2pojo-core,io.github.pojotools.flat2pojo.core.impl,RootKeyGrouper,61,44,5,3,12,8,6,4,3,3
+flat2pojo-coverage/flat2pojo-core,io.github.pojotools.flat2pojo.core.impl,RootKeyGrouper,0,115,0,14,0,25,0,13,0,6
 flat2pojo-coverage/flat2pojo-core,io.github.pojotools.flat2pojo.core.impl,Flat2PojoCore,16,171,2,4,2,34,2,11,1,9
 flat2pojo-coverage/flat2pojo-core,io.github.pojotools.flat2pojo.core.impl,ProcessingPipeline,0,17,0,0,0,2,0,2,0,2
 flat2pojo-coverage/flat2pojo-core,io.github.pojotools.flat2pojo.core.impl,ResultMaterializer,9,20,0,2,2,7,0,3,0,2
