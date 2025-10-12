@@ -59,7 +59,7 @@ public abstract class MappingConfig {
   }
 
   @Value.Default
-  public List<PrimitiveAggregationRule> primitiveAggregation() {
+  public List<PrimitiveAggregationRule> primitiveLists() {
     return List.of();
   }
 

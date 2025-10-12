@@ -46,7 +46,7 @@ public final class PrimitiveListManager {
   private static Map<String, MappingConfig.PrimitiveAggregationRule> buildRulesCache(
       final MappingConfig config) {
     final Map<String, MappingConfig.PrimitiveAggregationRule> cache = new HashMap<>();
-    for (final MappingConfig.PrimitiveAggregationRule rule : config.primitiveAggregation()) {
+    for (final MappingConfig.PrimitiveAggregationRule rule : config.primitiveLists()) {
       cache.put(rule.path(), rule);
     }
     return cache;

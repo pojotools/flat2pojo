@@ -26,7 +26,7 @@ primitives:                       # String-to-array split rules
       delimiter: ","              # Split delimiter (default: ",")
       trim: false                 # Trim whitespace from elements (default: false)
 
-primitiveAggregation:             # Aggregate primitive values across rows into arrays
+primitiveLists:                   # Aggregate primitive values across rows into arrays
   - path: "schedule/weekdays"     # Absolute path
     mode: collect                 # Aggregation mode (default: collect)
 
@@ -444,12 +444,12 @@ coordinates=40.7128|-74.0060
 - Empty parts are preserved (e.g., `"a,,b"` → `["a", "", "b"]`)
 - Respects `nullPolicy.blanksAsNulls` for empty parts
 
-## Primitive Aggregation Rules
+## Primitive List Rules
 
 Aggregate primitive values across multiple rows into arrays on a single output object. This is useful when multiple rows contain different values for the same field, and you want to collect them all into an array.
 
 ```yaml
-primitiveAggregation:
+primitiveLists:
   - path: "definitions/schedule/weekdays"
     mode: "collect"
   - path: "definitions/tags"
@@ -488,7 +488,7 @@ Primitive aggregation is **scope-aware**, meaning it respects the hierarchical s
 
 **Root-Level Aggregation:**
 ```yaml
-primitiveAggregation:
+primitiveLists:
   - path: "weekdays"
     mode: "collect"
 ```
@@ -504,7 +504,7 @@ Output: {weekdays: ["Mon", "Tue"]}
 lists:
   - path: "definitions"
     keyPaths: ["id/identifier"]
-primitiveAggregation:
+primitiveLists:
   - path: "definitions/schedule/weekdays"
     mode: "collect"
 ```
@@ -528,7 +528,7 @@ Output:
 Aggregate multiple fields independently within the same object:
 
 ```yaml
-primitiveAggregation:
+primitiveLists:
   - path: "definitions/schedule/weekdays"
     mode: "collect"
   - path: "definitions/tags"
@@ -567,7 +567,7 @@ lists:
     keyPaths: ["id/identifier"]
     dedupe: true
     onConflict: "merge"
-primitiveAggregation:
+primitiveLists:
   - path: "definitions/schedule/weekdays"
     mode: "collect"
 ```
@@ -605,7 +605,7 @@ Row 3: definitions/id/identifier=D-1, definitions/audit/modifiedBy=alice, defini
 | **Purpose** | Split a single delimited string into array | Collect values from multiple rows into array |
 | **Input** | Single row with delimited string | Multiple rows with individual values |
 | **Use Case** | CSV-style fields: `"tag1,tag2,tag3"` | Database JOINs producing multiple rows |
-| **Configuration** | `primitives` + `split` | `primitiveAggregation` + `mode` |
+| **Configuration** | `primitives` + `split` | `primitiveLists` + `mode` |
 
 **Example showing the difference:**
 
@@ -622,7 +622,7 @@ Output: {definitions: [{id: {identifier: "D-1"}, tags: ["java", "spring", "boot"
 
 **Aggregation Rule:**
 ```yaml
-primitiveAggregation:
+primitiveLists:
   - path: "definitions/tags"
     mode: "collect"
 ```
@@ -650,7 +650,7 @@ Produces multiple rows per definition, each with one day. Aggregation collects a
 
 Aggregating events or log entries over time:
 ```yaml
-primitiveAggregation:
+primitiveLists:
   - path: "events/timestamps"
     mode: "collect"
 ```
@@ -659,7 +659,7 @@ primitiveAggregation:
 
 Collecting related entities across multiple rows:
 ```yaml
-primitiveAggregation:
+primitiveLists:
   - path: "products/categories"
     mode: "collect"
   - path: "products/tags"
@@ -673,7 +673,7 @@ When data comes from a cartesian product and you need to de-duplicate and aggreg
 lists:
   - path: "projects"
     keyPaths: ["id"]
-primitiveAggregation:
+primitiveLists:
   - path: "projects/contributors"
     mode: "collect"
 ```

@@ -2450,7 +2450,7 @@ class SpecSuiteTest {
             separator: "/"
             allowSparseRows: false
             lists: []
-            primitiveAggregation:
+            primitiveLists:
               - path: "weekdays"
                 mode: "collect"
           """);
@@ -2483,7 +2483,7 @@ class SpecSuiteTest {
             lists:
               - path: "definitions"
                 keyPaths: ["id/identifier"]
-            primitiveAggregation:
+            primitiveLists:
               - path: "definitions/schedule/weekdays"
                 mode: "collect"
           """);
@@ -2527,7 +2527,7 @@ class SpecSuiteTest {
             lists:
               - path: "definitions"
                 keyPaths: ["id/identifier"]
-            primitiveAggregation:
+            primitiveLists:
               - path: "definitions/schedule/weekdays"
                 mode: "collect"
           """);
@@ -2586,7 +2586,7 @@ class SpecSuiteTest {
             lists:
               - path: "definitions"
                 keyPaths: ["id/identifier"]
-            primitiveAggregation:
+            primitiveLists:
               - path: "definitions/schedule/weekdays"
                 mode: "collect"
               - path: "definitions/tags"
@@ -2643,7 +2643,7 @@ class SpecSuiteTest {
                 keyPaths: ["id/identifier"]
                 dedupe: true
                 onConflict: "merge"
-            primitiveAggregation:
+            primitiveLists:
               - path: "definitions/schedule/weekdays"
                 mode: "collect"
           """);
@@ -2702,7 +2702,7 @@ class SpecSuiteTest {
             lists:
               - path: "products"
                 keyPaths: ["id"]
-            primitiveAggregation:
+            primitiveLists:
               - path: "products/tags"
                 mode: "collect"
               - path: "products/colors"
@@ -2764,7 +2764,7 @@ class SpecSuiteTest {
                 keyPaths: ["id"]
                 dedupe: true
                 onConflict: "merge"
-            primitiveAggregation:
+            primitiveLists:
               - path: "users/roles"
                 mode: "collect"
           """);
@@ -2818,7 +2818,7 @@ class SpecSuiteTest {
             lists:
               - path: "tasks"
                 keyPaths: ["id"]
-            primitiveAggregation:
+            primitiveLists:
               - path: "tasks/comments"
                 mode: "collect"
           """);
@@ -2871,7 +2871,7 @@ class SpecSuiteTest {
             lists:
               - path: "tasks"
                 keyPaths: ["id"]
-            primitiveAggregation:
+            primitiveLists:
               - path: "tasks/tags"
                 mode: "collect"
                 unique: true
@@ -2879,7 +2879,7 @@ class SpecSuiteTest {
 
     // Debug: print configuration
     System.out.println("=== Primitive Aggregation Rules ===");
-    for (var rule : cfg.primitiveAggregation()) {
+    for (var rule : cfg.primitiveLists()) {
       System.out.println("  path=" + rule.path() + ", mode=" + rule.mode() + ", unique=" + rule.unique());
     }
 
@@ -2918,7 +2918,7 @@ class SpecSuiteTest {
             lists:
               - path: "tasks"
                 keyPaths: ["id"]
-            primitiveAggregation:
+            primitiveLists:
               - path: "tasks/tags"
                 mode: "collect"
           """);
@@ -2958,7 +2958,7 @@ class SpecSuiteTest {
             lists:
               - path: "tasks"
                 keyPaths: ["id"]
-            primitiveAggregation:
+            primitiveLists:
               - path: "tasks/tags"
                 mode: "collect"
                 unique: true
@@ -3003,7 +3003,7 @@ class SpecSuiteTest {
             lists:
               - path: "tasks"
                 keyPaths: ["id"]
-            primitiveAggregation:
+            primitiveLists:
               - path: "tasks/tags"
                 mode: "collect"
                 unique: true
@@ -3047,7 +3047,7 @@ class SpecSuiteTest {
             lists:
               - path: "tasks"
                 keyPaths: ["id"]
-            primitiveAggregation:
+            primitiveLists:
               - path: "tasks/tags"
                 mode: "collect"
                 unique: true

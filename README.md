@@ -190,7 +190,7 @@ Quick overview of key configuration options:
 - **rootKeys** - Fields that group rows into separate root objects
 - **lists** - Hierarchical grouping with deduplication and sorting
 - **primitives** - String-to-array split rules
-- **primitiveAggregation** - Collect values across rows into arrays
+- **primitiveLists** - Collect values across rows into arrays
 - **nullPolicy** - Blank string handling
 - **SPI extensions** - Custom preprocessing and reporting
 

@@ -71,8 +71,7 @@ final class YamlConfigParser {
 
   private static void parsePrimitiveAggregationRules(
       final Map<String, Object> root, final ImmutableMappingConfig.Builder builder) {
-    List<Map<String, Object>> aggregations =
-        (List<Map<String, Object>>) root.get("primitiveAggregation");
+    List<Map<String, Object>> aggregations = (List<Map<String, Object>>) root.get("primitiveLists");
     if (aggregations == null) {
       return;
     }
@@ -89,7 +88,7 @@ final class YamlConfigParser {
     AggregationMode mode = AggregationMode.valueOf(modeString.toLowerCase(java.util.Locale.ROOT));
     boolean unique = Boolean.TRUE.equals(aggregation.get("unique"));
 
-    builder.addPrimitiveAggregation(new PrimitiveAggregationRule(path, mode, unique));
+    builder.addPrimitiveLists(new PrimitiveAggregationRule(path, mode, unique));
   }
 
   private static void parseListRules(
