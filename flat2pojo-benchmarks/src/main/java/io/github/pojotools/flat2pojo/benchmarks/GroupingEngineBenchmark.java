@@ -48,7 +48,7 @@ public class GroupingEngineBenchmark {
             List.of("userId", "orderId"),
             List.of(
                 new MappingConfig.OrderBy(
-                    "timestamp", MappingConfig.Direction.desc, MappingConfig.Nulls.last)),
+                    "timestamp", MappingConfig.OrderDirection.desc, MappingConfig.Nulls.last)),
             true,
             MappingConfig.ConflictPolicy.lastWriteWins);
 

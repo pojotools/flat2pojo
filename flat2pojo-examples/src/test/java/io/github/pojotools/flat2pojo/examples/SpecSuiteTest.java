@@ -2452,7 +2452,6 @@ class SpecSuiteTest {
             lists: []
             primitiveLists:
               - path: "weekdays"
-                mode: "collect"
           """);
 
     List<Map<String, ?>> rows =
@@ -2485,7 +2484,6 @@ class SpecSuiteTest {
                 keyPaths: ["id/identifier"]
             primitiveLists:
               - path: "definitions/schedule/weekdays"
-                mode: "collect"
           """);
 
     List<Map<String, ?>> rows =
@@ -2529,7 +2527,6 @@ class SpecSuiteTest {
                 keyPaths: ["id/identifier"]
             primitiveLists:
               - path: "definitions/schedule/weekdays"
-                mode: "collect"
           """);
 
     List<Map<String, ?>> rows =
@@ -2588,9 +2585,7 @@ class SpecSuiteTest {
                 keyPaths: ["id/identifier"]
             primitiveLists:
               - path: "definitions/schedule/weekdays"
-                mode: "collect"
               - path: "definitions/tags"
-                mode: "collect"
           """);
 
     List<Map<String, ?>> rows =
@@ -2766,7 +2761,6 @@ class SpecSuiteTest {
                 onConflict: "merge"
             primitiveLists:
               - path: "users/roles"
-                mode: "collect"
           """);
 
     List<Map<String, ?>> rows =
@@ -2809,7 +2803,7 @@ class SpecSuiteTest {
   @Test
   void test54_array_aggregation_order_preservation() {
     // Smart Feature 4: Order Preservation
-    // Arrays maintain the order values appear in input rows
+    // Arrays maintain the direction values appear in input rows
     MappingConfig cfg =
         TestSupport.loadMappingConfigFromYaml(
             """
@@ -2820,7 +2814,6 @@ class SpecSuiteTest {
                 keyPaths: ["id"]
             primitiveLists:
               - path: "tasks/comments"
-                mode: "collect"
           """);
 
     List<Map<String, ?>> rows =
@@ -2836,7 +2829,7 @@ class SpecSuiteTest {
 
     var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
 
-    // Comment array preserves chronological order from input rows
+    // Comment array preserves chronological direction from input rows
     PojoJsonAssert.assertPojoJsonEquals(
         objectMapper,
         """
@@ -2861,7 +2854,7 @@ class SpecSuiteTest {
 
   @Test
   void test55_unique_flag_deduplicates_values() {
-    // DESIRED BEHAVIOR: With unique: true, duplicate values are removed
+    // DESIRED BEHAVIOR: With dedup: true, duplicate values are removed
     // Simulates cartesian product scenario where same value appears multiple times
     MappingConfig cfg =
         TestSupport.loadMappingConfigFromYaml(
@@ -2873,15 +2866,8 @@ class SpecSuiteTest {
                 keyPaths: ["id"]
             primitiveLists:
               - path: "tasks/tags"
-                mode: "collect"
-                unique: true
+                dedup: true
           """);
-
-    // Debug: print configuration
-    System.out.println("=== Primitive Aggregation Rules ===");
-    for (var rule : cfg.primitiveLists()) {
-      System.out.println("  path=" + rule.path() + ", mode=" + rule.mode() + ", unique=" + rule.unique());
-    }
 
     List<Map<String, ?>> rows =
         List.of(
@@ -2909,7 +2895,7 @@ class SpecSuiteTest {
 
   @Test
   void test56_default_behavior_without_unique_keeps_duplicates() {
-    // DESIRED BEHAVIOR: Without unique flag (default: false), duplicates are kept
+    // DESIRED BEHAVIOR: Without dedup flag (default: false), duplicates are kept
     MappingConfig cfg =
         TestSupport.loadMappingConfigFromYaml(
             """
@@ -2920,7 +2906,6 @@ class SpecSuiteTest {
                 keyPaths: ["id"]
             primitiveLists:
               - path: "tasks/tags"
-                mode: "collect"
           """);
 
     List<Map<String, ?>> rows =
@@ -2961,7 +2946,7 @@ class SpecSuiteTest {
             primitiveLists:
               - path: "tasks/tags"
                 mode: "collect"
-                unique: true
+                dedup: true
           """);
 
     List<Map<String, ?>> rows =
@@ -3005,11 +2990,9 @@ class SpecSuiteTest {
                 keyPaths: ["id"]
             primitiveLists:
               - path: "tasks/tags"
-                mode: "collect"
-                unique: true
+                dedup: true
               - path: "tasks/comments"
-                mode: "collect"
-                unique: false
+                dedup: false
           """);
 
     List<Map<String, ?>> rows =
@@ -3049,8 +3032,7 @@ class SpecSuiteTest {
                 keyPaths: ["id"]
             primitiveLists:
               - path: "tasks/tags"
-                mode: "collect"
-                unique: true
+                dedup: true
           """);
 
     List<Map<String, ?>> rows =

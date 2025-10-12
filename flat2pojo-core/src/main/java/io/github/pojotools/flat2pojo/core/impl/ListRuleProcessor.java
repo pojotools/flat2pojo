@@ -6,6 +6,7 @@ import io.github.pojotools.flat2pojo.core.config.MappingConfig;
 import io.github.pojotools.flat2pojo.core.engine.GroupingEngine;
 import io.github.pojotools.flat2pojo.core.engine.Path;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -14,17 +15,14 @@ final class ListRuleProcessor {
   private final ProcessingContext context;
   private final GroupingEngine groupingEngine;
   private final ListElementWriter writer;
-  private final Map<String, ObjectNode> listElementCache; // Shared across rows
+  private final Map<String, ObjectNode> listElementCache = new LinkedHashMap<>(); // Shared across rows
 
   ListRuleProcessor(
-      final GroupingEngine groupingEngine,
-      final ProcessingContext context,
-      final ListElementWriter writer,
-      final Map<String, ObjectNode> listElementCache) {
+      final AssemblerDependencies dependencies,
+      final ProcessingContext context) {
     this.context = context;
-    this.groupingEngine = groupingEngine;
-    this.writer = writer;
-    this.listElementCache = listElementCache;
+    this.groupingEngine = dependencies.groupingEngine();
+    this.writer = new ListElementWriter(context, dependencies.primitiveListManager());
   }
 
   void processRule(

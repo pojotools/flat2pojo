@@ -172,7 +172,7 @@ public class ConfigurationBenchmark {
                     List.of("customerId"),
                     List.of(
                         new MappingConfig.OrderBy(
-                            "orderDate", MappingConfig.Direction.desc, MappingConfig.Nulls.last)),
+                            "orderDate", MappingConfig.OrderDirection.desc, MappingConfig.Nulls.last)),
                     true,
                     MappingConfig.ConflictPolicy.error))
             .addLists(
@@ -196,13 +196,8 @@ public class ConfigurationBenchmark {
 
   @Benchmark
   public void accessDerivedFields(Blackhole bh) {
-    char separatorChar = prebuiltConfig.separatorChar();
     var listPaths = prebuiltConfig.listPaths();
-    var childPrefixes = prebuiltConfig.getChildListPrefixes("items");
-
-    bh.consume(separatorChar);
     bh.consume(listPaths);
-    bh.consume(childPrefixes);
   }
 
   @Benchmark

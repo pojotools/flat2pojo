@@ -4,13 +4,23 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.pojotools.flat2pojo.core.api.Flat2Pojo;
 import io.github.pojotools.flat2pojo.core.config.MappingConfig;
 import io.github.pojotools.flat2pojo.core.impl.Flat2PojoCore;
+import org.openjdk.jmh.annotations.Benchmark;
+import org.openjdk.jmh.annotations.BenchmarkMode;
+import org.openjdk.jmh.annotations.Fork;
+import org.openjdk.jmh.annotations.Measurement;
+import org.openjdk.jmh.annotations.Mode;
+import org.openjdk.jmh.annotations.OutputTimeUnit;
+import org.openjdk.jmh.annotations.Scope;
+import org.openjdk.jmh.annotations.Setup;
+import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.annotations.Warmup;
+import org.openjdk.jmh.infra.Blackhole;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import org.openjdk.jmh.annotations.*;
-import org.openjdk.jmh.infra.Blackhole;
 
 @BenchmarkMode(Mode.Throughput)
 @OutputTimeUnit(TimeUnit.SECONDS)
@@ -41,7 +51,7 @@ public class RealisticDatasetBenchmark {
                     List.of("customerId"),
                     List.of(
                         new MappingConfig.OrderBy(
-                            "orderDate", MappingConfig.Direction.desc, MappingConfig.Nulls.last)),
+                            "orderDate", MappingConfig.OrderDirection.desc, MappingConfig.Nulls.last)),
                     true,
                     MappingConfig.ConflictPolicy.error))
             .addLists(
@@ -62,7 +72,7 @@ public class RealisticDatasetBenchmark {
                     List.of("companyId"),
                     List.of(
                         new MappingConfig.OrderBy(
-                            "lastName", MappingConfig.Direction.asc, MappingConfig.Nulls.last)),
+                            "lastName", MappingConfig.OrderDirection.asc, MappingConfig.Nulls.last)),
                     true,
                     MappingConfig.ConflictPolicy.merge))
             .addLists(
@@ -71,7 +81,7 @@ public class RealisticDatasetBenchmark {
                     List.of("companyId", "contactId"),
                     List.of(
                         new MappingConfig.OrderBy(
-                            "timestamp", MappingConfig.Direction.desc, MappingConfig.Nulls.last)),
+                            "timestamp", MappingConfig.OrderDirection.desc, MappingConfig.Nulls.last)),
                     true,
                     MappingConfig.ConflictPolicy.lastWriteWins))
             .build();
@@ -85,7 +95,7 @@ public class RealisticDatasetBenchmark {
                     List.of("sessionId"),
                     List.of(
                         new MappingConfig.OrderBy(
-                            "timestamp", MappingConfig.Direction.asc, MappingConfig.Nulls.first)),
+                            "timestamp", MappingConfig.OrderDirection.asc, MappingConfig.Nulls.first)),
                     false,
                     MappingConfig.ConflictPolicy.error))
             .build();

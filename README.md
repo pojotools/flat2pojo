@@ -90,14 +90,14 @@ lists:
     keyPaths: ["id"]
     orderBy:
       - path: "priority"
-        direction: desc
+        orderDirection: desc
     onConflict: lastWriteWins
 
   - path: "tasks/comments"
     keyPaths: ["id"]
     orderBy:
       - path: "timestamp"
-        direction: asc
+        orderDirection: asc
 
 nullPolicy:
   blanksAsNulls: true

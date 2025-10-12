@@ -40,7 +40,7 @@ public class PerformanceRegressionBenchmark {
                     List.of("tenantId"),
                     List.of(
                         new MappingConfig.OrderBy(
-                            "userId", MappingConfig.Direction.asc, MappingConfig.Nulls.last)),
+                            "userId", MappingConfig.OrderDirection.asc, MappingConfig.Nulls.last)),
                     true,
                     MappingConfig.ConflictPolicy.error))
             .addLists(
@@ -49,7 +49,7 @@ public class PerformanceRegressionBenchmark {
                     List.of("tenantId", "userId"),
                     List.of(
                         new MappingConfig.OrderBy(
-                            "orderDate", MappingConfig.Direction.desc, MappingConfig.Nulls.last)),
+                            "orderDate", MappingConfig.OrderDirection.desc, MappingConfig.Nulls.last)),
                     true,
                     MappingConfig.ConflictPolicy.lastWriteWins))
             .addLists(

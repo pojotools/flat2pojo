@@ -19,7 +19,7 @@ import java.util.Map;
 public final class PrimitiveListManager {
   private final ObjectMapper objectMapper;
   private final String separator;
-  private final Map<String, MappingConfig.PrimitiveAggregationRule> rulesCache;
+  private final Map<String, MappingConfig.PrimitiveListRule> rulesCache;
   private final Map<String, ArrayNode> arrayNodeCache;
 
   public PrimitiveListManager(final ObjectMapper objectMapper, final MappingConfig config) {
@@ -43,10 +43,10 @@ public final class PrimitiveListManager {
     appendValue(arrayNode, value, path.absolutePath());
   }
 
-  private static Map<String, MappingConfig.PrimitiveAggregationRule> buildRulesCache(
+  private static Map<String, MappingConfig.PrimitiveListRule> buildRulesCache(
       final MappingConfig config) {
-    final Map<String, MappingConfig.PrimitiveAggregationRule> cache = new HashMap<>();
-    for (final MappingConfig.PrimitiveAggregationRule rule : config.primitiveLists()) {
+    final Map<String, MappingConfig.PrimitiveListRule> cache = new HashMap<>();
+    for (final MappingConfig.PrimitiveListRule rule : config.primitiveLists()) {
       cache.put(rule.path(), rule);
     }
     return cache;
@@ -84,8 +84,8 @@ public final class PrimitiveListManager {
   }
 
   private boolean shouldDeduplicate(final String path) {
-    final MappingConfig.PrimitiveAggregationRule rule = rulesCache.get(path);
-    return rule != null && rule.unique();
+    final MappingConfig.PrimitiveListRule rule = rulesCache.get(path);
+    return rule != null && rule.dedup();
   }
 
   private boolean containsValue(final ArrayNode arrayNode, final JsonNode value) {

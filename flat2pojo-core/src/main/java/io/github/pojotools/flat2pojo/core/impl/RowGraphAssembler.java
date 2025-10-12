@@ -6,7 +6,6 @@ import io.github.pojotools.flat2pojo.core.config.MappingConfig;
 import io.github.pojotools.flat2pojo.core.engine.Path;
 
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
@@ -20,19 +19,15 @@ final class RowGraphAssembler implements RowProcessor {
   private final AssemblerDependencies dependencies;
   private final ProcessingContext context;
   private final ListRuleProcessor listRuleProcessor;
-  private final ListElementWriter listElementWriter;
   private final DirectValueWriter directValueWriter;
   private final Function<Map<String, ?>, Map<String, ?>> preprocessor;
-  private final Map<String, ObjectNode> listElementCache = new LinkedHashMap<>();
 
   RowGraphAssembler(final AssemblerDependencies dependencies, final ProcessingContext context) {
     this.dependencies = dependencies;
     this.root = dependencies.objectMapper().createObjectNode();
     this.context = context;
-    this.listElementWriter = new ListElementWriter(context, dependencies.primitiveListManager());
     this.directValueWriter = new DirectValueWriter(context, dependencies.primitiveListManager());
-    this.listRuleProcessor =
-        new ListRuleProcessor(dependencies.groupingEngine(), context, listElementWriter, listElementCache);
+    this.listRuleProcessor = new ListRuleProcessor(dependencies, context);
     this.preprocessor = buildPreprocessor(context.config());
   }
 
