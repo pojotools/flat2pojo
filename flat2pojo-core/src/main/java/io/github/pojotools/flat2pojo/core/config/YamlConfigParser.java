@@ -1,9 +1,11 @@
 package io.github.pojotools.flat2pojo.core.config;
 
+import io.github.pojotools.flat2pojo.core.config.MappingConfig.AggregationMode;
 import io.github.pojotools.flat2pojo.core.config.MappingConfig.ConflictPolicy;
 import io.github.pojotools.flat2pojo.core.config.MappingConfig.Direction;
 import io.github.pojotools.flat2pojo.core.config.MappingConfig.Nulls;
 import io.github.pojotools.flat2pojo.core.config.MappingConfig.OrderBy;
+import io.github.pojotools.flat2pojo.core.config.MappingConfig.PrimitiveAggregationRule;
 import io.github.pojotools.flat2pojo.core.config.MappingConfig.PrimitiveSplitRule;
 import java.util.ArrayList;
 import java.util.List;
@@ -24,6 +26,7 @@ final class YamlConfigParser {
     final ImmutableMappingConfig.Builder builder = MappingConfig.builder();
     parseBasicConfiguration(root, builder);
     parsePrimitiveRules(root, builder);
+    parsePrimitiveAggregationRules(root, builder);
     parseListRules(root, builder);
     parseNullPolicy(root, builder);
     return builder.build();
@@ -64,6 +67,29 @@ final class YamlConfigParser {
     boolean trim = Boolean.TRUE.equals(split.get("trim"));
 
     builder.addPrimitives(new PrimitiveSplitRule(path, delimiter, trim));
+  }
+
+  private static void parsePrimitiveAggregationRules(
+      final Map<String, Object> root, final ImmutableMappingConfig.Builder builder) {
+    List<Map<String, Object>> aggregations =
+        (List<Map<String, Object>>) root.get("primitiveAggregation");
+    if (aggregations == null) {
+      return;
+    }
+
+    for (Map<String, Object> aggregation : aggregations) {
+      parseSingleAggregationRule(aggregation, builder);
+    }
+  }
+
+  private static void parseSingleAggregationRule(
+      final Map<String, Object> aggregation, final ImmutableMappingConfig.Builder builder) {
+    String path = (String) aggregation.get("path");
+    String modeString = (String) aggregation.getOrDefault("mode", "collect");
+    AggregationMode mode = AggregationMode.valueOf(modeString.toLowerCase(java.util.Locale.ROOT));
+    boolean unique = Boolean.TRUE.equals(aggregation.get("unique"));
+
+    builder.addPrimitiveAggregation(new PrimitiveAggregationRule(path, mode, unique));
   }
 
   private static void parseListRules(

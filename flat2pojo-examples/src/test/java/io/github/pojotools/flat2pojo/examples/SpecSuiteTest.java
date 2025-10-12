@@ -1,7 +1,5 @@
 package io.github.pojotools.flat2pojo.examples;
 
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.pojotools.flat2pojo.core.api.Flat2Pojo;
@@ -9,11 +7,14 @@ import io.github.pojotools.flat2pojo.core.config.MappingConfig;
 import io.github.pojotools.flat2pojo.core.config.MappingConfigLoader;
 import io.github.pojotools.flat2pojo.core.config.ValidationException;
 import io.github.pojotools.flat2pojo.examples.domain.ImmutableProductRoot;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class SpecSuiteTest {
   private ObjectMapper objectMapper;
@@ -2433,4 +2434,647 @@ class SpecSuiteTest {
         """,
         out);
   }
+
+  // ===== Tests for Array Leaf Aggregation Feature (NOT YET IMPLEMENTED) =====
+  // These tests document the DESIRED behavior for aggregating primitive values
+  // across multiple rows into arrays. This feature does not currently exist.
+
+  @Test
+  void test46_array_leaf_aggregation_simple_weekdays() {
+    // DESIRED BEHAVIOR: Aggregate primitive values from multiple rows into an array
+    // Input: Multiple rows with "weekdays" field
+    // Expected: Single object with weekdays as an array
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists: []
+            primitiveAggregation:
+              - path: "weekdays"
+                mode: "collect"
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of("weekdays", "Mon"),
+            Map.of("weekdays", "Tue"));
+
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "weekdays": ["Mon", "Tue"]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test47_array_leaf_aggregation_nested_path() {
+    // DESIRED BEHAVIOR: Aggregate primitive values at nested paths
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists:
+              - path: "definitions"
+                keyPaths: ["id/identifier"]
+            primitiveAggregation:
+              - path: "definitions/schedule/weekdays"
+                mode: "collect"
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of("definitions/id/identifier", "D-1", "definitions/schedule/weekdays", "Mon"),
+            Map.of("definitions/id/identifier", "D-1", "definitions/schedule/weekdays", "Tue"),
+            Map.of("definitions/id/identifier", "D-1", "definitions/schedule/weekdays", "Wed"));
+
+    var out =
+        TestSupport.firstElementOrThrow(
+            converter.convertAll(rows, ImmutableProductRoot.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "definitions": [
+            {
+              "id": { "identifier": "D-1" },
+              "schedule": {
+                "weekdays": ["Mon", "Tue", "Wed"]
+              }
+            }
+          ]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test48_array_leaf_aggregation_multiple_definitions() {
+    // DESIRED BEHAVIOR: Aggregate primitive values per list item
+    // Each definition should have its own aggregated array
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists:
+              - path: "definitions"
+                keyPaths: ["id/identifier"]
+            primitiveAggregation:
+              - path: "definitions/schedule/weekdays"
+                mode: "collect"
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of(
+                "definitions/id/identifier", "D-1",
+                "definitions/name", "Work Schedule",
+                "definitions/schedule/weekdays", "Mon"),
+            Map.of("definitions/id/identifier", "D-1", "definitions/schedule/weekdays", "Tue"),
+            Map.of("definitions/id/identifier", "D-1", "definitions/schedule/weekdays", "Wed"),
+            Map.of(
+                "definitions/id/identifier", "D-2",
+                "definitions/name", "Weekend Schedule",
+                "definitions/schedule/weekdays", "Sat"),
+            Map.of("definitions/id/identifier", "D-2", "definitions/schedule/weekdays", "Sun"));
+
+    var out =
+        TestSupport.firstElementOrThrow(
+            converter.convertAll(rows, ImmutableProductRoot.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "definitions": [
+            {
+              "id": { "identifier": "D-1" },
+              "name": "Work Schedule",
+              "schedule": {
+                "weekdays": ["Mon", "Tue", "Wed"]
+              }
+            },
+            {
+              "id": { "identifier": "D-2" },
+              "name": "Weekend Schedule",
+              "schedule": {
+                "weekdays": ["Sat", "Sun"]
+              }
+            }
+          ]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test49_array_leaf_aggregation_multiple_fields() {
+    // DESIRED BEHAVIOR: Aggregate multiple primitive fields independently
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists:
+              - path: "definitions"
+                keyPaths: ["id/identifier"]
+            primitiveAggregation:
+              - path: "definitions/schedule/weekdays"
+                mode: "collect"
+              - path: "definitions/tags"
+                mode: "collect"
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of(
+                "definitions/id/identifier", "D-1",
+                "definitions/schedule/weekdays", "Mon",
+                "definitions/tags", "urgent"),
+            Map.of(
+                "definitions/id/identifier", "D-1",
+                "definitions/schedule/weekdays", "Tue",
+                "definitions/tags", "backend"),
+            Map.of(
+                "definitions/id/identifier", "D-1",
+                "definitions/schedule/weekdays", "Wed",
+                "definitions/tags", "critical"));
+
+    var out =
+        TestSupport.firstElementOrThrow(
+            converter.convertAll(rows, ImmutableProductRoot.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "definitions": [
+            {
+              "id": { "identifier": "D-1" },
+              "schedule": {
+                "weekdays": ["Mon", "Tue", "Wed"]
+              },
+              "tags": ["urgent", "backend", "critical"]
+            }
+          ]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test50_array_leaf_aggregation_with_mixed_data() {
+    // DESIRED BEHAVIOR: Mix aggregated arrays with regular scalar fields
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists:
+              - path: "definitions"
+                keyPaths: ["id/identifier"]
+                dedupe: true
+                onConflict: "merge"
+            primitiveAggregation:
+              - path: "definitions/schedule/weekdays"
+                mode: "collect"
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of(
+                "definitions/id/identifier", "D-1",
+                "definitions/name", "Core Services",
+                "definitions/priority", 5,
+                "definitions/schedule/weekdays", "Mon"),
+            Map.of("definitions/id/identifier", "D-1", "definitions/schedule/weekdays", "Tue"),
+            Map.of(
+                "definitions/id/identifier", "D-1",
+                "definitions/audit/modifiedBy", "alice",
+                "definitions/schedule/weekdays", "Wed"));
+
+    var out =
+        TestSupport.firstElementOrThrow(
+            converter.convertAll(rows, ImmutableProductRoot.class, cfg));
+
+    // Regular fields should be merged, aggregated field should become array
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "definitions": [
+            {
+              "id": { "identifier": "D-1" },
+              "name": "Core Services",
+              "priority": 5,
+              "audit": {
+                "modifiedBy": "alice"
+              },
+              "schedule": {
+                "weekdays": ["Mon", "Tue", "Wed"]
+              }
+            }
+          ]
+        }
+        """,
+        out);
+  }
+
+  // ===== Tests for Smart Features of Array Leaf Aggregation =====
+
+  @Test
+  void test52_array_aggregation_multiple_fields() {
+    // Smart Feature 2: Multiple Field Support
+    // Aggregate several fields independently in the same configuration
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists:
+              - path: "products"
+                keyPaths: ["id"]
+            primitiveAggregation:
+              - path: "products/tags"
+                mode: "collect"
+              - path: "products/colors"
+                mode: "collect"
+              - path: "products/sizes"
+                mode: "collect"
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of(
+                "products/id", "shirt-001",
+                "products/name", "T-Shirt",
+                "products/tags", "casual",
+                "products/colors", "red",
+                "products/sizes", "S"),
+            Map.of(
+                "products/id", "shirt-001",
+                "products/tags", "cotton",
+                "products/colors", "blue",
+                "products/sizes", "M"),
+            Map.of(
+                "products/id", "shirt-001",
+                "products/tags", "summer",
+                "products/colors", "green",
+                "products/sizes", "L"));
+
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "products": [
+            {
+              "id": "shirt-001",
+              "name": "T-Shirt",
+              "tags": ["casual", "cotton", "summer"],
+              "colors": ["red", "blue", "green"],
+              "sizes": ["S", "M", "L"]
+            }
+          ]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test53_array_aggregation_mixed_with_merge() {
+    // Smart Feature 3: Mixed Operations
+    // Combine aggregation with deduplication and merge
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists:
+              - path: "users"
+                keyPaths: ["id"]
+                dedupe: true
+                onConflict: "merge"
+            primitiveAggregation:
+              - path: "users/roles"
+                mode: "collect"
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of(
+                "users/id", "alice",
+                "users/name", "Alice Smith",
+                "users/roles", "admin"),
+            Map.of(
+                "users/id", "alice",
+                "users/email", "alice@example.com",
+                "users/roles", "developer"),
+            Map.of(
+                "users/id", "alice",
+                "users/department", "Engineering",
+                "users/roles", "reviewer"));
+
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
+
+    // Regular fields (name, email, department) are merged
+    // roles values are aggregated into an array
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "users": [
+            {
+              "id": "alice",
+              "name": "Alice Smith",
+              "email": "alice@example.com",
+              "department": "Engineering",
+              "roles": ["admin", "developer", "reviewer"]
+            }
+          ]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test54_array_aggregation_order_preservation() {
+    // Smart Feature 4: Order Preservation
+    // Arrays maintain the order values appear in input rows
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists:
+              - path: "tasks"
+                keyPaths: ["id"]
+            primitiveAggregation:
+              - path: "tasks/comments"
+                mode: "collect"
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of(
+                "tasks/id", "task-1",
+                "tasks/title", "Fix bug",
+                "tasks/comments", "Started investigation"),
+            Map.of("tasks/id", "task-1", "tasks/comments", "Found root cause"),
+            Map.of("tasks/id", "task-1", "tasks/comments", "Implemented fix"),
+            Map.of("tasks/id", "task-1", "tasks/comments", "Testing complete"),
+            Map.of("tasks/id", "task-1", "tasks/comments", "Deployed to production"));
+
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
+
+    // Comment array preserves chronological order from input rows
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "tasks": [
+            {
+              "id": "task-1",
+              "title": "Fix bug",
+              "comments": [
+                "Started investigation",
+                "Found root cause",
+                "Implemented fix",
+                "Testing complete",
+                "Deployed to production"
+              ]
+            }
+          ]
+        }
+        """,
+        out);
+  }
+
+//  @Test
+//  void test55_unique_flag_deduplicates_values() {
+//    // DESIRED BEHAVIOR: With unique: true, duplicate values are removed
+//    // Simulates cartesian product scenario where same value appears multiple times
+//    MappingConfig cfg =
+//        TestSupport.loadMappingConfigFromYaml(
+//            """
+//            separator: "/"
+//            allowSparseRows: false
+//            lists:
+//              - path: "tasks"
+//                keyPaths: ["id"]
+//            primitiveAggregation:
+//              - path: "tasks/tags"
+//                mode: "collect"
+//                unique: true
+//          """);
+//
+//    // Debug: print configuration
+//    System.out.println("=== Primitive Aggregation Rules ===");
+//    for (var rule : cfg.primitiveAggregation()) {
+//      System.out.println("  path=" + rule.path() + ", mode=" + rule.mode() + ", unique=" + rule.unique());
+//    }
+//
+//    List<Map<String, ?>> rows =
+//        List.of(
+//            Map.of("tasks/id", "1", "tasks/tags", "urgent"),
+//            Map.of("tasks/id", "1", "tasks/tags", "backend"),
+//            Map.of("tasks/id", "1", "tasks/tags", "urgent"), // duplicate
+//            Map.of("tasks/id", "1", "tasks/tags", "backend")); // duplicate
+//
+//    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
+//
+//    PojoJsonAssert.assertPojoJsonEquals(
+//        objectMapper,
+//        """
+//        {
+//          "tasks": [
+//            {
+//              "id": "1",
+//              "tags": ["urgent", "backend"]
+//            }
+//          ]
+//        }
+//        """,
+//        out);
+//  }
+//
+//  @Test
+//  void test56_default_behavior_without_unique_keeps_duplicates() {
+//    // DESIRED BEHAVIOR: Without unique flag (default: false), duplicates are kept
+//    MappingConfig cfg =
+//        TestSupport.loadMappingConfigFromYaml(
+//            """
+//            separator: "/"
+//            allowSparseRows: false
+//            lists:
+//              - path: "tasks"
+//                keyPaths: ["id"]
+//            primitiveAggregation:
+//              - path: "tasks/tags"
+//                mode: "collect"
+//          """);
+//
+//    List<Map<String, ?>> rows =
+//        List.of(
+//            Map.of("tasks/id", "1", "tasks/tags", "urgent"),
+//            Map.of("tasks/id", "1", "tasks/tags", "backend"),
+//            Map.of("tasks/id", "1", "tasks/tags", "urgent")); // duplicate
+//
+//    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
+//
+//    PojoJsonAssert.assertPojoJsonEquals(
+//        objectMapper,
+//        """
+//        {
+//          "tasks": [
+//            {
+//              "id": "1",
+//              "tags": ["urgent", "backend", "urgent"]
+//            }
+//          ]
+//        }
+//        """,
+//        out);
+//  }
+//
+//  @Test
+//  void test57_unique_flag_per_item_scoping() {
+//    // DESIRED BEHAVIOR: Each list item has independent deduplication
+//    // Same value across different items is NOT deduplicated
+//    MappingConfig cfg =
+//        TestSupport.loadMappingConfigFromYaml(
+//            """
+//            separator: "/"
+//            allowSparseRows: false
+//            lists:
+//              - path: "tasks"
+//                keyPaths: ["id"]
+//            primitiveAggregation:
+//              - path: "tasks/tags"
+//                mode: "collect"
+//                unique: true
+//          """);
+//
+//    List<Map<String, ?>> rows =
+//        List.of(
+//            Map.of("tasks/id", "1", "tasks/tags", "urgent"),
+//            Map.of("tasks/id", "1", "tasks/tags", "urgent"), // dup for task 1
+//            Map.of("tasks/id", "2", "tasks/tags", "urgent"), // NOT a dup (different task)
+//            Map.of("tasks/id", "2", "tasks/tags", "urgent")); // dup for task 2
+//
+//    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
+//
+//    PojoJsonAssert.assertPojoJsonEquals(
+//        objectMapper,
+//        """
+//        {
+//          "tasks": [
+//            {
+//              "id": "1",
+//              "tags": ["urgent"]
+//            },
+//            {
+//              "id": "2",
+//              "tags": ["urgent"]
+//            }
+//          ]
+//        }
+//        """,
+//        out);
+//  }
+//
+//  @Test
+//  void test58_mixed_unique_and_non_unique_fields() {
+//    // DESIRED BEHAVIOR: Some fields deduplicate, others don't
+//    MappingConfig cfg =
+//        TestSupport.loadMappingConfigFromYaml(
+//            """
+//            separator: "/"
+//            allowSparseRows: false
+//            lists:
+//              - path: "tasks"
+//                keyPaths: ["id"]
+//            primitiveAggregation:
+//              - path: "tasks/tags"
+//                mode: "collect"
+//                unique: true
+//              - path: "tasks/comments"
+//                mode: "collect"
+//                unique: false
+//          """);
+//
+//    List<Map<String, ?>> rows =
+//        List.of(
+//            Map.of("tasks/id", "1", "tasks/tags", "urgent", "tasks/comments", "Started"),
+//            Map.of("tasks/id", "1", "tasks/tags", "backend", "tasks/comments", "In progress"),
+//            Map.of("tasks/id", "1", "tasks/tags", "urgent", "tasks/comments", "Started")); // dups
+//
+//    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
+//
+//    PojoJsonAssert.assertPojoJsonEquals(
+//        objectMapper,
+//        """
+//        {
+//          "tasks": [
+//            {
+//              "id": "1",
+//              "tags": ["urgent", "backend"],
+//              "comments": ["Started", "In progress", "Started"]
+//            }
+//          ]
+//        }
+//        """,
+//        out);
+//  }
+//
+//  @Test
+//  void test59_unique_flag_order_preservation() {
+//    // DESIRED BEHAVIOR: First occurrence determines position
+//    MappingConfig cfg =
+//        TestSupport.loadMappingConfigFromYaml(
+//            """
+//            separator: "/"
+//            allowSparseRows: false
+//            lists:
+//              - path: "tasks"
+//                keyPaths: ["id"]
+//            primitiveAggregation:
+//              - path: "tasks/tags"
+//                mode: "collect"
+//                unique: true
+//          """);
+//
+//    List<Map<String, ?>> rows =
+//        List.of(
+//            Map.of("tasks/id", "1", "tasks/tags", "urgent"),
+//            Map.of("tasks/id", "1", "tasks/tags", "backend"),
+//            Map.of("tasks/id", "1", "tasks/tags", "critical"),
+//            Map.of("tasks/id", "1", "tasks/tags", "backend"), // duplicate - should be skipped
+//            Map.of("tasks/id", "1", "tasks/tags", "urgent")); // duplicate - should be skipped
+//
+//    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
+//
+//    PojoJsonAssert.assertPojoJsonEquals(
+//        objectMapper,
+//        """
+//        {
+//          "tasks": [
+//            {
+//              "id": "1",
+//              "tags": ["urgent", "backend", "critical"]
+//            }
+//          ]
+//        }
+//        """,
+//        out);
+//  }
 }

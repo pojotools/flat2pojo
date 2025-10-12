@@ -2,6 +2,7 @@ package io.github.pojotools.flat2pojo.core.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.pojotools.flat2pojo.core.engine.GroupingEngine;
+import io.github.pojotools.flat2pojo.core.engine.PrimitiveAccumulator;
 import io.github.pojotools.flat2pojo.core.engine.ValueTransformer;
 import lombok.Builder;
 
@@ -13,4 +14,5 @@ record AssemblerDependencies(
     ObjectMapper objectMapper,
     GroupingEngine groupingEngine,
     ValueTransformer valueTransformer,
+    PrimitiveAccumulator primitiveAccumulator,
     ResultMaterializer materializer) {}

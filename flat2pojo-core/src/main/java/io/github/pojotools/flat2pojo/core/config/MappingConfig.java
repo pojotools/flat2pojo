@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import io.github.pojotools.flat2pojo.spi.Reporter;
 import io.github.pojotools.flat2pojo.spi.ValuePreprocessor;
+import org.immutables.value.Value;
+
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -12,7 +14,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import org.immutables.value.Value;
 
 /**
  * Immutable configuration for flat-to-POJO conversion.
@@ -54,6 +55,11 @@ public abstract class MappingConfig {
 
   @Value.Default
   public List<PrimitiveSplitRule> primitives() {
+    return List.of();
+  }
+
+  @Value.Default
+  public List<PrimitiveAggregationRule> primitiveAggregation() {
     return List.of();
   }
 
@@ -127,7 +133,7 @@ public abstract class MappingConfig {
       prefixMap.put(rulePath, new HashSet<>());
     }
 
-    // For each path, find its DIRECT parent (longest matching prefix)
+    // For each path, find its DIRECT parent (the longest matching prefix)
     for (int i = 0; i < sortedPaths.size(); i++) {
       final String childPath = sortedPaths.get(i);
       final String childPrefix = childPath + sep;
@@ -188,4 +194,10 @@ public abstract class MappingConfig {
   }
 
   public record PrimitiveSplitRule(String path, String delimiter, boolean trim) {}
+
+  public record PrimitiveAggregationRule(String path, AggregationMode mode, boolean unique) {}
+
+  public enum AggregationMode {
+    collect
+  }
 }

@@ -3,6 +3,7 @@ package io.github.pojotools.flat2pojo.core.impl;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.github.pojotools.flat2pojo.core.config.MappingConfig;
+
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -18,7 +19,8 @@ final class RowGraphAssembler implements RowProcessor {
   private final AssemblerDependencies dependencies;
   private final ProcessingContext context;
   private final ListRuleProcessor listRuleProcessor;
-  private final ListElementWriter writer;
+  private final ListElementWriter listElementWriter;
+  private final DirectValueWriter directValueWriter;
   private final Function<Map<String, ?>, Map<String, ?>> preprocessor;
   private final Map<String, ObjectNode> listElementCache = new LinkedHashMap<>();
 
@@ -26,9 +28,10 @@ final class RowGraphAssembler implements RowProcessor {
     this.dependencies = dependencies;
     this.root = dependencies.objectMapper().createObjectNode();
     this.context = context;
+    this.listElementWriter = new ListElementWriter(context, dependencies.primitiveAccumulator());
+    this.directValueWriter = new DirectValueWriter(context, dependencies.primitiveAccumulator());
     this.listRuleProcessor =
-        new ListRuleProcessor(dependencies.groupingEngine(), context, listElementCache);
-    this.writer = new ListElementWriter(context);
+        new ListRuleProcessor(dependencies.groupingEngine(), context, listElementWriter, listElementCache);
     this.preprocessor = buildPreprocessor(context.config());
   }
 
@@ -44,7 +47,14 @@ final class RowGraphAssembler implements RowProcessor {
   @Override
   public <T> T materialize(final Class<T> type) {
     dependencies.groupingEngine().finalizeArrays(root);
+    writeAccumulatedArrays();
     return dependencies.materializer().materialize(root, type);
+  }
+
+  private void writeAccumulatedArrays() {
+    // Write all accumulated arrays by traversing the entire tree and writing to each node
+    // This must happen AFTER finalizeArrays so that list elements are in the tree
+    dependencies.primitiveAccumulator().writeAllAccumulatedArrays(root);
   }
 
   private static Function<Map<String, ?>, Map<String, ?>> buildPreprocessor(
@@ -68,7 +78,7 @@ final class RowGraphAssembler implements RowProcessor {
     for (final var entry : rowValues.entrySet()) {
       final String path = entry.getKey();
       if (isDirectValuePath(path, skippedListPaths)) {
-        writer.writeDirectly(root, path, entry.getValue());
+        directValueWriter.writeDirectly(root, path, entry.getValue());
       }
     }
   }

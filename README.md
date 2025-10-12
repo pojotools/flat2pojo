@@ -23,6 +23,7 @@ A high-performance Java library for converting flat maps to structured POJOs usi
 - **Hierarchical grouping** - Convert flat rows into nested lists and objects
 - **Flexible ordering** - Sort list elements by multiple fields with null handling
 - **Conflict resolution** - Handle value conflicts with configurable policies
+- **Primitive aggregation** - Collect values across multiple rows into arrays
 - **Type safety** - Full Jackson integration with your existing POJOs
 - **Performance** - O(n) processing with minimal allocations
 - **Extensible** - Custom value processing and reporting via SPI
@@ -189,6 +190,7 @@ Quick overview of key configuration options:
 - **rootKeys** - Fields that group rows into separate root objects
 - **lists** - Hierarchical grouping with deduplication and sorting
 - **primitives** - String-to-array split rules
+- **primitiveAggregation** - Collect values across rows into arrays
 - **nullPolicy** - Blank string handling
 - **SPI extensions** - Custom preprocessing and reporting
 
