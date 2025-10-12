@@ -408,7 +408,7 @@ RM MAPPING.md -> MAPPINGS.md
 ?? DEVELOPMENT.md
 
 # Files created (1 report)
-?? docs/DOCUMENTATION-AUDIT-REPORT.md
+?? docs/2025-10-11_documentation-audit-report.md
 ```
 
 **Total Changes:** 10 files (6 modified, 1 renamed, 4 created)

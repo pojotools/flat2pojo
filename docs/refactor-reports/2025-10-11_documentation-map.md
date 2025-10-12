@@ -105,7 +105,7 @@ Example from OPERATIONS.md:
 ```markdown
 ## Related Documentation
 
-- [MAPPINGS.md](MAPPINGS.md) - Complete mapping DSL specification
+- [MAPPINGS.md](../MAPPINGS.md) - Complete mapping DSL specification
 - [ARCHITECTURE.md](ARCHITECTURE.md) - Design decisions and system architecture
 - [PSEUDOCODE.md](PSEUDOCODE.md) - Internal algorithm flow and component interactions
 - [README.md](README.md) - Project overview and quick start guide
