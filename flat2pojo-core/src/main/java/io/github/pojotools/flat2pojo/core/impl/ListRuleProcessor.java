@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.github.pojotools.flat2pojo.core.config.MappingConfig;
 import io.github.pojotools.flat2pojo.core.engine.GroupingEngine;
+import io.github.pojotools.flat2pojo.core.engine.Path;
+
 import java.util.Map;
 import java.util.Set;
 
@@ -133,11 +135,13 @@ final class ListRuleProcessor {
       final ObjectNode element,
       final Map.Entry<String, JsonNode> entry,
       final WriteContext writeContext) {
-    final String suffix =
+    final String relativePath =
         context.pathResolver().stripPrefix(entry.getKey(), writeContext.pathPrefix());
-    if (!context.hierarchyCache().isUnderAnyChildList(suffix, writeContext.rule().path())) {
+    if (!context.hierarchyCache().isUnderAnyChildList(relativePath, writeContext.rule().path())) {
+      final String absolutePath = entry.getKey();
+      final Path path = new Path(relativePath, absolutePath);
       writer.writeWithConflictPolicy(
-          element, suffix, entry.getValue(), writeContext.rule().onConflict(), entry.getKey());
+          element, path, entry.getValue(), writeContext.rule().onConflict());
     }
   }
 

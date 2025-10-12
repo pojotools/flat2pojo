@@ -2859,222 +2859,222 @@ class SpecSuiteTest {
         out);
   }
 
-//  @Test
-//  void test55_unique_flag_deduplicates_values() {
-//    // DESIRED BEHAVIOR: With unique: true, duplicate values are removed
-//    // Simulates cartesian product scenario where same value appears multiple times
-//    MappingConfig cfg =
-//        TestSupport.loadMappingConfigFromYaml(
-//            """
-//            separator: "/"
-//            allowSparseRows: false
-//            lists:
-//              - path: "tasks"
-//                keyPaths: ["id"]
-//            primitiveAggregation:
-//              - path: "tasks/tags"
-//                mode: "collect"
-//                unique: true
-//          """);
-//
-//    // Debug: print configuration
-//    System.out.println("=== Primitive Aggregation Rules ===");
-//    for (var rule : cfg.primitiveAggregation()) {
-//      System.out.println("  path=" + rule.path() + ", mode=" + rule.mode() + ", unique=" + rule.unique());
-//    }
-//
-//    List<Map<String, ?>> rows =
-//        List.of(
-//            Map.of("tasks/id", "1", "tasks/tags", "urgent"),
-//            Map.of("tasks/id", "1", "tasks/tags", "backend"),
-//            Map.of("tasks/id", "1", "tasks/tags", "urgent"), // duplicate
-//            Map.of("tasks/id", "1", "tasks/tags", "backend")); // duplicate
-//
-//    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
-//
-//    PojoJsonAssert.assertPojoJsonEquals(
-//        objectMapper,
-//        """
-//        {
-//          "tasks": [
-//            {
-//              "id": "1",
-//              "tags": ["urgent", "backend"]
-//            }
-//          ]
-//        }
-//        """,
-//        out);
-//  }
-//
-//  @Test
-//  void test56_default_behavior_without_unique_keeps_duplicates() {
-//    // DESIRED BEHAVIOR: Without unique flag (default: false), duplicates are kept
-//    MappingConfig cfg =
-//        TestSupport.loadMappingConfigFromYaml(
-//            """
-//            separator: "/"
-//            allowSparseRows: false
-//            lists:
-//              - path: "tasks"
-//                keyPaths: ["id"]
-//            primitiveAggregation:
-//              - path: "tasks/tags"
-//                mode: "collect"
-//          """);
-//
-//    List<Map<String, ?>> rows =
-//        List.of(
-//            Map.of("tasks/id", "1", "tasks/tags", "urgent"),
-//            Map.of("tasks/id", "1", "tasks/tags", "backend"),
-//            Map.of("tasks/id", "1", "tasks/tags", "urgent")); // duplicate
-//
-//    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
-//
-//    PojoJsonAssert.assertPojoJsonEquals(
-//        objectMapper,
-//        """
-//        {
-//          "tasks": [
-//            {
-//              "id": "1",
-//              "tags": ["urgent", "backend", "urgent"]
-//            }
-//          ]
-//        }
-//        """,
-//        out);
-//  }
-//
-//  @Test
-//  void test57_unique_flag_per_item_scoping() {
-//    // DESIRED BEHAVIOR: Each list item has independent deduplication
-//    // Same value across different items is NOT deduplicated
-//    MappingConfig cfg =
-//        TestSupport.loadMappingConfigFromYaml(
-//            """
-//            separator: "/"
-//            allowSparseRows: false
-//            lists:
-//              - path: "tasks"
-//                keyPaths: ["id"]
-//            primitiveAggregation:
-//              - path: "tasks/tags"
-//                mode: "collect"
-//                unique: true
-//          """);
-//
-//    List<Map<String, ?>> rows =
-//        List.of(
-//            Map.of("tasks/id", "1", "tasks/tags", "urgent"),
-//            Map.of("tasks/id", "1", "tasks/tags", "urgent"), // dup for task 1
-//            Map.of("tasks/id", "2", "tasks/tags", "urgent"), // NOT a dup (different task)
-//            Map.of("tasks/id", "2", "tasks/tags", "urgent")); // dup for task 2
-//
-//    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
-//
-//    PojoJsonAssert.assertPojoJsonEquals(
-//        objectMapper,
-//        """
-//        {
-//          "tasks": [
-//            {
-//              "id": "1",
-//              "tags": ["urgent"]
-//            },
-//            {
-//              "id": "2",
-//              "tags": ["urgent"]
-//            }
-//          ]
-//        }
-//        """,
-//        out);
-//  }
-//
-//  @Test
-//  void test58_mixed_unique_and_non_unique_fields() {
-//    // DESIRED BEHAVIOR: Some fields deduplicate, others don't
-//    MappingConfig cfg =
-//        TestSupport.loadMappingConfigFromYaml(
-//            """
-//            separator: "/"
-//            allowSparseRows: false
-//            lists:
-//              - path: "tasks"
-//                keyPaths: ["id"]
-//            primitiveAggregation:
-//              - path: "tasks/tags"
-//                mode: "collect"
-//                unique: true
-//              - path: "tasks/comments"
-//                mode: "collect"
-//                unique: false
-//          """);
-//
-//    List<Map<String, ?>> rows =
-//        List.of(
-//            Map.of("tasks/id", "1", "tasks/tags", "urgent", "tasks/comments", "Started"),
-//            Map.of("tasks/id", "1", "tasks/tags", "backend", "tasks/comments", "In progress"),
-//            Map.of("tasks/id", "1", "tasks/tags", "urgent", "tasks/comments", "Started")); // dups
-//
-//    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
-//
-//    PojoJsonAssert.assertPojoJsonEquals(
-//        objectMapper,
-//        """
-//        {
-//          "tasks": [
-//            {
-//              "id": "1",
-//              "tags": ["urgent", "backend"],
-//              "comments": ["Started", "In progress", "Started"]
-//            }
-//          ]
-//        }
-//        """,
-//        out);
-//  }
-//
-//  @Test
-//  void test59_unique_flag_order_preservation() {
-//    // DESIRED BEHAVIOR: First occurrence determines position
-//    MappingConfig cfg =
-//        TestSupport.loadMappingConfigFromYaml(
-//            """
-//            separator: "/"
-//            allowSparseRows: false
-//            lists:
-//              - path: "tasks"
-//                keyPaths: ["id"]
-//            primitiveAggregation:
-//              - path: "tasks/tags"
-//                mode: "collect"
-//                unique: true
-//          """);
-//
-//    List<Map<String, ?>> rows =
-//        List.of(
-//            Map.of("tasks/id", "1", "tasks/tags", "urgent"),
-//            Map.of("tasks/id", "1", "tasks/tags", "backend"),
-//            Map.of("tasks/id", "1", "tasks/tags", "critical"),
-//            Map.of("tasks/id", "1", "tasks/tags", "backend"), // duplicate - should be skipped
-//            Map.of("tasks/id", "1", "tasks/tags", "urgent")); // duplicate - should be skipped
-//
-//    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
-//
-//    PojoJsonAssert.assertPojoJsonEquals(
-//        objectMapper,
-//        """
-//        {
-//          "tasks": [
-//            {
-//              "id": "1",
-//              "tags": ["urgent", "backend", "critical"]
-//            }
-//          ]
-//        }
-//        """,
-//        out);
-//  }
+  @Test
+  void test55_unique_flag_deduplicates_values() {
+    // DESIRED BEHAVIOR: With unique: true, duplicate values are removed
+    // Simulates cartesian product scenario where same value appears multiple times
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists:
+              - path: "tasks"
+                keyPaths: ["id"]
+            primitiveAggregation:
+              - path: "tasks/tags"
+                mode: "collect"
+                unique: true
+          """);
+
+    // Debug: print configuration
+    System.out.println("=== Primitive Aggregation Rules ===");
+    for (var rule : cfg.primitiveAggregation()) {
+      System.out.println("  path=" + rule.path() + ", mode=" + rule.mode() + ", unique=" + rule.unique());
+    }
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of("tasks/id", "1", "tasks/tags", "urgent"),
+            Map.of("tasks/id", "1", "tasks/tags", "backend"),
+            Map.of("tasks/id", "1", "tasks/tags", "urgent"), // duplicate
+            Map.of("tasks/id", "1", "tasks/tags", "backend")); // duplicate
+
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "tasks": [
+            {
+              "id": "1",
+              "tags": ["urgent", "backend"]
+            }
+          ]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test56_default_behavior_without_unique_keeps_duplicates() {
+    // DESIRED BEHAVIOR: Without unique flag (default: false), duplicates are kept
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists:
+              - path: "tasks"
+                keyPaths: ["id"]
+            primitiveAggregation:
+              - path: "tasks/tags"
+                mode: "collect"
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of("tasks/id", "1", "tasks/tags", "urgent"),
+            Map.of("tasks/id", "1", "tasks/tags", "backend"),
+            Map.of("tasks/id", "1", "tasks/tags", "urgent")); // duplicate
+
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "tasks": [
+            {
+              "id": "1",
+              "tags": ["urgent", "backend", "urgent"]
+            }
+          ]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test57_unique_flag_per_item_scoping() {
+    // DESIRED BEHAVIOR: Each list item has independent deduplication
+    // Same value across different items is NOT deduplicated
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists:
+              - path: "tasks"
+                keyPaths: ["id"]
+            primitiveAggregation:
+              - path: "tasks/tags"
+                mode: "collect"
+                unique: true
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of("tasks/id", "1", "tasks/tags", "urgent"),
+            Map.of("tasks/id", "1", "tasks/tags", "urgent"), // dup for task 1
+            Map.of("tasks/id", "2", "tasks/tags", "urgent"), // NOT a dup (different task)
+            Map.of("tasks/id", "2", "tasks/tags", "urgent")); // dup for task 2
+
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "tasks": [
+            {
+              "id": "1",
+              "tags": ["urgent"]
+            },
+            {
+              "id": "2",
+              "tags": ["urgent"]
+            }
+          ]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test58_mixed_unique_and_non_unique_fields() {
+    // DESIRED BEHAVIOR: Some fields deduplicate, others don't
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists:
+              - path: "tasks"
+                keyPaths: ["id"]
+            primitiveAggregation:
+              - path: "tasks/tags"
+                mode: "collect"
+                unique: true
+              - path: "tasks/comments"
+                mode: "collect"
+                unique: false
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of("tasks/id", "1", "tasks/tags", "urgent", "tasks/comments", "Started"),
+            Map.of("tasks/id", "1", "tasks/tags", "backend", "tasks/comments", "In progress"),
+            Map.of("tasks/id", "1", "tasks/tags", "urgent", "tasks/comments", "Started")); // dups
+
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "tasks": [
+            {
+              "id": "1",
+              "tags": ["urgent", "backend"],
+              "comments": ["Started", "In progress", "Started"]
+            }
+          ]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test59_unique_flag_order_preservation() {
+    // DESIRED BEHAVIOR: First occurrence determines position
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists:
+              - path: "tasks"
+                keyPaths: ["id"]
+            primitiveAggregation:
+              - path: "tasks/tags"
+                mode: "collect"
+                unique: true
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of("tasks/id", "1", "tasks/tags", "urgent"),
+            Map.of("tasks/id", "1", "tasks/tags", "backend"),
+            Map.of("tasks/id", "1", "tasks/tags", "critical"),
+            Map.of("tasks/id", "1", "tasks/tags", "backend"), // duplicate - should be skipped
+            Map.of("tasks/id", "1", "tasks/tags", "urgent")); // duplicate - should be skipped
+
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "tasks": [
+            {
+              "id": "1",
+              "tags": ["urgent", "backend", "critical"]
+            }
+          ]
+        }
+        """,
+        out);
+  }
 }

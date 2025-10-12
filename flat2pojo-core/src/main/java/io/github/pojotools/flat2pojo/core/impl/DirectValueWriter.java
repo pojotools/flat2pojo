@@ -2,7 +2,8 @@ package io.github.pojotools.flat2pojo.core.impl;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import io.github.pojotools.flat2pojo.core.engine.PrimitiveAccumulator;
+import io.github.pojotools.flat2pojo.core.engine.Path;
+import io.github.pojotools.flat2pojo.core.engine.PrimitiveListManager;
 
 /**
  * Writes values directly to object nodes without conflict handling or policy checks.
@@ -12,38 +13,43 @@ import io.github.pojotools.flat2pojo.core.engine.PrimitiveAccumulator;
  */
 final class DirectValueWriter {
   private final ProcessingContext context;
-  private final PrimitiveAccumulator accumulator;
+  private final PrimitiveListManager primitiveListManager;
 
-  DirectValueWriter(final ProcessingContext context, PrimitiveAccumulator accumulator) {
+  DirectValueWriter(final ProcessingContext context, final PrimitiveListManager manager) {
     this.context = context;
-    this.accumulator = accumulator;
+    this.primitiveListManager = manager;
   }
 
-  /**
-   * Writes a value directly to the target node at the specified path.
-   *
-   * @param target the object node to write to
-   * @param path the dot-separated path where the value should be written
-   * @param value the JSON value to write
-   */
-  void writeDirectly(final ObjectNode target, final String path, final JsonNode value) {
-    if (path.isEmpty()) {
+  void writeDirectly(final ObjectNode target, final Path path, final JsonNode value) {
+    if (path.relativePath().isEmpty()) {
       return;
     }
 
-    if (accumulator.isAggregationPath(path)) {
-      final String scope = buildScopeKey(target);
-      // Store with a relative path for correct writing later
-      accumulator.accumulate(scope, path, value);
+    if (primitiveListManager.isPrimitiveListPath(path.relativePath())) {
+      writeToPrimitiveList(target, path, value);
     } else {
-      final ObjectNode parent = context.pathResolver().traverseAndEnsurePath(target, path);
-      final String lastSegment = context.pathResolver().getFinalSegment(path);
-      parent.set(lastSegment, value);
+      writeToScalarField(target, path.relativePath(), value);
     }
   }
 
+  private void writeToPrimitiveList(
+      final ObjectNode target,
+      final Path path,
+      final JsonNode value) {
+    final String scope = buildScopeKey(target);
+    primitiveListManager.addValue(scope, path, value, target);
+  }
+
+  private void writeToScalarField(
+      final ObjectNode target,
+      final String path,
+      final JsonNode value) {
+    final ObjectNode parent = context.pathResolver().traverseAndEnsurePath(target, path);
+    final String lastSegment = context.pathResolver().getFinalSegment(path);
+    parent.set(lastSegment, value);
+  }
+
   private String buildScopeKey(final ObjectNode target) {
-    // Use target identity hash as a scope - each ObjectNode represents a unique scope
     return String.valueOf(System.identityHashCode(target));
   }
 }

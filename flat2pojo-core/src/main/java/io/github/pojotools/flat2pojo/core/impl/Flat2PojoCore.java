@@ -6,7 +6,7 @@ import io.github.pojotools.flat2pojo.core.config.ListHierarchyCache;
 import io.github.pojotools.flat2pojo.core.config.MappingConfig;
 import io.github.pojotools.flat2pojo.core.config.MappingConfigLoader;
 import io.github.pojotools.flat2pojo.core.engine.GroupingEngine;
-import io.github.pojotools.flat2pojo.core.engine.PrimitiveAccumulator;
+import io.github.pojotools.flat2pojo.core.engine.PrimitiveListManager;
 import io.github.pojotools.flat2pojo.core.engine.ValueTransformer;
 import io.github.pojotools.flat2pojo.core.util.PathResolver;
 import java.util.ArrayList;
@@ -68,7 +68,7 @@ public final class Flat2PojoCore implements Flat2Pojo {
       .objectMapper(objectMapper)
       .groupingEngine(new GroupingEngine(objectMapper, config))
       .valueTransformer(new ValueTransformer(objectMapper, config))
-      .primitiveAccumulator(new PrimitiveAccumulator(objectMapper, config))
+      .primitiveListManager(new PrimitiveListManager(objectMapper, config))
       .materializer(new ResultMaterializer(objectMapper))
       .build();
   }

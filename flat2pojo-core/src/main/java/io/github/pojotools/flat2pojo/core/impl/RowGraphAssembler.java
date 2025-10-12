@@ -3,6 +3,7 @@ package io.github.pojotools.flat2pojo.core.impl;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.github.pojotools.flat2pojo.core.config.MappingConfig;
+import io.github.pojotools.flat2pojo.core.engine.Path;
 
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -28,8 +29,8 @@ final class RowGraphAssembler implements RowProcessor {
     this.dependencies = dependencies;
     this.root = dependencies.objectMapper().createObjectNode();
     this.context = context;
-    this.listElementWriter = new ListElementWriter(context, dependencies.primitiveAccumulator());
-    this.directValueWriter = new DirectValueWriter(context, dependencies.primitiveAccumulator());
+    this.listElementWriter = new ListElementWriter(context, dependencies.primitiveListManager());
+    this.directValueWriter = new DirectValueWriter(context, dependencies.primitiveListManager());
     this.listRuleProcessor =
         new ListRuleProcessor(dependencies.groupingEngine(), context, listElementWriter, listElementCache);
     this.preprocessor = buildPreprocessor(context.config());
@@ -47,14 +48,7 @@ final class RowGraphAssembler implements RowProcessor {
   @Override
   public <T> T materialize(final Class<T> type) {
     dependencies.groupingEngine().finalizeArrays(root);
-    writeAccumulatedArrays();
     return dependencies.materializer().materialize(root, type);
-  }
-
-  private void writeAccumulatedArrays() {
-    // Write all accumulated arrays by traversing the entire tree and writing to each node
-    // This must happen AFTER finalizeArrays so that list elements are in the tree
-    dependencies.primitiveAccumulator().writeAllAccumulatedArrays(root);
   }
 
   private static Function<Map<String, ?>, Map<String, ?>> buildPreprocessor(
@@ -76,8 +70,10 @@ final class RowGraphAssembler implements RowProcessor {
   private void processDirectValues(
       final Map<String, JsonNode> rowValues, final Set<String> skippedListPaths) {
     for (final var entry : rowValues.entrySet()) {
-      final String path = entry.getKey();
-      if (isDirectValuePath(path, skippedListPaths)) {
+      final String absolutePath = entry.getKey();
+      if (isDirectValuePath(absolutePath, skippedListPaths)) {
+        // absolute and relative paths are the same for direct values
+        final Path path = new Path(absolutePath, absolutePath);
         directValueWriter.writeDirectly(root, path, entry.getValue());
       }
     }
