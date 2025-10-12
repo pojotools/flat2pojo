@@ -53,6 +53,6 @@ public final class ListHierarchyCache {
   }
 
   public boolean isUnderAnyChildList(final String suffix, final String parentPath) {
-    return pathResolver.isSuffixUnderAnyChild(suffix, parentPath, declaredListPaths);
+    return pathResolver.isSuffixUnderAnyChildList(suffix, parentPath, declaredListPaths);
   }
 }

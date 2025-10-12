@@ -17,10 +17,11 @@ final class ListRuleProcessor {
   ListRuleProcessor(
       final GroupingEngine groupingEngine,
       final ProcessingContext context,
+      final ListElementWriter writer,
       final Map<String, ObjectNode> listElementCache) {
     this.context = context;
     this.groupingEngine = groupingEngine;
-    this.writer = new ListElementWriter(context);
+    this.writer = writer;
     this.listElementCache = listElementCache;
   }
 
@@ -44,7 +45,8 @@ final class ListRuleProcessor {
     if (listElement == null) {
       markAsSkipped(skippedListPaths, rule);
     } else {
-      cacheAndPopulate(rowValues, listElement, rule);
+      listElementCache.put(rule.path(), listElement);
+      copyValuesToElement(rowValues, listElement, rule);
     }
   }
 
@@ -112,14 +114,6 @@ final class ListRuleProcessor {
 
   private ObjectNode resolveBaseObject(final String parentListPath, final ObjectNode root) {
     return parentListPath == null ? root : listElementCache.get(parentListPath);
-  }
-
-  private void cacheAndPopulate(
-      final Map<String, JsonNode> rowValues,
-      final ObjectNode listElement,
-      final MappingConfig.ListRule rule) {
-    listElementCache.put(rule.path(), listElement);
-    copyValuesToElement(rowValues, listElement, rule);
   }
 
   private void copyValuesToElement(

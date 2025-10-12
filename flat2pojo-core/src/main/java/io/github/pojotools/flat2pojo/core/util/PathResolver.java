@@ -43,7 +43,7 @@ public record PathResolver(String separator) {
    * Checks if a relative suffix is under any child list of the parent. Example: For parent
    * "definitions", checks if suffix "modules/name" starts with "modules/"
    */
-  public boolean isSuffixUnderAnyChild(
+  public boolean isSuffixUnderAnyChildList(
       final String suffix, final String parentPath, final Set<String> allListPaths) {
     final String parentPrefix = buildPrefix(parentPath);
     for (final String listPath : allListPaths) {
