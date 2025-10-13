@@ -25,7 +25,7 @@ final class DirectValueWriter {
       return;
     }
 
-    if (primitiveListManager.isPrimitiveListPath(path.relativePath())) {
+    if (primitiveListManager.isPrimitiveListPath(path.absolutePath())) {
       writeToPrimitiveList(target, path, value);
     } else {
       writeToScalarField(target, path.relativePath(), value);

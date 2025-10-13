@@ -6,13 +6,14 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.github.pojotools.flat2pojo.core.config.MappingConfig;
 import io.github.pojotools.flat2pojo.core.util.PathOps;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
+
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
-import lombok.AccessLevel;
-import lombok.experimental.FieldDefaults;
 
 /** Manages list/grouping state while building the JSON tree. */
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)

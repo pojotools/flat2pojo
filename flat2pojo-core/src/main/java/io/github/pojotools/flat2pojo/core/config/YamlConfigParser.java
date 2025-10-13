@@ -84,9 +84,9 @@ final class YamlConfigParser {
   private static void parseSinglePrimitiveListRule(
     final Map<String, Object> primitiveListRule, final ImmutableMappingConfig.Builder builder) {
     String path = (String) primitiveListRule.get("path");
-    String orderDirectionString = (String) primitiveListRule.getOrDefault("direction", "insertion");
+    String orderDirectionString = (String) primitiveListRule.getOrDefault("orderDirection", "insertion");
     OrderDirection orderDirection = OrderDirection.valueOf(orderDirectionString.toLowerCase(java.util.Locale.ROOT));
-    boolean dedup = Boolean.TRUE.equals(primitiveListRule.get("dedup"));
+    boolean dedup = !Boolean.FALSE.equals(primitiveListRule.get("dedup"));
 
     builder.addPrimitiveLists(new PrimitiveListRule(path, orderDirection, dedup));
   }

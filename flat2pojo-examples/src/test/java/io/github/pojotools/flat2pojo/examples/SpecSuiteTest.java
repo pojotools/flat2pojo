@@ -2895,7 +2895,7 @@ class SpecSuiteTest {
 
   @Test
   void test56_default_behavior_without_unique_keeps_duplicates() {
-    // DESIRED BEHAVIOR: Without dedup flag (default: false), duplicates are kept
+    // DESIRED BEHAVIOR: With dedup: false, duplicates are kept
     MappingConfig cfg =
         TestSupport.loadMappingConfigFromYaml(
             """
@@ -2906,6 +2906,7 @@ class SpecSuiteTest {
                 keyPaths: ["id"]
             primitiveLists:
               - path: "tasks/tags"
+                dedup: false
           """);
 
     List<Map<String, ?>> rows =
@@ -3053,6 +3054,452 @@ class SpecSuiteTest {
             {
               "id": "1",
               "tags": ["urgent", "backend", "critical"]
+            }
+          ]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test60_primitiveLists_defaults() {
+    // Verify default behavior: orderDirection=insertion, dedup=true
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists: []
+            primitiveLists:
+              - path: "priorities"
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of("priorities", 3),
+            Map.of("priorities", 1),
+            Map.of("priorities", 3), // duplicate - should be removed
+            Map.of("priorities", 2));
+
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "priorities": [3, 1, 2]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test61_primitiveLists_insertion_order() {
+    // Verify insertion order is maintained
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists: []
+            primitiveLists:
+              - path: "priorities"
+                orderDirection: insertion
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of("priorities", 3),
+            Map.of("priorities", 1),
+            Map.of("priorities", 5),
+            Map.of("priorities", 2),
+            Map.of("priorities", 4));
+
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "priorities": [3, 1, 5, 2, 4]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test62_primitiveLists_ascending_order_numbers() {
+    // Verify numeric ascending sorting
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists: []
+            primitiveLists:
+              - path: "priorities"
+                orderDirection: asc
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of("priorities", 3),
+            Map.of("priorities", 1),
+            Map.of("priorities", 5),
+            Map.of("priorities", 2),
+            Map.of("priorities", 4));
+
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "priorities": [1, 2, 3, 4, 5]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test63_primitiveLists_descending_order_numbers() {
+    // Verify numeric descending sorting
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists: []
+            primitiveLists:
+              - path: "priorities"
+                orderDirection: desc
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of("priorities", 3),
+            Map.of("priorities", 1),
+            Map.of("priorities", 5),
+            Map.of("priorities", 2),
+            Map.of("priorities", 4));
+
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "priorities": [5, 4, 3, 2, 1]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test64_primitiveLists_ascending_order_strings() {
+    // Verify string lexicographic ascending sorting
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists: []
+            primitiveLists:
+              - path: "names"
+                orderDirection: asc
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of("names", "Charlie"),
+            Map.of("names", "Alice"),
+            Map.of("names", "Eve"),
+            Map.of("names", "Bob"),
+            Map.of("names", "David"));
+
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "names": ["Alice", "Bob", "Charlie", "David", "Eve"]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test65_primitiveLists_descending_order_strings() {
+    // Verify string lexicographic descending sorting
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists: []
+            primitiveLists:
+              - path: "names"
+                orderDirection: desc
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of("names", "Charlie"),
+            Map.of("names", "Alice"),
+            Map.of("names", "Eve"),
+            Map.of("names", "Bob"),
+            Map.of("names", "David"));
+
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "names": ["Eve", "David", "Charlie", "Bob", "Alice"]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test66_primitiveLists_ascending_with_dedup() {
+    // Verify sorted + deduplication works together
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists: []
+            primitiveLists:
+              - path: "priorities"
+                orderDirection: asc
+                dedup: true
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of("priorities", 3),
+            Map.of("priorities", 1),
+            Map.of("priorities", 3), // duplicate
+            Map.of("priorities", 2),
+            Map.of("priorities", 1), // duplicate
+            Map.of("priorities", 5));
+
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "priorities": [1, 2, 3, 5]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test67_primitiveLists_ascending_with_duplicates() {
+    // Verify sorted with duplicates allowed
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists: []
+            primitiveLists:
+              - path: "priorities"
+                orderDirection: asc
+                dedup: false
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of("priorities", 3),
+            Map.of("priorities", 1),
+            Map.of("priorities", 3), // duplicate - kept
+            Map.of("priorities", 2),
+            Map.of("priorities", 1), // duplicate - kept
+            Map.of("priorities", 5));
+
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "priorities": [1, 1, 2, 3, 3, 5]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test68_primitiveLists_nested_ascending() {
+    // Verify ascending order works for nested primitive lists (within a list structure)
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            lists:
+              - path: "tasks"
+                keyPaths: ["taskId"]
+            primitiveLists:
+              - path: "tasks/priorities"
+                orderDirection: asc
+                dedup: true
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of("tasks/taskId", 1, "tasks/priorities", 3),
+            Map.of("tasks/taskId", 1, "tasks/priorities", 1),
+            Map.of("tasks/taskId", 1, "tasks/priorities", 5),
+            Map.of("tasks/taskId", 1, "tasks/priorities", 2));
+
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "tasks": [
+            {
+              "taskId": 1,
+              "priorities": [1, 2, 3, 5]
+            }
+          ]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test69_primitiveLists_nested_descending() {
+    // Verify descending order works for nested primitive lists
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            lists:
+              - path: "tasks"
+                keyPaths: ["taskId"]
+            primitiveLists:
+              - path: "tasks/priorities"
+                orderDirection: desc
+                dedup: true
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of("tasks/taskId", 1, "tasks/priorities", 3),
+            Map.of("tasks/taskId", 1, "tasks/priorities", 1),
+            Map.of("tasks/taskId", 1, "tasks/priorities", 5),
+            Map.of("tasks/taskId", 1, "tasks/priorities", 2));
+
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "tasks": [
+            {
+              "taskId": 1,
+              "priorities": [5, 3, 2, 1]
+            }
+          ]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test70_primitiveLists_nested_multiple_different_orders() {
+    // Verify multiple primitive lists in same nested context can have different ordering
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            lists:
+              - path: "tasks"
+                keyPaths: ["taskId"]
+            primitiveLists:
+              - path: "tasks/tags"
+                orderDirection: insertion
+                dedup: true
+              - path: "tasks/priorities"
+                orderDirection: asc
+                dedup: true
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of("tasks/taskId", 1, "tasks/tags", "urgent", "tasks/priorities", 3),
+            Map.of("tasks/taskId", 1, "tasks/tags", "bug", "tasks/priorities", 1),
+            Map.of("tasks/taskId", 1, "tasks/tags", "frontend", "tasks/priorities", 2));
+
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "tasks": [
+            {
+              "taskId": 1,
+              "tags": ["urgent", "bug", "frontend"],
+              "priorities": [1, 2, 3]
+            }
+          ]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test71_primitiveLists_nested_multiple_list_items() {
+    // Verify primitive lists work correctly when there are multiple list items (scoping test)
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            lists:
+              - path: "tasks"
+                keyPaths: ["taskId"]
+            primitiveLists:
+              - path: "tasks/tags"
+                orderDirection: asc
+                dedup: true
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of("tasks/taskId", 1, "tasks/tags", "urgent"),
+            Map.of("tasks/taskId", 1, "tasks/tags", "bug"),
+            Map.of("tasks/taskId", 2, "tasks/tags", "feature"),
+            Map.of("tasks/taskId", 2, "tasks/tags", "backend"),
+            Map.of("tasks/taskId", 3, "tasks/tags", "docs"));
+
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "tasks": [
+            {
+              "taskId": 1,
+              "tags": ["bug", "urgent"]
+            },
+            {
+              "taskId": 2,
+              "tags": ["backend", "feature"]
+            },
+            {
+              "taskId": 3,
+              "tags": ["docs"]
             }
           ]
         }

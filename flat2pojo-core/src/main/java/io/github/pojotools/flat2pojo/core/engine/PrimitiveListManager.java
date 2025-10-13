@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.github.pojotools.flat2pojo.core.config.MappingConfig;
 import io.github.pojotools.flat2pojo.core.util.PathOps;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -39,7 +40,7 @@ public final class PrimitiveListManager {
       return;
     }
 
-    final ArrayNode arrayNode = getOrCreateArrayNode(scope, path.relativePath(), targetRoot);
+    final ArrayNode arrayNode = getOrCreateArrayNode(scope, path, targetRoot);
     appendValue(arrayNode, value, path.absolutePath());
   }
 
@@ -57,9 +58,10 @@ public final class PrimitiveListManager {
   }
 
   private ArrayNode getOrCreateArrayNode(
-      final String scope, final String path, final ObjectNode targetRoot) {
-    final String cacheKey = buildCacheKey(scope, path);
-    return arrayNodeCache.computeIfAbsent(cacheKey, k -> createAndAttachArray(targetRoot, path));
+      final String scope, final Path path, final ObjectNode targetRoot) {
+    final String cacheKey = buildCacheKey(scope, path.absolutePath());
+    return arrayNodeCache.computeIfAbsent(
+        cacheKey, k -> createAndAttachArray(targetRoot, path.relativePath()));
   }
 
   private String buildCacheKey(final String scope, final String path) {
@@ -77,15 +79,42 @@ public final class PrimitiveListManager {
 
   private void appendValue(
       final ArrayNode arrayNode, final JsonNode value, final String absolutePath) {
-    if (shouldDeduplicate(absolutePath) && containsValue(arrayNode, value)) {
+    final MappingConfig.PrimitiveListRule rule = rulesCache.get(absolutePath);
+    if (rule.dedup() && containsValue(arrayNode, value)) {
       return;
     }
-    arrayNode.add(value);
+    addValueToArray(arrayNode, value, rule);
   }
 
-  private boolean shouldDeduplicate(final String path) {
-    final MappingConfig.PrimitiveListRule rule = rulesCache.get(path);
-    return rule != null && rule.dedup();
+  private void addValueToArray(
+      final ArrayNode arrayNode, final JsonNode value, final MappingConfig.PrimitiveListRule rule) {
+    switch (rule.orderDirection()) {
+      case insertion -> arrayNode.add(value);
+      case asc -> insertSorted(arrayNode, value, new JsonNodeComparator());
+      case desc -> insertSorted(arrayNode, value, new JsonNodeComparator().reversed());
+      default -> throw new IllegalStateException("Unknown order direction: " + rule.orderDirection());
+    }
+  }
+
+  private void insertSorted(
+      final ArrayNode arrayNode, final JsonNode value, final Comparator<JsonNode> comparator) {
+    final int position = findInsertPosition(arrayNode, value, comparator);
+    arrayNode.insert(position, value);
+  }
+
+  private int findInsertPosition(
+      final ArrayNode arrayNode, final JsonNode value, final Comparator<JsonNode> comparator) {
+    int left = 0;
+    int right = arrayNode.size();
+    while (left < right) {
+      final int mid = (left + right) / 2;
+      if (comparator.compare(arrayNode.get(mid), value) < 0) {
+        left = mid + 1;
+      } else {
+        right = mid;
+      }
+    }
+    return left;
   }
 
   private boolean containsValue(final ArrayNode arrayNode, final JsonNode value) {
