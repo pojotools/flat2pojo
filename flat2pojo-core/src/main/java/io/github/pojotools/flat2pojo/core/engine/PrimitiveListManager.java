@@ -5,124 +5,115 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.github.pojotools.flat2pojo.core.config.MappingConfig;
-import io.github.pojotools.flat2pojo.core.util.PathOps;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Manages primitive list arrays with eager ArrayNode creation during processing. Single
- * Responsibility: Direct primitive array creation and value appending.
+ * Manages primitive list arrays with optimized accumulation and finalization.
+ * Single Responsibility: Coordinates primitive array lifecycle.
  *
- * <p>Memory-efficient design: Creates ArrayNodes immediately and appends values directly,
- * eliminating intermediate storage and tree traversal overhead.
+ * <p>Performance optimization: Uses accumulation + sort-at-end pattern for sorted lists
+ * (asc/desc) to achieve O(P + V log V) complexity instead of O(P × V) quadratic insertion.
+ * Insertion-order lists still use immediate append for optimal memory efficiency.
  */
 public final class PrimitiveListManager {
-  private final ObjectMapper objectMapper;
-  private final String separator;
-  private final Map<String, MappingConfig.PrimitiveListRule> rulesCache;
-  private final Map<String, ArrayNode> arrayNodeCache;
+  private static final char CACHE_KEY_SEPARATOR = '|';
+
+  private final PrimitiveListRuleCache ruleCache;
+  private final PrimitiveArrayNodeFactory arrayFactory;
+  private final Map<String, ArrayNode> arrayNodes;
+  private final Map<String, PrimitiveArrayBucket> buckets;
+  private final Map<String, MappingConfig.OrderDirection> directions;
 
   public PrimitiveListManager(final ObjectMapper objectMapper, final MappingConfig config) {
-    this.objectMapper = objectMapper;
-    this.separator = config.separator();
-    this.rulesCache = buildRulesCache(config);
-    this.arrayNodeCache = new HashMap<>();
+    this.ruleCache = new PrimitiveListRuleCache(config);
+    this.arrayFactory = new PrimitiveArrayNodeFactory(objectMapper, config.separator());
+    this.arrayNodes = new HashMap<>();
+    this.buckets = new HashMap<>();
+    this.directions = new HashMap<>();
   }
 
+  private record AddContext(
+      String cacheKey,
+      Path path,
+      JsonNode value,
+      ObjectNode targetRoot,
+      MappingConfig.PrimitiveListRule rule) {}
+
   public boolean isPrimitiveListPath(final String path) {
-    return rulesCache.containsKey(path);
+    return ruleCache.isPrimitiveListPath(path);
+  }
+
+  public void finalizePrimitiveLists() {
+    final PrimitiveArrayFinalizer finalizer =
+        new PrimitiveArrayFinalizer(buckets, arrayNodes, directions);
+    finalizer.finalizeAll();
+    clearState();
   }
 
   public void addValue(
-    final String scope, final Path path, final JsonNode value, final ObjectNode targetRoot) {
+      final String scope, final Path path, final JsonNode value, final ObjectNode targetRoot) {
     if (isNullValue(value)) {
       return;
     }
-
-    final ArrayNode arrayNode = getOrCreateArrayNode(scope, path, targetRoot);
-    appendValue(arrayNode, value, path.absolutePath());
+    routeValue(scope, path, value, targetRoot);
   }
 
-  private static Map<String, MappingConfig.PrimitiveListRule> buildRulesCache(
-      final MappingConfig config) {
-    final Map<String, MappingConfig.PrimitiveListRule> cache = new HashMap<>();
-    for (final MappingConfig.PrimitiveListRule rule : config.primitiveLists()) {
-      cache.put(rule.path(), rule);
+  private void routeValue(
+      final String scope, final Path path, final JsonNode value, final ObjectNode targetRoot) {
+    final String cacheKey = buildCacheKey(scope, path.absolutePath());
+    final MappingConfig.PrimitiveListRule rule = ruleCache.getRuleFor(path.absolutePath());
+    final AddContext context = new AddContext(cacheKey, path, value, targetRoot, rule);
+
+    if (shouldInsertImmediately(rule)) {
+      addImmediately(context);
+    } else {
+      accumulateForSorting(context);
     }
-    return cache;
+  }
+
+  private boolean shouldInsertImmediately(final MappingConfig.PrimitiveListRule rule) {
+    return rule.orderDirection() == MappingConfig.OrderDirection.insertion;
+  }
+
+  private void addImmediately(final AddContext context) {
+    final ArrayNode array = getOrCreateArrayNode(context.cacheKey(), context.path(), context.targetRoot());
+    final PrimitiveArrayBucket bucket = getOrCreateBucket(context.cacheKey(), context.rule());
+
+    if (bucket.shouldAdd(context.value())) {
+      array.add(context.value());
+    }
+  }
+
+  private void accumulateForSorting(final AddContext context) {
+    getOrCreateArrayNode(context.cacheKey(), context.path(), context.targetRoot());
+    final PrimitiveArrayBucket bucket = getOrCreateBucket(context.cacheKey(), context.rule());
+    bucket.add(context.value());
+    directions.put(context.cacheKey(), context.rule().orderDirection());
+  }
+
+  private PrimitiveArrayBucket getOrCreateBucket(
+      final String cacheKey, final MappingConfig.PrimitiveListRule rule) {
+    return buckets.computeIfAbsent(cacheKey, k -> new PrimitiveArrayBucket(rule.dedup()));
+  }
+
+  private ArrayNode getOrCreateArrayNode(
+      final String cacheKey, final Path path, final ObjectNode targetRoot) {
+    return arrayNodes.computeIfAbsent(
+        cacheKey, k -> arrayFactory.createAndAttach(targetRoot, path.relativePath()));
+  }
+
+  private String buildCacheKey(final String scope, final String path) {
+    return scope + CACHE_KEY_SEPARATOR + path;
+  }
+
+  private void clearState() {
+    arrayNodes.clear();
+    buckets.clear();
+    directions.clear();
   }
 
   private boolean isNullValue(final JsonNode value) {
     return value == null || value.isNull();
-  }
-
-  private ArrayNode getOrCreateArrayNode(
-      final String scope, final Path path, final ObjectNode targetRoot) {
-    final String cacheKey = buildCacheKey(scope, path.absolutePath());
-    return arrayNodeCache.computeIfAbsent(
-        cacheKey, k -> createAndAttachArray(targetRoot, path.relativePath()));
-  }
-
-  private String buildCacheKey(final String scope, final String path) {
-    return scope + "|" + path;
-  }
-
-  private ArrayNode createAndAttachArray(final ObjectNode targetRoot, final String path) {
-    final ObjectNode parent =
-        PathOps.traverseAndEnsurePath(targetRoot, path, separator, PathOps::ensureObject);
-    final String fieldName = PathOps.getFinalSegment(path, separator);
-    final ArrayNode array = objectMapper.createArrayNode();
-    parent.set(fieldName, array);
-    return array;
-  }
-
-  private void appendValue(
-      final ArrayNode arrayNode, final JsonNode value, final String absolutePath) {
-    final MappingConfig.PrimitiveListRule rule = rulesCache.get(absolutePath);
-    if (rule.dedup() && containsValue(arrayNode, value)) {
-      return;
-    }
-    addValueToArray(arrayNode, value, rule);
-  }
-
-  private void addValueToArray(
-      final ArrayNode arrayNode, final JsonNode value, final MappingConfig.PrimitiveListRule rule) {
-    switch (rule.orderDirection()) {
-      case insertion -> arrayNode.add(value);
-      case asc -> insertSorted(arrayNode, value, new JsonNodeComparator());
-      case desc -> insertSorted(arrayNode, value, new JsonNodeComparator().reversed());
-      default -> throw new IllegalStateException("Unknown order direction: " + rule.orderDirection());
-    }
-  }
-
-  private void insertSorted(
-      final ArrayNode arrayNode, final JsonNode value, final Comparator<JsonNode> comparator) {
-    final int position = findInsertPosition(arrayNode, value, comparator);
-    arrayNode.insert(position, value);
-  }
-
-  private int findInsertPosition(
-      final ArrayNode arrayNode, final JsonNode value, final Comparator<JsonNode> comparator) {
-    int left = 0;
-    int right = arrayNode.size();
-    while (left < right) {
-      final int mid = (left + right) / 2;
-      if (comparator.compare(arrayNode.get(mid), value) < 0) {
-        left = mid + 1;
-      } else {
-        right = mid;
-      }
-    }
-    return left;
-  }
-
-  private boolean containsValue(final ArrayNode arrayNode, final JsonNode value) {
-    for (final JsonNode element : arrayNode) {
-      if (element.equals(value)) {
-        return true;
-      }
-    }
-    return false;
   }
 }

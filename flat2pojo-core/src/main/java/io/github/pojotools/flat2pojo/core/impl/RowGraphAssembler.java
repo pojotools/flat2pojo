@@ -43,6 +43,7 @@ final class RowGraphAssembler implements RowProcessor {
   @Override
   public <T> T materialize(final Class<T> type) {
     dependencies.groupingEngine().finalizeArrays(root);
+    dependencies.primitiveListManager().finalizePrimitiveLists();
     return dependencies.materializer().materialize(root, type);
   }
 
