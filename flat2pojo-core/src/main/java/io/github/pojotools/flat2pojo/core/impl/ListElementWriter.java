@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.github.pojotools.flat2pojo.core.config.MappingConfig;
 import io.github.pojotools.flat2pojo.core.engine.Path;
-import io.github.pojotools.flat2pojo.core.engine.PrimitiveListManager;
+import io.github.pojotools.flat2pojo.core.engine.PrimitiveArrayManager;
 import io.github.pojotools.flat2pojo.core.util.ConflictContext;
 import io.github.pojotools.flat2pojo.core.util.ConflictHandler;
 
@@ -14,11 +14,11 @@ import io.github.pojotools.flat2pojo.core.util.ConflictHandler;
  */
 final class ListElementWriter {
   private final ProcessingContext context;
-  private final PrimitiveListManager primitiveListManager;
+  private final PrimitiveArrayManager primitiveArrayManager;
 
-  ListElementWriter(final ProcessingContext context, final PrimitiveListManager manager) {
+  ListElementWriter(final ProcessingContext context, final PrimitiveArrayManager manager) {
     this.context = context;
-    this.primitiveListManager = manager;
+    this.primitiveArrayManager = manager;
   }
 
   void writeWithConflictPolicy(
@@ -30,7 +30,7 @@ final class ListElementWriter {
       return;
     }
 
-    if (primitiveListManager.isPrimitiveListPath(path.absolutePath())) {
+    if (primitiveArrayManager.isPrimitiveListPath(path.absolutePath())) {
       writeToPrimitiveList(target, path, value);
     } else {
       writeWithPolicy(target, path, value, policy);
@@ -42,7 +42,7 @@ final class ListElementWriter {
       final Path path,
       final JsonNode value) {
     final String scope = buildScopeKey(target);
-    primitiveListManager.addValue(scope, path, value, target);
+    primitiveArrayManager.addValue(scope, path, value, target);
   }
 
   private void writeWithPolicy(

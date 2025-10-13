@@ -1,8 +1,8 @@
 package io.github.pojotools.flat2pojo.core.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.github.pojotools.flat2pojo.core.engine.GroupingEngine;
-import io.github.pojotools.flat2pojo.core.engine.PrimitiveListManager;
+import io.github.pojotools.flat2pojo.core.engine.ArrayManager;
+import io.github.pojotools.flat2pojo.core.engine.PrimitiveArrayManager;
 import io.github.pojotools.flat2pojo.core.engine.ValueTransformer;
 import lombok.Builder;
 
@@ -12,7 +12,7 @@ import lombok.Builder;
 @Builder
 record AssemblerDependencies(
     ObjectMapper objectMapper,
-    GroupingEngine groupingEngine,
+    ArrayManager arrayManager,
     ValueTransformer valueTransformer,
-    PrimitiveListManager primitiveListManager,
+    PrimitiveArrayManager primitiveArrayManager,
     ResultMaterializer materializer) {}

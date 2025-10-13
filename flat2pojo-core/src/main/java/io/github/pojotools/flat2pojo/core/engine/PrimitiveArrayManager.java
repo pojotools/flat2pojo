@@ -16,17 +16,17 @@ import java.util.Map;
  * (asc/desc) to achieve O(P + V log V) complexity instead of O(P × V) quadratic insertion.
  * Insertion-order lists still use immediate append for optimal memory efficiency.
  */
-public final class PrimitiveListManager {
+public final class PrimitiveArrayManager {
   private static final char CACHE_KEY_SEPARATOR = '|';
 
-  private final PrimitiveListRuleCache ruleCache;
+  private final PrimitiveArrayRuleCache ruleCache;
   private final PrimitiveArrayNodeFactory arrayFactory;
   private final Map<String, ArrayNode> arrayNodes;
   private final Map<String, PrimitiveArrayBucket> buckets;
   private final Map<String, MappingConfig.OrderDirection> directions;
 
-  public PrimitiveListManager(final ObjectMapper objectMapper, final MappingConfig config) {
-    this.ruleCache = new PrimitiveListRuleCache(config);
+  public PrimitiveArrayManager(final ObjectMapper objectMapper, final MappingConfig config) {
+    this.ruleCache = new PrimitiveArrayRuleCache(config);
     this.arrayFactory = new PrimitiveArrayNodeFactory(objectMapper, config.separator());
     this.arrayNodes = new HashMap<>();
     this.buckets = new HashMap<>();
@@ -44,7 +44,7 @@ public final class PrimitiveListManager {
     return ruleCache.isPrimitiveListPath(path);
   }
 
-  public void finalizePrimitiveLists() {
+  public void finalizePrimitiveArrays() {
     final PrimitiveArrayFinalizer finalizer =
         new PrimitiveArrayFinalizer(buckets, arrayNodes, directions);
     finalizer.finalizeAll();

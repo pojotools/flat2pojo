@@ -26,7 +26,7 @@ final class RowGraphAssembler implements RowProcessor {
     this.dependencies = dependencies;
     this.root = dependencies.objectMapper().createObjectNode();
     this.context = context;
-    this.directValueWriter = new DirectValueWriter(context, dependencies.primitiveListManager());
+    this.directValueWriter = new DirectValueWriter(context, dependencies.primitiveArrayManager());
     this.listRuleProcessor = new ListRuleProcessor(dependencies, context);
     this.preprocessor = buildPreprocessor(context.config());
   }
@@ -42,8 +42,8 @@ final class RowGraphAssembler implements RowProcessor {
 
   @Override
   public <T> T materialize(final Class<T> type) {
-    dependencies.groupingEngine().finalizeArrays(root);
-    dependencies.primitiveListManager().finalizePrimitiveLists();
+    dependencies.arrayManager().finalizeArrays(root);
+    dependencies.primitiveArrayManager().finalizePrimitiveArrays();
     return dependencies.materializer().materialize(root, type);
   }
 

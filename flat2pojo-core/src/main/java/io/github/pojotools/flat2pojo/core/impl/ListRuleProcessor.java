@@ -3,7 +3,7 @@ package io.github.pojotools.flat2pojo.core.impl;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.github.pojotools.flat2pojo.core.config.MappingConfig;
-import io.github.pojotools.flat2pojo.core.engine.GroupingEngine;
+import io.github.pojotools.flat2pojo.core.engine.ArrayManager;
 import io.github.pojotools.flat2pojo.core.engine.Path;
 
 import java.util.LinkedHashMap;
@@ -13,7 +13,7 @@ import java.util.Set;
 /** Processes a single list rule for a row. Single Responsibility: List rule processing logic. */
 final class ListRuleProcessor {
   private final ProcessingContext context;
-  private final GroupingEngine groupingEngine;
+  private final ArrayManager arrayManager;
   private final ListElementWriter writer;
   private final Map<String, ObjectNode> listElementCache = new LinkedHashMap<>(); // Shared across rows
 
@@ -21,8 +21,8 @@ final class ListRuleProcessor {
       final AssemblerDependencies dependencies,
       final ProcessingContext context) {
     this.context = context;
-    this.groupingEngine = dependencies.groupingEngine();
-    this.writer = new ListElementWriter(context, dependencies.primitiveListManager());
+    this.arrayManager = dependencies.arrayManager();
+    this.writer = new ListElementWriter(context, dependencies.primitiveArrayManager());
   }
 
   void processRule(
@@ -94,7 +94,7 @@ final class ListRuleProcessor {
     final String parentListPath = context.hierarchyCache().getParentListPath(listPath);
     final ObjectNode baseObject = findBaseObject(parentListPath, root);
     final String relativePath = computeRelativePath(listPath, parentListPath);
-    return groupingEngine.upsertListElementRelative(baseObject, relativePath, rowValues, rule);
+    return arrayManager.upsertListElement(baseObject, relativePath, rowValues, rule);
   }
 
   private ObjectNode findBaseObject(final String parentListPath, final ObjectNode root) {

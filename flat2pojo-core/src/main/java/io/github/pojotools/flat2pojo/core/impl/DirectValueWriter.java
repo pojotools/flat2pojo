@@ -3,7 +3,7 @@ package io.github.pojotools.flat2pojo.core.impl;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.github.pojotools.flat2pojo.core.engine.Path;
-import io.github.pojotools.flat2pojo.core.engine.PrimitiveListManager;
+import io.github.pojotools.flat2pojo.core.engine.PrimitiveArrayManager;
 
 /**
  * Writes values directly to object nodes without conflict handling or policy checks.
@@ -13,11 +13,11 @@ import io.github.pojotools.flat2pojo.core.engine.PrimitiveListManager;
  */
 final class DirectValueWriter {
   private final ProcessingContext context;
-  private final PrimitiveListManager primitiveListManager;
+  private final PrimitiveArrayManager primitiveArrayManager;
 
-  DirectValueWriter(final ProcessingContext context, final PrimitiveListManager manager) {
+  DirectValueWriter(final ProcessingContext context, final PrimitiveArrayManager manager) {
     this.context = context;
-    this.primitiveListManager = manager;
+    this.primitiveArrayManager = manager;
   }
 
   void writeDirectly(final ObjectNode target, final Path path, final JsonNode value) {
@@ -25,7 +25,7 @@ final class DirectValueWriter {
       return;
     }
 
-    if (primitiveListManager.isPrimitiveListPath(path.absolutePath())) {
+    if (primitiveArrayManager.isPrimitiveListPath(path.absolutePath())) {
       writeToPrimitiveList(target, path, value);
     } else {
       writeToScalarField(target, path.relativePath(), value);
@@ -37,7 +37,7 @@ final class DirectValueWriter {
       final Path path,
       final JsonNode value) {
     final String scope = buildScopeKey(target);
-    primitiveListManager.addValue(scope, path, value, target);
+    primitiveArrayManager.addValue(scope, path, value, target);
   }
 
   private void writeToScalarField(

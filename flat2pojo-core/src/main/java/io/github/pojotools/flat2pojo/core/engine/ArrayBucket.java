@@ -1,13 +1,10 @@
 package io.github.pojotools.flat2pojo.core.engine;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.*;
 
 public final class ArrayBucket {
   private final Map<CompositeKey, ObjectNode> byKey = new LinkedHashMap<>();
-  private final List<ObjectNode> insertionOrder = new ArrayList<>();
   private List<ObjectNode> cachedSortedElements;
   private List<Comparator<ObjectNode>> lastComparators;
 
@@ -37,7 +34,6 @@ public final class ArrayBucket {
 
   private ObjectNode insertNew(CompositeKey key, ObjectNode candidate) {
     byKey.put(key, candidate);
-    insertionOrder.add(candidate);
     invalidateCache();
     return candidate;
   }
@@ -75,12 +71,5 @@ public final class ArrayBucket {
   private void cacheResults(List<Comparator<ObjectNode>> comparators, List<ObjectNode> elements) {
     cachedSortedElements = elements;
     lastComparators = new ArrayList<>(comparators);
-  }
-
-  public ArrayNode asArray(
-      ObjectMapper objectMapper, List<Comparator<ObjectNode>> nodeComparators) {
-    ArrayNode arrayNode = objectMapper.createArrayNode();
-    ordered(nodeComparators).forEach(arrayNode::add);
-    return arrayNode;
   }
 }

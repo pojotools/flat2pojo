@@ -8,10 +8,10 @@ import java.util.Map;
  * Caches primitive list rules for fast path lookup.
  * Single Responsibility: Rule caching and lookup.
  */
-final class PrimitiveListRuleCache {
+final class PrimitiveArrayRuleCache {
   private final Map<String, MappingConfig.PrimitiveListRule> rulesByPath;
 
-  PrimitiveListRuleCache(final MappingConfig config) {
+  PrimitiveArrayRuleCache(final MappingConfig config) {
     this.rulesByPath = buildCache(config);
   }
 
@@ -32,4 +32,3 @@ final class PrimitiveListRuleCache {
     return rulesByPath.get(path);
   }
 }
-
