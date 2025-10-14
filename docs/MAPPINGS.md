@@ -13,9 +13,9 @@ rootKeys: []                      # Keys for grouping rows (empty = single group
 lists:                            # List rules (processed in declaration order)
   - path: "definitions/modules"   # Absolute path to list
     keyPaths: ["id"]              # Relative paths for a composite key
-    orderBy:                      # Sort specifications (defaults: orderDirection=asc, nulls=last)
+    orderBy:                      # Sort specifications (defaults: direction=asc, nulls=last)
       - path: "name"              # Relative path
-        orderDirection: asc|desc
+        direction: asc|desc
         nulls: first|last
     dedupe: true                  # Enable deduplication (default: true)
     onConflict: error             # error | firstWriteWins | lastWriteWins | merge (default: error)
@@ -228,7 +228,7 @@ List rules define how flat data is grouped into lists and nested structures.
 lists:
   - path: "tasks"                    # Target path for the list
     keyPaths: ["id"]                 # Fields that uniquely identify list elements (relative)
-    orderBy: []                       # Optional sorting rules (defaults: orderDirection=asc, nulls=last)
+    orderBy: []                       # Optional sorting rules (defaults: direction=asc, nulls=last)
     dedupe: true                      # Remove duplicate elements (default: true)
     onConflict: error                 # How to handle field conflicts (default: error)
 ```
@@ -248,7 +248,7 @@ lists:
     keyPaths: ["id"]
     orderBy:
       - path: "name"
-        orderDirection: asc
+        direction: asc
 ```
 
 **Input Data:**
@@ -352,10 +352,10 @@ lists:
     keyPaths: ["id"]
     orderBy:
       - path: "priority"            # Primary sort (relative)
-        orderDirection: desc             # desc or asc (default if omitted: asc)
+        direction: desc             # desc or asc (default if omitted: asc)
         nulls: last                 # first or last (default if omitted: last)
       - path: "created"             # Secondary sort (relative)
-        orderDirection: asc
+        direction: asc
         nulls: first
 ```
 
@@ -364,7 +364,7 @@ lists:
 - Numeric values are compared numerically
 - String values are compared lexicographically
 - Null handling is configurable per field
-- Defaults when omitted: `orderDirection=asc`, `nulls=last`
+- Defaults when omitted: `direction=asc`, `nulls=last`
 
 ### Conflict Policies
 
@@ -786,22 +786,22 @@ lists:
     keyPaths: ["id"]
     orderBy:
       - path: "name"
-        orderDirection: asc
+        direction: asc
 
   - path: "organizations/departments"
     keyPaths: ["id"]
     orderBy:
       - path: "budget"
-        orderDirection: desc
+        direction: desc
         nulls: last
 
   - path: "organizations/departments/employees"
     keyPaths: ["id"]
     orderBy:
       - path: "level"
-        orderDirection: desc
+        direction: desc
       - path: "name"
-        orderDirection: asc
+        direction: asc
     onConflict: merge
 
 nullPolicy:

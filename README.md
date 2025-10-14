@@ -91,14 +91,14 @@ lists:
     keyPaths: ["id"]
     orderBy:
       - path: "priority"
-        orderDirection: desc
+        direction: desc
     onConflict: lastWriteWins
 
   - path: "tasks/comments"
     keyPaths: ["id"]
     orderBy:
       - path: "timestamp"
-        orderDirection: asc
+        direction: asc
 
 primitiveLists:
   - path: "tasks/tags"
