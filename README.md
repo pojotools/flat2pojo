@@ -70,6 +70,7 @@ public record Task(
     String title,
     String status,
     int priority,
+    List<String> tags,
     List<Comment> comments
 ) {}
 
@@ -99,6 +100,9 @@ lists:
       - path: "timestamp"
         orderDirection: asc
 
+primitiveLists:
+  - path: "tasks/tags"
+
 nullPolicy:
   blanksAsNulls: true
 ```
@@ -110,9 +114,11 @@ nullPolicy:
 List<Map<String, Object>> flatData = List.of(
     Map.of("id", "proj1", "name", "Project Alpha",
            "tasks/id", "task1", "tasks/title", "Setup", "tasks/priority", "1",
+           "tasks/tags", "backend",
            "tasks/comments/id", "c1", "tasks/comments/text", "Looks good"),
     Map.of("id", "proj1", "name", "Project Alpha",
            "tasks/id", "task1", "tasks/title", "Setup", "tasks/priority", "2",
+           "tasks/tags", "urgent",
            "tasks/comments/id", "c2", "tasks/comments/text", "Ready to deploy")
 );
 
@@ -136,6 +142,7 @@ List<ProjectRoot> projects = converter.convertAll(flatData, ProjectRoot.class, c
         "id": "task1",
         "title": "Setup",
         "priority": 2,
+        "tags": ["backend", "urgent"],
         "comments": [
           {"id": "c1", "text": "Looks good"},
           {"id": "c2", "text": "Ready to deploy"}
