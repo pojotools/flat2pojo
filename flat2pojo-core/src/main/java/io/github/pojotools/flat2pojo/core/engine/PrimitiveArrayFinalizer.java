@@ -2,12 +2,11 @@ package io.github.pojotools.flat2pojo.core.engine;
 
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import io.github.pojotools.flat2pojo.core.config.MappingConfig;
-
 import java.util.Map;
 
 /**
- * Finalizes primitive array nodes by applying sorting.
- * Single Responsibility: Primitive array finalization logic.
+ * Finalizes primitive array nodes by applying sorting. Single Responsibility: Primitive array
+ * finalization logic.
  */
 final class PrimitiveArrayFinalizer {
   private final Map<String, PrimitiveArrayBucket> buckets;
@@ -39,4 +38,3 @@ final class PrimitiveArrayFinalizer {
     return directions.getOrDefault(cacheKey, MappingConfig.OrderDirection.insertion);
   }
 }
-

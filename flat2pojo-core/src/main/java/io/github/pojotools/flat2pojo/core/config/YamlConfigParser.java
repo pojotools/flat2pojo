@@ -6,11 +6,10 @@ import io.github.pojotools.flat2pojo.core.config.MappingConfig.OrderBy;
 import io.github.pojotools.flat2pojo.core.config.MappingConfig.OrderDirection;
 import io.github.pojotools.flat2pojo.core.config.MappingConfig.PrimitiveListRule;
 import io.github.pojotools.flat2pojo.core.config.MappingConfig.PrimitiveSplitRule;
-import org.yaml.snakeyaml.Yaml;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import org.yaml.snakeyaml.Yaml;
 
 /** Parses YAML configuration into MappingConfig. Single Responsibility: YAML parsing only. */
 @SuppressWarnings("unchecked")
@@ -71,7 +70,8 @@ final class YamlConfigParser {
 
   private static void parsePrimitiveListRules(
       final Map<String, Object> root, final ImmutableMappingConfig.Builder builder) {
-    List<Map<String, Object>> primitiveLists = (List<Map<String, Object>>) root.get("primitiveLists");
+    List<Map<String, Object>> primitiveLists =
+        (List<Map<String, Object>>) root.get("primitiveLists");
     if (primitiveLists == null) {
       return;
     }
@@ -82,10 +82,12 @@ final class YamlConfigParser {
   }
 
   private static void parseSinglePrimitiveListRule(
-    final Map<String, Object> primitiveListRule, final ImmutableMappingConfig.Builder builder) {
+      final Map<String, Object> primitiveListRule, final ImmutableMappingConfig.Builder builder) {
     String path = (String) primitiveListRule.get("path");
-    String orderDirectionString = (String) primitiveListRule.getOrDefault("orderDirection", "insertion");
-    OrderDirection orderDirection = OrderDirection.valueOf(orderDirectionString.toLowerCase(java.util.Locale.ROOT));
+    String orderDirectionString =
+        (String) primitiveListRule.getOrDefault("orderDirection", "insertion");
+    OrderDirection orderDirection =
+        OrderDirection.valueOf(orderDirectionString.toLowerCase(java.util.Locale.ROOT));
     boolean dedup = !Boolean.FALSE.equals(primitiveListRule.get("dedup"));
 
     builder.addPrimitiveLists(new PrimitiveListRule(path, orderDirection, dedup));
@@ -129,7 +131,8 @@ final class YamlConfigParser {
 
   private static OrderBy parseSingleOrderBy(Map<String, Object> orderSpec) {
     String path = (String) orderSpec.get("path");
-    OrderDirection orderDirection = parseDirection((String) orderSpec.getOrDefault("direction", "asc"));
+    OrderDirection orderDirection =
+        parseDirection((String) orderSpec.getOrDefault("direction", "asc"));
     Nulls nulls = parseNulls((String) orderSpec.getOrDefault("nulls", "last"));
     return new OrderBy(path, orderDirection, nulls);
   }

@@ -9,8 +9,8 @@ import io.github.pojotools.flat2pojo.core.util.ConflictContext;
 import io.github.pojotools.flat2pojo.core.util.ConflictHandler;
 
 /**
- * Writes values into list elements with conflict policy handling.
- * Single Responsibility: Conflict-aware value writing for list elements.
+ * Writes values into list elements with conflict policy handling. Single Responsibility:
+ * Conflict-aware value writing for list elements.
  */
 final class ListElementWriter {
   private final ProcessingContext context;
@@ -38,9 +38,7 @@ final class ListElementWriter {
   }
 
   private void writeToPrimitiveList(
-      final ObjectNode target,
-      final Path path,
-      final JsonNode value) {
+      final ObjectNode target, final Path path, final JsonNode value) {
     final String scope = buildScopeKey(target);
     primitiveArrayManager.addValue(scope, path, value, target);
   }
@@ -50,7 +48,8 @@ final class ListElementWriter {
       final Path path,
       final JsonNode value,
       final MappingConfig.ConflictPolicy policy) {
-    final ObjectNode parent = context.pathResolver().traverseAndEnsurePath(target, path.relativePath());
+    final ObjectNode parent =
+        context.pathResolver().traverseAndEnsurePath(target, path.relativePath());
     final String lastSegment = context.pathResolver().getFinalSegment(path.relativePath());
     final ConflictContext conflictContext =
         new ConflictContext(policy, path.absolutePath(), context.config().reporter().orElse(null));

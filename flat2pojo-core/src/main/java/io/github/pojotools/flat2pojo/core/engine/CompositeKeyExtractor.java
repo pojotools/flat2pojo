@@ -6,8 +6,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Extracts composite keys from row values for list element deduplication.
- * Single Responsibility: Key extraction logic.
+ * Extracts composite keys from row values for list element deduplication. Single Responsibility:
+ * Key extraction logic.
  */
 final class CompositeKeyExtractor {
   private final String separator;
@@ -46,4 +46,3 @@ final class CompositeKeyExtractor {
     return value == null || value.isNull();
   }
 }
-

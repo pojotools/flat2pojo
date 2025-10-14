@@ -4,19 +4,17 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.pojotools.flat2pojo.core.api.Flat2Pojo;
 import io.github.pojotools.flat2pojo.core.config.MappingConfig;
 import io.github.pojotools.flat2pojo.core.impl.Flat2PojoCore;
-import org.openjdk.jmh.annotations.*;
-import org.openjdk.jmh.infra.Blackhole;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import org.openjdk.jmh.annotations.*;
+import org.openjdk.jmh.infra.Blackhole;
 
 /**
- * Focused benchmark testing Flat2PojoCore entry points with realistic data volumes.
- * Tests the main API methods: convertAll() and convertOptional()
- * with 2.5k, 5k, and 10k record volumes.
+ * Focused benchmark testing Flat2PojoCore entry points with realistic data volumes. Tests the main
+ * API methods: convertAll() and convertOptional() with 2.5k, 5k, and 10k record volumes.
  */
 @BenchmarkMode(Mode.Throughput)
 @OutputTimeUnit(TimeUnit.SECONDS)
@@ -48,42 +46,52 @@ public class Flat2PojoCoreBenchmark {
     converter = new Flat2PojoCore(new ObjectMapper());
 
     // Simple config: flat fields only
-    simpleConfig = MappingConfig.builder()
-        .separator("/")
-        .build();
+    simpleConfig = MappingConfig.builder().separator("/").build();
 
     // Nested list config: single level list with grouping
-    nestedListConfig = MappingConfig.builder()
-        .separator("/")
-        .rootKeys(List.of("orderId"))
-        .addLists(new MappingConfig.ListRule(
-            "items",
-            List.of("productId"),
-            List.of(new MappingConfig.OrderBy("price", MappingConfig.OrderDirection.asc, MappingConfig.Nulls.last)),
-            true,
-            MappingConfig.ConflictPolicy.error
-        ))
-        .build();
+    nestedListConfig =
+        MappingConfig.builder()
+            .separator("/")
+            .rootKeys(List.of("orderId"))
+            .addLists(
+                new MappingConfig.ListRule(
+                    "items",
+                    List.of("productId"),
+                    List.of(
+                        new MappingConfig.OrderBy(
+                            "price", MappingConfig.OrderDirection.asc, MappingConfig.Nulls.last)),
+                    true,
+                    MappingConfig.ConflictPolicy.error))
+            .build();
 
     // Complex config: nested lists with multiple levels
-    complexConfig = MappingConfig.builder()
-        .separator("/")
-        .rootKeys(List.of("customerId"))
-        .addLists(new MappingConfig.ListRule(
-            "orders",
-            List.of("orderId"),
-            List.of(new MappingConfig.OrderBy("orderDate", MappingConfig.OrderDirection.desc, MappingConfig.Nulls.last)),
-            true,
-            MappingConfig.ConflictPolicy.error
-        ))
-        .addLists(new MappingConfig.ListRule(
-            "orders/items",
-            List.of("orderId", "productId"),
-            List.of(new MappingConfig.OrderBy("quantity", MappingConfig.OrderDirection.desc, MappingConfig.Nulls.last)),
-            true,
-            MappingConfig.ConflictPolicy.lastWriteWins
-        ))
-        .build();
+    complexConfig =
+        MappingConfig.builder()
+            .separator("/")
+            .rootKeys(List.of("customerId"))
+            .addLists(
+                new MappingConfig.ListRule(
+                    "orders",
+                    List.of("orderId"),
+                    List.of(
+                        new MappingConfig.OrderBy(
+                            "orderDate",
+                            MappingConfig.OrderDirection.desc,
+                            MappingConfig.Nulls.last)),
+                    true,
+                    MappingConfig.ConflictPolicy.error))
+            .addLists(
+                new MappingConfig.ListRule(
+                    "orders/items",
+                    List.of("orderId", "productId"),
+                    List.of(
+                        new MappingConfig.OrderBy(
+                            "quantity",
+                            MappingConfig.OrderDirection.desc,
+                            MappingConfig.Nulls.last)),
+                    true,
+                    MappingConfig.ConflictPolicy.lastWriteWins))
+            .build();
 
     // Generate datasets
     simple2500 = generateSimpleDataset(2500);
@@ -162,8 +170,8 @@ public class Flat2PojoCoreBenchmark {
   // ==================== Data Generation Methods ====================
 
   /**
-   * Generates simple flat records with nested paths but no lists.
-   * Example: user/name, user/email, user/profile/age
+   * Generates simple flat records with nested paths but no lists. Example: user/name, user/email,
+   * user/profile/age
    */
   private List<Map<String, Object>> generateSimpleDataset(int recordCount) {
     List<Map<String, Object>> data = new ArrayList<>(recordCount);
@@ -184,8 +192,8 @@ public class Flat2PojoCoreBenchmark {
   }
 
   /**
-   * Generates records with a single level list requiring grouping.
-   * Simulates order with multiple items (5 items per order).
+   * Generates records with a single level list requiring grouping. Simulates order with multiple
+   * items (5 items per order).
    */
   private List<Map<String, Object>> generateNestedListDataset(int recordCount) {
     List<Map<String, Object>> data = new ArrayList<>(recordCount);
@@ -212,9 +220,9 @@ public class Flat2PojoCoreBenchmark {
   }
 
   /**
-   * Generates records with multi-level nested lists requiring complex grouping.
-   * Simulates customers with orders, each order having multiple items.
-   * Structure: customers -> orders (3 per customer) -> items (5 per order)
+   * Generates records with multi-level nested lists requiring complex grouping. Simulates customers
+   * with orders, each order having multiple items. Structure: customers -> orders (3 per customer)
+   * -> items (5 per order)
    */
   private List<Map<String, Object>> generateComplexDataset(int recordCount) {
     List<Map<String, Object>> data = new ArrayList<>(recordCount);
@@ -255,4 +263,3 @@ public class Flat2PojoCoreBenchmark {
     return data;
   }
 }
-

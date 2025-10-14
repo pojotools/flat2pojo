@@ -9,12 +9,12 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Manages primitive list arrays with optimized accumulation and finalization.
- * Single Responsibility: Coordinates primitive array lifecycle.
+ * Manages primitive list arrays with optimized accumulation and finalization. Single
+ * Responsibility: Coordinates primitive array lifecycle.
  *
- * <p>Performance optimization: Uses accumulation + sort-at-end pattern for sorted lists
- * (asc/desc) to achieve O(P + V log V) complexity instead of O(P × V) quadratic insertion.
- * Insertion-order lists still use immediate append for optimal memory efficiency.
+ * <p>Performance optimization: Uses accumulation + sort-at-end pattern for sorted lists (asc/desc)
+ * to achieve O(P + V log V) complexity instead of O(P × V) quadratic insertion. Insertion-order
+ * lists still use immediate append for optimal memory efficiency.
  */
 public final class PrimitiveArrayManager {
   private static final char CACHE_KEY_SEPARATOR = '|';
@@ -77,7 +77,8 @@ public final class PrimitiveArrayManager {
   }
 
   private void addImmediately(final AddContext context) {
-    final ArrayNode array = getOrCreateArrayNode(context.cacheKey(), context.path(), context.targetRoot());
+    final ArrayNode array =
+        getOrCreateArrayNode(context.cacheKey(), context.path(), context.targetRoot());
     final PrimitiveArrayBucket bucket = getOrCreateBucket(context.cacheKey(), context.rule());
 
     if (bucket.shouldAdd(context.value())) {

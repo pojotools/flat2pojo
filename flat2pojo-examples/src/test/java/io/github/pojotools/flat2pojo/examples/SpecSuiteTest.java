@@ -1,5 +1,7 @@
 package io.github.pojotools.flat2pojo.examples;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.pojotools.flat2pojo.core.api.Flat2Pojo;
@@ -7,14 +9,11 @@ import io.github.pojotools.flat2pojo.core.config.MappingConfig;
 import io.github.pojotools.flat2pojo.core.config.MappingConfigLoader;
 import io.github.pojotools.flat2pojo.core.config.ValidationException;
 import io.github.pojotools.flat2pojo.examples.domain.ImmutableProductRoot;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 class SpecSuiteTest {
   private ObjectMapper objectMapper;
@@ -2162,7 +2161,8 @@ class SpecSuiteTest {
             lists: []
           """);
 
-    List<Map<String, ?>> rows = List.of(Map.of("metadata/name", "Alpha", "metadata/version", "1.0"));
+    List<Map<String, ?>> rows =
+        List.of(Map.of("metadata/name", "Alpha", "metadata/version", "1.0"));
 
     var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
 
@@ -2454,10 +2454,7 @@ class SpecSuiteTest {
               - path: "weekdays"
           """);
 
-    List<Map<String, ?>> rows =
-        List.of(
-            Map.of("weekdays", "Mon"),
-            Map.of("weekdays", "Tue"));
+    List<Map<String, ?>> rows = List.of(Map.of("weekdays", "Mon"), Map.of("weekdays", "Tue"));
 
     var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
 
@@ -3084,13 +3081,11 @@ class SpecSuiteTest {
     var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
 
     PojoJsonAssert.assertPojoJsonEquals(
-        objectMapper,
-        """
+        objectMapper, """
         {
           "priorities": [3, 1, 2]
         }
-        """,
-        out);
+        """, out);
   }
 
   @Test

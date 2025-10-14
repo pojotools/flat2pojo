@@ -65,12 +65,12 @@ public final class Flat2PojoCore implements Flat2Pojo {
 
   private AssemblerDependencies buildAssemblerDependencies(final MappingConfig config) {
     return AssemblerDependencies.builder()
-      .objectMapper(objectMapper)
-      .arrayManager(new ArrayManager(objectMapper, config))
-      .valueTransformer(new ValueTransformer(objectMapper, config))
-      .primitiveArrayManager(new PrimitiveArrayManager(objectMapper, config))
-      .materializer(new ResultMaterializer(objectMapper))
-      .build();
+        .objectMapper(objectMapper)
+        .arrayManager(new ArrayManager(objectMapper, config))
+        .valueTransformer(new ValueTransformer(objectMapper, config))
+        .primitiveArrayManager(new PrimitiveArrayManager(objectMapper, config))
+        .materializer(new ResultMaterializer(objectMapper))
+        .build();
   }
 
   private <T> List<T> convertWithoutGrouping(

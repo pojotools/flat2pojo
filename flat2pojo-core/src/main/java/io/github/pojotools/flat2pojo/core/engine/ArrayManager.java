@@ -11,8 +11,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Manages list array lifecycle with grouping and sorting.
- * Single Responsibility: Coordinates array operations.
+ * Manages list array lifecycle with grouping and sorting. Single Responsibility: Coordinates array
+ * operations.
  */
 public final class ArrayManager {
   private final ObjectMapper objectMapper;
@@ -51,7 +51,8 @@ public final class ArrayManager {
 
   private ArrayBucket ensureBucket(final ArrayNode arrayNode, final MappingConfig.ListRule rule) {
     buckets.computeIfAbsent(arrayNode, k -> new ArrayBucket());
-    comparators.computeIfAbsent(arrayNode, k -> comparatorBuilder.getComparatorsForPath(rule.path()));
+    comparators.computeIfAbsent(
+        arrayNode, k -> comparatorBuilder.getComparatorsForPath(rule.path()));
     return buckets.get(arrayNode);
   }
 

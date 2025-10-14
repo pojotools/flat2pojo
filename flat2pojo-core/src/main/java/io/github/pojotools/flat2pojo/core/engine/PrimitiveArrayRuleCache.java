@@ -5,8 +5,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Caches primitive list rules for fast path lookup.
- * Single Responsibility: Rule caching and lookup.
+ * Caches primitive list rules for fast path lookup. Single Responsibility: Rule caching and lookup.
  */
 final class PrimitiveArrayRuleCache {
   private final Map<String, MappingConfig.PrimitiveListRule> rulesByPath;

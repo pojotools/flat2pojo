@@ -6,8 +6,8 @@ import io.github.pojotools.flat2pojo.core.engine.Path;
 import io.github.pojotools.flat2pojo.core.engine.PrimitiveArrayManager;
 
 /**
- * Writes values directly to object nodes without conflict handling or policy checks.
- * Used for non-list paths that don't require special conflict resolution.
+ * Writes values directly to object nodes without conflict handling or policy checks. Used for
+ * non-list paths that don't require special conflict resolution.
  *
  * <p>Single Responsibility: Direct value writing to JSON object nodes.
  */
@@ -33,17 +33,13 @@ final class DirectValueWriter {
   }
 
   private void writeToPrimitiveList(
-      final ObjectNode target,
-      final Path path,
-      final JsonNode value) {
+      final ObjectNode target, final Path path, final JsonNode value) {
     final String scope = buildScopeKey(target);
     primitiveArrayManager.addValue(scope, path, value, target);
   }
 
   private void writeToScalarField(
-      final ObjectNode target,
-      final String path,
-      final JsonNode value) {
+      final ObjectNode target, final String path, final JsonNode value) {
     final ObjectNode parent = context.pathResolver().traverseAndEnsurePath(target, path);
     final String lastSegment = context.pathResolver().getFinalSegment(path);
     parent.set(lastSegment, value);

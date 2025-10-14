@@ -6,8 +6,8 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.github.pojotools.flat2pojo.core.util.PathOps;
 
 /**
- * Creates and attaches array nodes to the object tree.
- * Single Responsibility: Array node creation and attachment.
+ * Creates and attaches array nodes to the object tree. Single Responsibility: Array node creation
+ * and attachment.
  */
 final class PrimitiveArrayNodeFactory {
   private final ObjectMapper objectMapper;
@@ -38,4 +38,3 @@ final class PrimitiveArrayNodeFactory {
     return array;
   }
 }
-

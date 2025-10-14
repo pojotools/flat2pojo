@@ -7,7 +7,8 @@ import io.github.pojotools.flat2pojo.core.engine.ValueTransformer;
 import lombok.Builder;
 
 /**
- * Bundles core dependencies for RowGraphAssembler construction. Reduces constructor parameter count.
+ * Bundles core dependencies for RowGraphAssembler construction. Reduces constructor parameter
+ * count.
  */
 @Builder
 record AssemblerDependencies(

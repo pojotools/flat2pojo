@@ -4,8 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import java.util.Comparator;
 
 /**
- * Comparator for JsonNode values with numeric and text fallback.
- * Single Responsibility: JsonNode comparison logic.
+ * Comparator for JsonNode values with numeric and text fallback. Single Responsibility: JsonNode
+ * comparison logic.
  */
 final class JsonNodeComparator implements Comparator<JsonNode> {
 

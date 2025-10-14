@@ -9,8 +9,8 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Accumulates primitive values with deduplication support.
- * Single Responsibility: Primitive value accumulation and deduplication.
+ * Accumulates primitive values with deduplication support. Single Responsibility: Primitive value
+ * accumulation and deduplication.
  */
 final class PrimitiveArrayBucket {
   private final List<JsonNode> values = new ArrayList<>();

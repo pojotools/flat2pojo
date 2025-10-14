@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.github.pojotools.flat2pojo.core.config.MappingConfig;
 import io.github.pojotools.flat2pojo.core.engine.ArrayManager;
 import io.github.pojotools.flat2pojo.core.engine.Path;
-
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
@@ -15,11 +14,10 @@ final class ListRuleProcessor {
   private final ProcessingContext context;
   private final ArrayManager arrayManager;
   private final ListElementWriter writer;
-  private final Map<String, ObjectNode> listElementCache = new LinkedHashMap<>(); // Shared across rows
+  private final Map<String, ObjectNode> listElementCache =
+      new LinkedHashMap<>(); // Shared across rows
 
-  ListRuleProcessor(
-      final AssemblerDependencies dependencies,
-      final ProcessingContext context) {
+  ListRuleProcessor(final AssemblerDependencies dependencies, final ProcessingContext context) {
     this.context = context;
     this.arrayManager = dependencies.arrayManager();
     this.writer = new ListElementWriter(context, dependencies.primitiveArrayManager());

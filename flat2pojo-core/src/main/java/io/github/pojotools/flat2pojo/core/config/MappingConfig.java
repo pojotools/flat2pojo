@@ -5,12 +5,11 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import io.github.pojotools.flat2pojo.spi.Reporter;
 import io.github.pojotools.flat2pojo.spi.ValuePreprocessor;
-import org.immutables.value.Value;
-
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import org.immutables.value.Value;
 
 /**
  * Immutable configuration for flat-to-POJO conversion.

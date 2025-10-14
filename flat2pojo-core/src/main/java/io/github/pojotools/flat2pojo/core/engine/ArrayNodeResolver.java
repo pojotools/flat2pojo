@@ -5,8 +5,8 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.github.pojotools.flat2pojo.core.util.PathOps;
 
 /**
- * Resolves and creates array nodes within the object tree.
- * Single Responsibility: Array node resolution and path traversal.
+ * Resolves and creates array nodes within the object tree. Single Responsibility: Array node
+ * resolution and path traversal.
  */
 final class ArrayNodeResolver {
   private final String separator;
