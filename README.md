@@ -41,7 +41,7 @@ Unlike manual transformation logic, flat2pojo uses a **Jackson-first** approach:
 <dependency>
     <groupId>io.github.pojotools</groupId>
     <artifactId>flat2pojo-jackson</artifactId>
-    <version>1.0.0</version>
+    <version>1.1.0</version>
 </dependency>
 ```
 
@@ -50,7 +50,7 @@ For SPI extensions (optional):
 <dependency>
     <groupId>io.github.pojotools</groupId>
     <artifactId>flat2pojo-spi</artifactId>
-    <version>1.0.0</version>
+    <version>1.1.0</version>
 </dependency>
 ```
 
