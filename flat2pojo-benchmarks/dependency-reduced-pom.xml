@@ -11,6 +11,21 @@
   <build>
     <plugins>
       <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <release>${maven.compiler.release}</release>
+          <parameters>true</parameters>
+          <compilerArgs />
+          <annotationProcessorPaths>
+            <path>
+              <groupId>org.openjdk.jmh</groupId>
+              <artifactId>jmh-generator-annprocess</artifactId>
+              <version>${jmh.version}</version>
+            </path>
+          </annotationProcessorPaths>
+        </configuration>
+      </plugin>
+      <plugin>
         <artifactId>maven-checkstyle-plugin</artifactId>
         <configuration>
           <skip>true</skip>
@@ -50,6 +65,29 @@
                   </excludes>
                 </filter>
               </filters>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>3.1.0</version>
+        <executions>
+          <execution>
+            <id>run-benchmarks</id>
+            <phase>none</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <classpathScope>compile</classpathScope>
+              <executable>java</executable>
+              <arguments>
+                <argument>-classpath</argument>
+                <classpath />
+                <argument>org.openjdk.jmh.Main</argument>
+              </arguments>
             </configuration>
           </execution>
         </executions>

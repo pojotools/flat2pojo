@@ -1,66 +1,36 @@
 # Flat2Pojo Performance Benchmarks
 
-This module contains comprehensive JMH (Java Microbenchmark Harness) benchmarks for measuring the performance of the flat2pojo library across various scenarios and workloads.
+This module contains focused JMH (Java Microbenchmark Harness) benchmarks for measuring the performance of the flat2pojo library's main entry points.
 
 ## Overview
 
 The benchmarks are designed to:
-- Measure conversion performance across different data sizes and complexities
-- Test path traversal optimization effectiveness
-- Monitor memory allocation patterns
-- Validate performance with realistic datasets
-- Prevent performance regressions
+- **Test the main `Flat2PojoCore` entry points** (`convertAll()` and `convertOptional()`)
+- **Measure performance with realistic data volumes**: 2,500, 5,000, and 10,000 records
+- **Cover common conversion scenarios**: simple flat structures, nested lists with grouping, and complex multi-level lists
+- **Prevent performance regressions** in the core conversion pipeline
 
-## Benchmark Classes
+## Benchmark Focus
 
-### 1. CoreConversionBenchmark
-Tests basic conversion operations:
-- Simple flat map conversion
-- Nested structure conversion
-- Multiple row processing
-- POJO materialization
+### Flat2PojoCoreBenchmark
+Tests the main conversion entry points with three realistic scenarios:
 
-### 2. PathTraversalBenchmark
-Measures path manipulation performance:
-- Path splitting operations
-- Path hierarchy checks
-- String manipulation optimizations
-- Comparison with baseline Java operations
+1. **Simple Flat Structure**
+   - Nested paths without lists (e.g., `user/profile/age`)
+   - Tests basic path traversal and object building
+   - Data volumes: 2.5k, 5k, 10k records
 
-### 3. GroupingEngineBenchmark
-Tests list grouping and array operations:
-- List element upserts
-- Array finalization
-- Nested list processing
-- Engine instantiation overhead
+2. **Nested List with Grouping**
+   - Single-level lists requiring grouping (orders with items)
+   - Tests list deduplication and sorting
+   - 5 items per order group
+   - Data volumes: 2.5k, 5k, 10k records
 
-### 4. MemoryAllocationBenchmark
-Monitors memory usage patterns:
-- Small, medium, and large dataset processing
-- Memory allocation profiling
-- GC impact measurement
-- Configuration caching efficiency
-
-### 5. RealisticDatasetBenchmark
-Real-world scenario testing:
-- E-commerce data processing
-- CRM system data handling
-- Analytics event processing
-- Mixed workload performance
-
-### 6. ConfigurationBenchmark
-Configuration loading and processing:
-- YAML parsing performance
-- Immutable configuration creation
-- Hierarchy validation
-- Derived field computation
-
-### 7. PerformanceRegressionBenchmark
-Comprehensive regression testing:
-- Full dataset processing
-- Complex nested structures
-- Stream processing
-- Configuration validation
+3. **Complex Multi-Level Lists**
+   - Nested lists with multiple levels (customers → orders → items)
+   - Tests hierarchical list processing and array management
+   - 3 orders per customer, 5 items per order (15 rows per customer)
+   - Data volumes: 2.5k, 5k, 10k records
 
 ## Running Benchmarks
 
@@ -76,92 +46,84 @@ java -jar flat2pojo-benchmarks/target/benchmarks.jar
 
 ### Run Specific Benchmark
 ```bash
-java -jar flat2pojo-benchmarks/target/benchmarks.jar CoreConversion
+java -jar flat2pojo-benchmarks/target/benchmarks.jar Flat2PojoCoreBenchmark
+```
+
+### Run Specific Test Pattern
+```bash
+# Run only 10k record benchmarks
+java -jar flat2pojo-benchmarks/target/benchmarks.jar ".*10000"
+
+# Run only complex scenario benchmarks
+java -jar flat2pojo-benchmarks/target/benchmarks.jar ".*Complex.*"
+
+# Run only simple scenarios at all volumes
+java -jar flat2pojo-benchmarks/target/benchmarks.jar ".*Simple.*"
 ```
 
 ### Run with Custom Parameters
 ```bash
 java -jar flat2pojo-benchmarks/target/benchmarks.jar \
-  -f 3 \
-  -wi 5 \
-  -i 10 \
-  -t 2 \
-  -prof gc
+  -f 2 \
+  -wi 3 \
+  -i 5 \
+  -t 2
 ```
 
 ### Memory Profiling
 ```bash
 java -jar flat2pojo-benchmarks/target/benchmarks.jar \
-  MemoryAllocation \
+  Flat2PojoCoreBenchmark \
   -prof gc \
   -prof stack
 ```
 
 ## Benchmark Parameters
 
-- **Fork (-f)**: Number of JVM forks (default: 1-2)
-- **Warmup Iterations (-wi)**: JVM warmup rounds (default: 2-5)
-- **Measurement Iterations (-i)**: Actual measurement rounds (default: 3-10)
-- **Threads (-t)**: Number of benchmark threads (default: 1)
-- **Profilers (-prof)**: gc, stack, async, etc.
+- **Mode**: Throughput (operations per second)
+- **Warmup**: 3 iterations, 2 seconds each
+- **Measurement**: 5 iterations, 3 seconds each
+- **Forks**: 1 JVM fork with 1 warmup fork
+- **Output**: Operations per second
 
-## Expected Performance Characteristics
+## Expected Results
 
-### Core Conversion
-- Simple maps: < 1µs per conversion
-- Nested structures: < 5µs per conversion
-- Batch processing: > 10,000 ops/sec
+Performance targets (ops/sec on modern hardware):
+- **Simple 10k**: > 50 ops/sec
+- **NestedList 10k**: > 30 ops/sec
+- **Complex 10k**: > 20 ops/sec
 
-### Path Operations
-- Path splitting: < 100ns for typical paths
-- Hierarchy checks: < 50ns
-- 10x faster than String.split() for deep paths
+Lower volumes (2.5k, 5k) should scale proportionally.
 
-### Memory Usage
-- Linear scaling with data size
-- Minimal GC pressure for typical workloads
-- Configuration caching reduces allocation overhead
+## Interpreting Results
 
-### Realistic Workloads
-- E-commerce: > 1,000 orders/sec
-- CRM: > 500 complex records/sec
-- Analytics: > 5,000 events/sec
+The benchmark output shows:
+1. **Throughput**: How many conversions per second
+2. **Score**: Average operations per second
+3. **Error margin**: Statistical confidence interval
+4. **Units**: ops/s (operations per second)
 
-## Continuous Performance Monitoring
-
-Integrate these benchmarks into your CI/CD pipeline:
-
-```bash
-# Run core performance regression test
-java -jar flat2pojo-benchmarks/target/benchmarks.jar \
-  PerformanceRegression.regressionSubsetProcessing \
-  -f 1 -wi 2 -i 3 \
-  -rf json \
-  -rff results.json
-
-# Compare with baseline (implement in CI)
-# Fail build if performance degrades > 20%
+Example output:
+```
+Benchmark                                    Mode  Cnt   Score   Error  Units
+Flat2PojoCoreBenchmark.convertAll_Simple_2500  thrpt    5  120.5 ± 3.2  ops/s
+Flat2PojoCoreBenchmark.convertAll_Simple_5000  thrpt    5   65.3 ± 2.1  ops/s
+Flat2PojoCoreBenchmark.convertAll_Simple_10000 thrpt    5   35.7 ± 1.5  ops/s
 ```
 
-## Profiling Tips
+## Continuous Integration
 
-1. **Memory Analysis**: Use `-prof gc` to monitor garbage collection
-2. **Hotspot Analysis**: Use `-prof stack` to identify bottlenecks
-3. **Allocation Profiling**: Use `-prof async:output=flamegraph`
-4. **JIT Analysis**: Use `-jvmArgs -XX:+PrintCompilation`
+Benchmarks should be run:
+- Before major releases
+- After significant performance-related changes
+- To validate optimizations
+- To catch performance regressions
 
-## Benchmark Results Interpretation
+Store baseline results for comparison across versions.
 
-- **Lower is better**: AverageTime, SampleTime modes
-- **Higher is better**: Throughput mode
-- **Watch for**: High variance, GC impact, memory leaks
-- **Compare**: Before/after changes, different configurations
+## Notes
 
-## Contributing
-
-When adding new benchmarks:
-1. Follow existing naming conventions
-2. Include appropriate @Benchmark annotations
-3. Use Blackhole.consume() for results
-4. Add realistic test data
-5. Document expected performance characteristics
+- Benchmarks run in throughput mode to measure sustained performance
+- Each test uses pre-generated datasets to avoid measurement bias
+- GC profiling can be enabled to understand memory pressure
+- Results may vary based on hardware and JVM settings
