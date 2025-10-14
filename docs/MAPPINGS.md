@@ -28,7 +28,8 @@ primitives:                       # String-to-array split rules
 
 primitiveLists:                   # Aggregate primitive values across rows into arrays
   - path: "schedule/weekdays"     # Absolute path
-    mode: collect                 # Aggregation mode (default: collect)
+    orderDirection: insertion     # insertion | asc | desc (default: insertion)
+    dedup: true                   # Remove duplicates (default: true)
 
 nullPolicy:
   blanksAsNulls: false            # Treat blank strings as null (default: false when omitted)
@@ -451,9 +452,11 @@ Aggregate primitive values across multiple rows into arrays on a single output o
 ```yaml
 primitiveLists:
   - path: "definitions/schedule/weekdays"
-    mode: "collect"
+    orderDirection: insertion   # insertion | asc | desc (default: insertion)
+    dedup: true                 # Remove duplicates (default: true)
   - path: "definitions/tags"
-    mode: "collect"
+    orderDirection: asc
+    dedup: false
 ```
 
 **Input (multiple rows):**
@@ -477,10 +480,16 @@ Row 3: definitions/id/identifier=D-1, definitions/schedule/weekdays=Wed
 }
 ```
 
-### Aggregation Modes
+### Configuration Options
 
-Currently supported mode:
-- `collect`: Accumulates all values from multiple rows into an array in the order encountered
+- **path** (required): Absolute path to the field to aggregate
+- **orderDirection** (optional, default: `insertion`): How to order the collected values
+  - `insertion`: Maintain the order values are encountered (first-seen, first-in-array)
+  - `asc`: Sort values in ascending order (alphabetically for strings, numerically for numbers)
+  - `desc`: Sort values in descending order
+- **dedup** (optional, default: `true`): Whether to remove duplicate values
+  - `true`: Only unique values are included in the array
+  - `false`: All values are included, even duplicates
 
 ### Scoping Behavior
 
@@ -490,7 +499,6 @@ Primitive aggregation is **scope-aware**, meaning it respects the hierarchical s
 ```yaml
 primitiveLists:
   - path: "weekdays"
-    mode: "collect"
 ```
 
 All rows contribute to a single array at the root level:
@@ -506,7 +514,6 @@ lists:
     keyPaths: ["id/identifier"]
 primitiveLists:
   - path: "definitions/schedule/weekdays"
-    mode: "collect"
 ```
 
 Each list element gets its own aggregated array:
@@ -530,9 +537,10 @@ Aggregate multiple fields independently within the same object:
 ```yaml
 primitiveLists:
   - path: "definitions/schedule/weekdays"
-    mode: "collect"
+    orderDirection: insertion
   - path: "definitions/tags"
-    mode: "collect"
+    orderDirection: asc  # Sort tags alphabetically
+    dedup: true          # Remove duplicate tags
 ```
 
 **Input:**
@@ -551,11 +559,13 @@ Row 3: definitions/id/identifier=D-1, definitions/schedule/weekdays=Wed, definit
       "schedule": {
         "weekdays": ["Mon", "Tue", "Wed"]
       },
-      "tags": ["urgent", "backend", "critical"]
+      "tags": ["backend", "critical", "urgent"]
     }
   ]
 }
 ```
+
+Note: `weekdays` are in insertion order, while `tags` are sorted alphabetically (asc).
 
 ### Mixing Aggregation with Regular Fields
 
@@ -569,7 +579,6 @@ lists:
     onConflict: "merge"
 primitiveLists:
   - path: "definitions/schedule/weekdays"
-    mode: "collect"
 ```
 
 **Input:**
@@ -605,7 +614,7 @@ Row 3: definitions/id/identifier=D-1, definitions/audit/modifiedBy=alice, defini
 | **Purpose** | Split a single delimited string into array | Collect values from multiple rows into array |
 | **Input** | Single row with delimited string | Multiple rows with individual values |
 | **Use Case** | CSV-style fields: `"tag1,tag2,tag3"` | Database JOINs producing multiple rows |
-| **Configuration** | `primitives` + `split` | `primitiveLists` + `mode` |
+| **Configuration** | `primitives` + `split` | `primitiveLists` with `orderDirection` and `dedup` |
 
 **Example showing the difference:**
 
@@ -624,7 +633,6 @@ Output: {definitions: [{id: {identifier: "D-1"}, tags: ["java", "spring", "boot"
 ```yaml
 primitiveLists:
   - path: "definitions/tags"
-    mode: "collect"
 ```
 ```
 Input:
@@ -652,7 +660,7 @@ Aggregating events or log entries over time:
 ```yaml
 primitiveLists:
   - path: "events/timestamps"
-    mode: "collect"
+    orderDirection: asc  # Chronological order
 ```
 
 **3. Many-to-Many Relationships**
@@ -661,9 +669,11 @@ Collecting related entities across multiple rows:
 ```yaml
 primitiveLists:
   - path: "products/categories"
-    mode: "collect"
+    orderDirection: asc
+    dedup: true          # Remove duplicate categories
   - path: "products/tags"
-    mode: "collect"
+    orderDirection: asc
+    dedup: true
 ```
 
 **4. Cartesian Product Flattening**
@@ -675,7 +685,7 @@ lists:
     keyPaths: ["id"]
 primitiveLists:
   - path: "projects/contributors"
-    mode: "collect"
+    dedup: true          # Remove duplicate contributor names
 ```
 
 ## Null Policy

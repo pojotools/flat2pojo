@@ -2637,7 +2637,6 @@ class SpecSuiteTest {
                 onConflict: "merge"
             primitiveLists:
               - path: "definitions/schedule/weekdays"
-                mode: "collect"
           """);
 
     List<Map<String, ?>> rows =
@@ -2696,11 +2695,8 @@ class SpecSuiteTest {
                 keyPaths: ["id"]
             primitiveLists:
               - path: "products/tags"
-                mode: "collect"
               - path: "products/colors"
-                mode: "collect"
               - path: "products/sizes"
-                mode: "collect"
           """);
 
     List<Map<String, ?>> rows =
@@ -2943,7 +2939,6 @@ class SpecSuiteTest {
                 keyPaths: ["id"]
             primitiveLists:
               - path: "tasks/tags"
-                mode: "collect"
                 dedup: true
           """);
 
