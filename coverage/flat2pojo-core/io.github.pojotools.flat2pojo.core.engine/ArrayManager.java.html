@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>ArrayManager.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">flat2pojo-coverage</a> &gt; <a href="../index.html" class="el_bundle">flat2pojo-core</a> &gt; <a href="index.source.html" class="el_package">io.github.pojotools.flat2pojo.core.engine</a> &gt; <span class="el_source">ArrayManager.java</span></div><h1>ArrayManager.java</h1><pre class="source lang-java linenums">package io.github.pojotools.flat2pojo.core.engine;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.github.pojotools.flat2pojo.core.config.MappingConfig;
+import java.util.Comparator;
+import java.util.IdentityHashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Manages list array lifecycle with grouping and sorting. Single Responsibility: Coordinates array
+ * operations.
+ */
+public final class ArrayManager {
+  private final ObjectMapper objectMapper;
+  private final ArrayNodeResolver arrayResolver;
+  private final CompositeKeyExtractor keyExtractor;
+  private final ComparatorBuilder comparatorBuilder;
+  private final IdentityHashMap&lt;ArrayNode, ArrayBucket&gt; buckets;
+  private final IdentityHashMap&lt;ArrayNode, List&lt;Comparator&lt;ObjectNode&gt;&gt;&gt; comparators;
+
+<span class="fc" id="L25">  public ArrayManager(final ObjectMapper objectMapper, final MappingConfig config) {</span>
+<span class="fc" id="L26">    this.objectMapper = objectMapper;</span>
+<span class="fc" id="L27">    this.arrayResolver = new ArrayNodeResolver(config.separator());</span>
+<span class="fc" id="L28">    this.keyExtractor = new CompositeKeyExtractor(config.separator());</span>
+<span class="fc" id="L29">    this.comparatorBuilder = new ComparatorBuilder(config.separator());</span>
+<span class="fc" id="L30">    this.buckets = new IdentityHashMap&lt;&gt;();</span>
+<span class="fc" id="L31">    this.comparators = new IdentityHashMap&lt;&gt;();</span>
+<span class="fc" id="L32">    comparatorBuilder.precomputeComparators(config);</span>
+<span class="fc" id="L33">  }</span>
+
+  public ObjectNode upsertListElement(
+      final ObjectNode base,
+      final String relativeListPath,
+      final Map&lt;String, JsonNode&gt; rowValues,
+      final MappingConfig.ListRule rule) {
+<span class="fc" id="L40">    final ArrayNode arrayNode = arrayResolver.resolveArrayNode(base, relativeListPath);</span>
+<span class="fc" id="L41">    final ArrayBucket bucket = ensureBucket(arrayNode, rule);</span>
+<span class="fc" id="L42">    final CompositeKey key = keyExtractor.extractFrom(rowValues, rule);</span>
+<span class="fc" id="L43">    return upsertElement(bucket, key);</span>
+  }
+
+  public void finalizeArrays(final ObjectNode root) {
+<span class="fc" id="L47">    final ArrayFinalizer finalizer = new ArrayFinalizer(buckets, comparators);</span>
+<span class="fc" id="L48">    finalizer.finalizeArrays(root);</span>
+<span class="fc" id="L49">    clearState();</span>
+<span class="fc" id="L50">  }</span>
+
+  private ArrayBucket ensureBucket(final ArrayNode arrayNode, final MappingConfig.ListRule rule) {
+<span class="fc" id="L53">    buckets.computeIfAbsent(arrayNode, k -&gt; new ArrayBucket());</span>
+<span class="fc" id="L54">    comparators.computeIfAbsent(</span>
+<span class="fc" id="L55">        arrayNode, k -&gt; comparatorBuilder.getComparatorsForPath(rule.path()));</span>
+<span class="fc" id="L56">    return buckets.get(arrayNode);</span>
+  }
+
+  private ObjectNode upsertElement(final ArrayBucket bucket, final CompositeKey key) {
+<span class="fc bfc" id="L60" title="All 2 branches covered.">    return key == null ? null : bucket.upsert(key, objectMapper.createObjectNode());</span>
+  }
+
+  private void clearState() {
+<span class="fc" id="L64">    buckets.clear();</span>
+<span class="fc" id="L65">    comparators.clear();</span>
+<span class="fc" id="L66">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

@@ -3,46 +3,61 @@
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.github.pojotools.flat2pojo.core.config.MappingConfig;
+import io.github.pojotools.flat2pojo.core.engine.Path;
+import io.github.pojotools.flat2pojo.core.engine.PrimitiveArrayManager;
 import io.github.pojotools.flat2pojo.core.util.ConflictContext;
 import io.github.pojotools.flat2pojo.core.util.ConflictHandler;
 
 /**
- * Writes values into list elements with appropriate conflict handling. Single Responsibility: Value
- * writing logic only.
+ * Writes values into list elements with conflict policy handling. Single Responsibility:
+ * Conflict-aware value writing for list elements.
  */
 final class ListElementWriter {
   private final ProcessingContext context;
+  private final PrimitiveArrayManager primitiveArrayManager;
 
-<span class="fc" id="L16">  ListElementWriter(final ProcessingContext context) {</span>
-<span class="fc" id="L17">    this.context = context;</span>
-<span class="fc" id="L18">  }</span>
+<span class="fc" id="L19">  ListElementWriter(final ProcessingContext context, final PrimitiveArrayManager manager) {</span>
+<span class="fc" id="L20">    this.context = context;</span>
+<span class="fc" id="L21">    this.primitiveArrayManager = manager;</span>
+<span class="fc" id="L22">  }</span>
 
   void writeWithConflictPolicy(
       final ObjectNode target,
-      final String path,
+      final Path path,
       final JsonNode value,
-      final MappingConfig.ConflictPolicy policy,
-      final String absolutePath) {
-<span class="pc bpc" id="L26" title="1 of 2 branches missed.">    if (path.isEmpty()) {</span>
-<span class="nc" id="L27">      return;</span>
+      final MappingConfig.ConflictPolicy policy) {
+<span class="pc bpc" id="L29" title="1 of 2 branches missed.">    if (path.relativePath().isEmpty()) {</span>
+<span class="nc" id="L30">      return;</span>
     }
 
-<span class="fc" id="L30">    final ObjectNode parent = context.pathResolver().traverseAndEnsurePath(target, path);</span>
-<span class="fc" id="L31">    final String lastSegment = context.pathResolver().getFinalSegment(path);</span>
-<span class="fc" id="L32">    final ConflictContext conflictContext =</span>
-<span class="fc" id="L33">        new ConflictContext(policy, absolutePath, context.config().reporter().orElse(null));</span>
-
-<span class="fc" id="L35">    ConflictHandler.writeScalarWithPolicy(parent, lastSegment, value, conflictContext);</span>
-<span class="fc" id="L36">  }</span>
-
-  void writeDirectly(final ObjectNode target, final String path, final JsonNode value) {
-<span class="pc bpc" id="L39" title="1 of 2 branches missed.">    if (path.isEmpty()) {</span>
-<span class="nc" id="L40">      return;</span>
+<span class="fc bfc" id="L33" title="All 2 branches covered.">    if (primitiveArrayManager.isPrimitiveListPath(path.absolutePath())) {</span>
+<span class="fc" id="L34">      writeToPrimitiveList(target, path, value);</span>
+    } else {
+<span class="fc" id="L36">      writeWithPolicy(target, path, value, policy);</span>
     }
+<span class="fc" id="L38">  }</span>
 
-<span class="fc" id="L43">    final ObjectNode parent = context.pathResolver().traverseAndEnsurePath(target, path);</span>
-<span class="fc" id="L44">    final String lastSegment = context.pathResolver().getFinalSegment(path);</span>
-<span class="fc" id="L45">    parent.set(lastSegment, value);</span>
-<span class="fc" id="L46">  }</span>
+  private void writeToPrimitiveList(
+      final ObjectNode target, final Path path, final JsonNode value) {
+<span class="fc" id="L42">    final String scope = buildScopeKey(target);</span>
+<span class="fc" id="L43">    primitiveArrayManager.addValue(scope, path, value, target);</span>
+<span class="fc" id="L44">  }</span>
+
+  private void writeWithPolicy(
+      final ObjectNode target,
+      final Path path,
+      final JsonNode value,
+      final MappingConfig.ConflictPolicy policy) {
+<span class="fc" id="L51">    final ObjectNode parent =</span>
+<span class="fc" id="L52">        context.pathResolver().traverseAndEnsurePath(target, path.relativePath());</span>
+<span class="fc" id="L53">    final String lastSegment = context.pathResolver().getFinalSegment(path.relativePath());</span>
+<span class="fc" id="L54">    final ConflictContext conflictContext =</span>
+<span class="fc" id="L55">        new ConflictContext(policy, path.absolutePath(), context.config().reporter().orElse(null));</span>
+<span class="fc" id="L56">    ConflictHandler.writeScalarWithPolicy(parent, lastSegment, value, conflictContext);</span>
+<span class="fc" id="L57">  }</span>
+
+  private String buildScopeKey(final ObjectNode target) {
+<span class="fc" id="L60">    return String.valueOf(System.identityHashCode(target));</span>
+  }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

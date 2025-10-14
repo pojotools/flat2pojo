@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>ArrayNodeResolver.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">flat2pojo-coverage</a> &gt; <a href="../index.html" class="el_bundle">flat2pojo-core</a> &gt; <a href="index.source.html" class="el_package">io.github.pojotools.flat2pojo.core.engine</a> &gt; <span class="el_source">ArrayNodeResolver.java</span></div><h1>ArrayNodeResolver.java</h1><pre class="source lang-java linenums">package io.github.pojotools.flat2pojo.core.engine;
+
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.github.pojotools.flat2pojo.core.util.PathOps;
+
+/**
+ * Resolves and creates array nodes within the object tree. Single Responsibility: Array node
+ * resolution and path traversal.
+ */
+final class ArrayNodeResolver {
+  private final String separator;
+
+<span class="fc" id="L14">  ArrayNodeResolver(final String separator) {</span>
+<span class="fc" id="L15">    this.separator = separator;</span>
+<span class="fc" id="L16">  }</span>
+
+  ArrayNode resolveArrayNode(final ObjectNode base, final String relativeListPath) {
+<span class="fc" id="L19">    final ObjectNode parentNode = traverseToParent(base, relativeListPath);</span>
+<span class="fc" id="L20">    final String arrayField = extractArrayFieldName(relativeListPath);</span>
+<span class="fc" id="L21">    return parentNode.withArray(arrayField);</span>
+  }
+
+  private ObjectNode traverseToParent(final ObjectNode base, final String relativeListPath) {
+<span class="fc" id="L25">    return PathOps.traverseAndEnsurePath(base, relativeListPath, separator, PathOps::ensureObject);</span>
+  }
+
+  private String extractArrayFieldName(final String relativeListPath) {
+<span class="fc" id="L29">    return PathOps.getFinalSegment(relativeListPath, separator);</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

@@ -3,48 +3,48 @@
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.github.pojotools.flat2pojo.core.config.MappingConfig;
-import io.github.pojotools.flat2pojo.core.engine.GroupingEngine;
+import io.github.pojotools.flat2pojo.core.engine.ArrayManager;
+import io.github.pojotools.flat2pojo.core.engine.Path;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
 /** Processes a single list rule for a row. Single Responsibility: List rule processing logic. */
 final class ListRuleProcessor {
   private final ProcessingContext context;
-  private final GroupingEngine groupingEngine;
+  private final ArrayManager arrayManager;
   private final ListElementWriter writer;
-  private final Map&lt;String, ObjectNode&gt; listElementCache; // Shared across rows
+<span class="fc" id="L17">  private final Map&lt;String, ObjectNode&gt; listElementCache =</span>
+      new LinkedHashMap&lt;&gt;(); // Shared across rows
 
-  ListRuleProcessor(
-      final GroupingEngine groupingEngine,
-      final ProcessingContext context,
-<span class="fc" id="L20">      final Map&lt;String, ObjectNode&gt; listElementCache) {</span>
+<span class="fc" id="L20">  ListRuleProcessor(final AssemblerDependencies dependencies, final ProcessingContext context) {</span>
 <span class="fc" id="L21">    this.context = context;</span>
-<span class="fc" id="L22">    this.groupingEngine = groupingEngine;</span>
-<span class="fc" id="L23">    this.writer = new ListElementWriter(context);</span>
-<span class="fc" id="L24">    this.listElementCache = listElementCache;</span>
-<span class="fc" id="L25">  }</span>
+<span class="fc" id="L22">    this.arrayManager = dependencies.arrayManager();</span>
+<span class="fc" id="L23">    this.writer = new ListElementWriter(context, dependencies.primitiveArrayManager());</span>
+<span class="fc" id="L24">  }</span>
 
   void processRule(
       final Map&lt;String, JsonNode&gt; rowValues,
       final Set&lt;String&gt; skippedListPaths,
       final MappingConfig.ListRule rule,
       final ObjectNode root) {
-<span class="fc bfc" id="L32" title="All 2 branches covered.">    if (shouldSkipDueToParent(rule.path(), skippedListPaths)) {</span>
-<span class="fc" id="L33">      return;</span>
+<span class="fc bfc" id="L31" title="All 2 branches covered.">    if (shouldSkipDueToParent(rule.path(), skippedListPaths)) {</span>
+<span class="fc" id="L32">      return;</span>
     }
-<span class="fc" id="L35">    processListElementCreation(rowValues, skippedListPaths, rule, root);</span>
-<span class="fc" id="L36">  }</span>
+<span class="fc" id="L34">    processListElementCreation(rowValues, skippedListPaths, rule, root);</span>
+<span class="fc" id="L35">  }</span>
 
   private void processListElementCreation(
       final Map&lt;String, JsonNode&gt; rowValues,
       final Set&lt;String&gt; skippedListPaths,
       final MappingConfig.ListRule rule,
       final ObjectNode root) {
-<span class="fc" id="L43">    final ObjectNode listElement = createListElement(rowValues, rule, root);</span>
-<span class="fc bfc" id="L44" title="All 2 branches covered.">    if (listElement == null) {</span>
-<span class="fc" id="L45">      markAsSkipped(skippedListPaths, rule);</span>
+<span class="fc" id="L42">    final ObjectNode listElement = createListElement(rowValues, rule, root);</span>
+<span class="fc bfc" id="L43" title="All 2 branches covered.">    if (listElement == null) {</span>
+<span class="fc" id="L44">      markAsSkipped(skippedListPaths, rule);</span>
     } else {
-<span class="fc" id="L47">      cacheAndPopulate(rowValues, listElement, rule);</span>
+<span class="fc" id="L46">      listElementCache.put(rule.path(), listElement);</span>
+<span class="fc" id="L47">      copyValuesToElement(rowValues, listElement, rule);</span>
     }
 <span class="fc" id="L49">  }</span>
 
@@ -92,7 +92,7 @@ final class ListRuleProcessor {
 <span class="fc" id="L92">    final String parentListPath = context.hierarchyCache().getParentListPath(listPath);</span>
 <span class="fc" id="L93">    final ObjectNode baseObject = findBaseObject(parentListPath, root);</span>
 <span class="fc" id="L94">    final String relativePath = computeRelativePath(listPath, parentListPath);</span>
-<span class="fc" id="L95">    return groupingEngine.upsertListElementRelative(baseObject, relativePath, rowValues, rule);</span>
+<span class="fc" id="L95">    return arrayManager.upsertListElement(baseObject, relativePath, rowValues, rule);</span>
   }
 
   private ObjectNode findBaseObject(final String parentListPath, final ObjectNode root) {
@@ -114,39 +114,33 @@ final class ListRuleProcessor {
 <span class="fc bfc" id="L114" title="All 2 branches covered.">    return parentListPath == null ? root : listElementCache.get(parentListPath);</span>
   }
 
-  private void cacheAndPopulate(
-      final Map&lt;String, JsonNode&gt; rowValues,
-      final ObjectNode listElement,
-      final MappingConfig.ListRule rule) {
-<span class="fc" id="L121">    listElementCache.put(rule.path(), listElement);</span>
-<span class="fc" id="L122">    copyValuesToElement(rowValues, listElement, rule);</span>
-<span class="fc" id="L123">  }</span>
-
   private void copyValuesToElement(
       final Map&lt;String, JsonNode&gt; rowValues,
       final ObjectNode element,
       final MappingConfig.ListRule rule) {
-<span class="fc" id="L129">    final WriteContext writeContext =</span>
-<span class="fc" id="L130">        new WriteContext(rule, context.pathResolver().buildPrefix(rule.path()));</span>
-<span class="fc bfc" id="L131" title="All 2 branches covered.">    for (final var entry : rowValues.entrySet()) {</span>
-<span class="fc bfc" id="L132" title="All 2 branches covered.">      if (entry.getKey().startsWith(writeContext.pathPrefix())) {</span>
-<span class="fc" id="L133">        writeValueIfNotUnderChild(element, entry, writeContext);</span>
+<span class="fc" id="L121">    final WriteContext writeContext =</span>
+<span class="fc" id="L122">        new WriteContext(rule, context.pathResolver().buildPrefix(rule.path()));</span>
+<span class="fc bfc" id="L123" title="All 2 branches covered.">    for (final var entry : rowValues.entrySet()) {</span>
+<span class="fc bfc" id="L124" title="All 2 branches covered.">      if (entry.getKey().startsWith(writeContext.pathPrefix())) {</span>
+<span class="fc" id="L125">        writeValueIfNotUnderChild(element, entry, writeContext);</span>
       }
-<span class="fc" id="L135">    }</span>
-<span class="fc" id="L136">  }</span>
+<span class="fc" id="L127">    }</span>
+<span class="fc" id="L128">  }</span>
 
   private void writeValueIfNotUnderChild(
       final ObjectNode element,
       final Map.Entry&lt;String, JsonNode&gt; entry,
       final WriteContext writeContext) {
-<span class="fc" id="L142">    final String suffix =</span>
-<span class="fc" id="L143">        context.pathResolver().stripPrefix(entry.getKey(), writeContext.pathPrefix());</span>
-<span class="fc bfc" id="L144" title="All 2 branches covered.">    if (!context.hierarchyCache().isUnderAnyChildList(suffix, writeContext.rule().path())) {</span>
-<span class="fc" id="L145">      writer.writeWithConflictPolicy(</span>
-<span class="fc" id="L146">          element, suffix, entry.getValue(), writeContext.rule().onConflict(), entry.getKey());</span>
+<span class="fc" id="L134">    final String relativePath =</span>
+<span class="fc" id="L135">        context.pathResolver().stripPrefix(entry.getKey(), writeContext.pathPrefix());</span>
+<span class="fc bfc" id="L136" title="All 2 branches covered.">    if (!context.hierarchyCache().isUnderAnyChildList(relativePath, writeContext.rule().path())) {</span>
+<span class="fc" id="L137">      final String absolutePath = entry.getKey();</span>
+<span class="fc" id="L138">      final Path path = new Path(relativePath, absolutePath);</span>
+<span class="fc" id="L139">      writer.writeWithConflictPolicy(</span>
+<span class="fc" id="L140">          element, path, entry.getValue(), writeContext.rule().onConflict());</span>
     }
-<span class="fc" id="L148">  }</span>
+<span class="fc" id="L142">  }</span>
 
-<span class="fc" id="L150">  private record WriteContext(MappingConfig.ListRule rule, String pathPrefix) {}</span>
+<span class="fc" id="L144">  private record WriteContext(MappingConfig.ListRule rule, String pathPrefix) {}</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

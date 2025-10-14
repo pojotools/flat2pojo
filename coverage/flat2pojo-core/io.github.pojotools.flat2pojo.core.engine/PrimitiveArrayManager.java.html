@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>PrimitiveArrayManager.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">flat2pojo-coverage</a> &gt; <a href="../index.html" class="el_bundle">flat2pojo-core</a> &gt; <a href="index.source.html" class="el_package">io.github.pojotools.flat2pojo.core.engine</a> &gt; <span class="el_source">PrimitiveArrayManager.java</span></div><h1>PrimitiveArrayManager.java</h1><pre class="source lang-java linenums">package io.github.pojotools.flat2pojo.core.engine;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.github.pojotools.flat2pojo.core.config.MappingConfig;
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * Manages primitive list arrays with optimized accumulation and finalization. Single
+ * Responsibility: Coordinates primitive array lifecycle.
+ *
+ * &lt;p&gt;Performance optimization: Uses accumulation + sort-at-end pattern for sorted lists (asc/desc)
+ * to achieve O(P + V log V) complexity instead of O(P × V) quadratic insertion. Insertion-order
+ * lists still use immediate append for optimal memory efficiency.
+ */
+public final class PrimitiveArrayManager {
+  private static final char CACHE_KEY_SEPARATOR = '|';
+
+  private final PrimitiveArrayRuleCache ruleCache;
+  private final PrimitiveArrayNodeFactory arrayFactory;
+  private final Map&lt;String, ArrayNode&gt; arrayNodes;
+  private final Map&lt;String, PrimitiveArrayBucket&gt; buckets;
+  private final Map&lt;String, MappingConfig.OrderDirection&gt; directions;
+
+<span class="fc" id="L28">  public PrimitiveArrayManager(final ObjectMapper objectMapper, final MappingConfig config) {</span>
+<span class="fc" id="L29">    this.ruleCache = new PrimitiveArrayRuleCache(config);</span>
+<span class="fc" id="L30">    this.arrayFactory = new PrimitiveArrayNodeFactory(objectMapper, config.separator());</span>
+<span class="fc" id="L31">    this.arrayNodes = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L32">    this.buckets = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L33">    this.directions = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L34">  }</span>
+
+<span class="fc" id="L36">  private record AddContext(</span>
+      String cacheKey,
+      Path path,
+      JsonNode value,
+      ObjectNode targetRoot,
+      MappingConfig.PrimitiveListRule rule) {}
+
+  public boolean isPrimitiveListPath(final String path) {
+<span class="fc" id="L44">    return ruleCache.isPrimitiveListPath(path);</span>
+  }
+
+  public void finalizePrimitiveArrays() {
+<span class="fc" id="L48">    final PrimitiveArrayFinalizer finalizer =</span>
+        new PrimitiveArrayFinalizer(buckets, arrayNodes, directions);
+<span class="fc" id="L50">    finalizer.finalizeAll();</span>
+<span class="fc" id="L51">    clearState();</span>
+<span class="fc" id="L52">  }</span>
+
+  public void addValue(
+      final String scope, final Path path, final JsonNode value, final ObjectNode targetRoot) {
+<span class="pc bpc" id="L56" title="1 of 2 branches missed.">    if (isNullValue(value)) {</span>
+<span class="nc" id="L57">      return;</span>
+    }
+<span class="fc" id="L59">    routeValue(scope, path, value, targetRoot);</span>
+<span class="fc" id="L60">  }</span>
+
+  private void routeValue(
+      final String scope, final Path path, final JsonNode value, final ObjectNode targetRoot) {
+<span class="fc" id="L64">    final String cacheKey = buildCacheKey(scope, path.absolutePath());</span>
+<span class="fc" id="L65">    final MappingConfig.PrimitiveListRule rule = ruleCache.getRuleFor(path.absolutePath());</span>
+<span class="fc" id="L66">    final AddContext context = new AddContext(cacheKey, path, value, targetRoot, rule);</span>
+
+<span class="fc bfc" id="L68" title="All 2 branches covered.">    if (shouldInsertImmediately(rule)) {</span>
+<span class="fc" id="L69">      addImmediately(context);</span>
+    } else {
+<span class="fc" id="L71">      accumulateForSorting(context);</span>
+    }
+<span class="fc" id="L73">  }</span>
+
+  private boolean shouldInsertImmediately(final MappingConfig.PrimitiveListRule rule) {
+<span class="fc bfc" id="L76" title="All 2 branches covered.">    return rule.orderDirection() == MappingConfig.OrderDirection.insertion;</span>
+  }
+
+  private void addImmediately(final AddContext context) {
+<span class="fc" id="L80">    final ArrayNode array =</span>
+<span class="fc" id="L81">        getOrCreateArrayNode(context.cacheKey(), context.path(), context.targetRoot());</span>
+<span class="fc" id="L82">    final PrimitiveArrayBucket bucket = getOrCreateBucket(context.cacheKey(), context.rule());</span>
+
+<span class="fc bfc" id="L84" title="All 2 branches covered.">    if (bucket.shouldAdd(context.value())) {</span>
+<span class="fc" id="L85">      array.add(context.value());</span>
+    }
+<span class="fc" id="L87">  }</span>
+
+  private void accumulateForSorting(final AddContext context) {
+<span class="fc" id="L90">    getOrCreateArrayNode(context.cacheKey(), context.path(), context.targetRoot());</span>
+<span class="fc" id="L91">    final PrimitiveArrayBucket bucket = getOrCreateBucket(context.cacheKey(), context.rule());</span>
+<span class="fc" id="L92">    bucket.add(context.value());</span>
+<span class="fc" id="L93">    directions.put(context.cacheKey(), context.rule().orderDirection());</span>
+<span class="fc" id="L94">  }</span>
+
+  private PrimitiveArrayBucket getOrCreateBucket(
+      final String cacheKey, final MappingConfig.PrimitiveListRule rule) {
+<span class="fc" id="L98">    return buckets.computeIfAbsent(cacheKey, k -&gt; new PrimitiveArrayBucket(rule.dedup()));</span>
+  }
+
+  private ArrayNode getOrCreateArrayNode(
+      final String cacheKey, final Path path, final ObjectNode targetRoot) {
+<span class="fc" id="L103">    return arrayNodes.computeIfAbsent(</span>
+<span class="fc" id="L104">        cacheKey, k -&gt; arrayFactory.createAndAttach(targetRoot, path.relativePath()));</span>
+  }
+
+  private String buildCacheKey(final String scope, final String path) {
+<span class="fc" id="L108">    return scope + CACHE_KEY_SEPARATOR + path;</span>
+  }
+
+  private void clearState() {
+<span class="fc" id="L112">    arrayNodes.clear();</span>
+<span class="fc" id="L113">    buckets.clear();</span>
+<span class="fc" id="L114">    directions.clear();</span>
+<span class="fc" id="L115">  }</span>
+
+  private boolean isNullValue(final JsonNode value) {
+<span class="pc bpc" id="L118" title="2 of 4 branches missed.">    return value == null || value.isNull();</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

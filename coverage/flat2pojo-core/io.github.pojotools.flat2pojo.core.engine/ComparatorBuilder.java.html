@@ -38,7 +38,7 @@ final class ComparatorBuilder {
 
 <span class="fc bfc" id="L39" title="All 2 branches covered.">    for (final var orderBy : rule.orderBy()) {</span>
 <span class="fc" id="L40">      final String relativePath = orderBy.path();</span>
-<span class="fc bfc" id="L41" title="All 2 branches covered.">      final boolean isAscending = orderBy.direction() == MappingConfig.Direction.asc;</span>
+<span class="fc bfc" id="L41" title="All 2 branches covered.">      final boolean isAscending = orderBy.direction() == MappingConfig.OrderDirection.asc;</span>
 <span class="fc bfc" id="L42" title="All 2 branches covered.">      final boolean nullsFirst = orderBy.nulls() == MappingConfig.Nulls.first;</span>
 
 <span class="fc" id="L44">      comparatorList.add(createFieldComparator(relativePath, isAscending, nullsFirst));</span>

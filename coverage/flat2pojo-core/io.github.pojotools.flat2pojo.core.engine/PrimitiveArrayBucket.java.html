@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>PrimitiveArrayBucket.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">flat2pojo-coverage</a> &gt; <a href="../index.html" class="el_bundle">flat2pojo-core</a> &gt; <a href="index.source.html" class="el_package">io.github.pojotools.flat2pojo.core.engine</a> &gt; <span class="el_source">PrimitiveArrayBucket.java</span></div><h1>PrimitiveArrayBucket.java</h1><pre class="source lang-java linenums">package io.github.pojotools.flat2pojo.core.engine;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import io.github.pojotools.flat2pojo.core.config.MappingConfig;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+/**
+ * Accumulates primitive values with deduplication support. Single Responsibility: Primitive value
+ * accumulation and deduplication.
+ */
+final class PrimitiveArrayBucket {
+<span class="fc" id="L16">  private final List&lt;JsonNode&gt; values = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L17">  private final Set&lt;JsonNode&gt; dedupSet = new HashSet&lt;&gt;();</span>
+  private final boolean dedup;
+
+<span class="fc" id="L20">  PrimitiveArrayBucket(final boolean dedup) {</span>
+<span class="fc" id="L21">    this.dedup = dedup;</span>
+<span class="fc" id="L22">  }</span>
+
+  void add(final JsonNode value) {
+<span class="fc bfc" id="L25" title="All 2 branches covered.">    if (shouldAdd(value)) {</span>
+<span class="fc" id="L26">      values.add(value);</span>
+    }
+<span class="fc" id="L28">  }</span>
+
+  boolean shouldAdd(final JsonNode value) {
+<span class="fc bfc" id="L31" title="All 4 branches covered.">    return !dedup || dedupSet.add(value);</span>
+  }
+
+  void writeToArray(final ArrayNode array, final MappingConfig.OrderDirection direction) {
+<span class="fc" id="L35">    sortIfNeeded(direction);</span>
+<span class="fc" id="L36">    addAllToArray(array);</span>
+<span class="fc" id="L37">  }</span>
+
+  private void sortIfNeeded(final MappingConfig.OrderDirection direction) {
+<span class="fc bfc" id="L40" title="All 2 branches covered.">    if (direction == MappingConfig.OrderDirection.asc) {</span>
+<span class="fc" id="L41">      values.sort(new JsonNodeComparator());</span>
+<span class="fc bfc" id="L42" title="All 2 branches covered.">    } else if (direction == MappingConfig.OrderDirection.desc) {</span>
+<span class="fc" id="L43">      values.sort(new JsonNodeComparator().reversed());</span>
+    }
+<span class="fc" id="L45">  }</span>
+
+  private void addAllToArray(final ArrayNode array) {
+<span class="fc bfc" id="L48" title="All 2 branches covered.">    for (final JsonNode value : values) {</span>
+<span class="fc" id="L49">      array.add(value);</span>
+<span class="fc" id="L50">    }</span>
+<span class="fc" id="L51">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

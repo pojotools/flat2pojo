@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>JsonNodeComparator.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">flat2pojo-coverage</a> &gt; <a href="../index.html" class="el_bundle">flat2pojo-core</a> &gt; <a href="index.source.html" class="el_package">io.github.pojotools.flat2pojo.core.engine</a> &gt; <span class="el_source">JsonNodeComparator.java</span></div><h1>JsonNodeComparator.java</h1><pre class="source lang-java linenums">package io.github.pojotools.flat2pojo.core.engine;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import java.util.Comparator;
+
+/**
+ * Comparator for JsonNode values with numeric and text fallback. Single Responsibility: JsonNode
+ * comparison logic.
+ */
+<span class="fc" id="L10">final class JsonNodeComparator implements Comparator&lt;JsonNode&gt; {</span>
+
+  @Override
+  public int compare(final JsonNode a, final JsonNode b) {
+<span class="fc bfc" id="L14" title="All 2 branches covered.">    if (bothAreNumeric(a, b)) {</span>
+<span class="fc" id="L15">      return compareAsNumbers(a, b);</span>
+    }
+<span class="fc" id="L17">    return compareAsText(a, b);</span>
+  }
+
+  private boolean bothAreNumeric(final JsonNode a, final JsonNode b) {
+<span class="pc bpc" id="L21" title="1 of 4 branches missed.">    return a.isNumber() &amp;&amp; b.isNumber();</span>
+  }
+
+  private int compareAsNumbers(final JsonNode a, final JsonNode b) {
+<span class="fc" id="L25">    return Double.compare(a.doubleValue(), b.doubleValue());</span>
+  }
+
+  private int compareAsText(final JsonNode a, final JsonNode b) {
+<span class="fc" id="L29">    return a.asText().compareTo(b.asText());</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

@@ -43,7 +43,7 @@ import java.util.Set;
    * Checks if a relative suffix is under any child list of the parent. Example: For parent
    * &quot;definitions&quot;, checks if suffix &quot;modules/name&quot; starts with &quot;modules/&quot;
    */
-  public boolean isSuffixUnderAnyChild(
+  public boolean isSuffixUnderAnyChildList(
       final String suffix, final String parentPath, final Set&lt;String&gt; allListPaths) {
 <span class="fc" id="L48">    final String parentPrefix = buildPrefix(parentPath);</span>
 <span class="fc bfc" id="L49" title="All 2 branches covered.">    for (final String listPath : allListPaths) {</span>

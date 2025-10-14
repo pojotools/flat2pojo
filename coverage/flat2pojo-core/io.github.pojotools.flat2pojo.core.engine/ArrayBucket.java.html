@@ -1,87 +1,76 @@
 <?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../../jacoco-resources/report.gif" type="image/gif"/><title>ArrayBucket.java</title><link rel="stylesheet" href="../../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../../index.html" class="el_report">flat2pojo-coverage</a> &gt; <a href="../index.html" class="el_bundle">flat2pojo-core</a> &gt; <a href="index.source.html" class="el_package">io.github.pojotools.flat2pojo.core.engine</a> &gt; <span class="el_source">ArrayBucket.java</span></div><h1>ArrayBucket.java</h1><pre class="source lang-java linenums">package io.github.pojotools.flat2pojo.core.engine;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.*;
 
-<span class="fc" id="L8">public final class ArrayBucket {</span>
-<span class="fc" id="L9">  private final Map&lt;CompositeKey, ObjectNode&gt; byKey = new LinkedHashMap&lt;&gt;();</span>
-<span class="fc" id="L10">  private final List&lt;ObjectNode&gt; insertionOrder = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L6">public final class ArrayBucket {</span>
+<span class="fc" id="L7">  private final Map&lt;CompositeKey, ObjectNode&gt; byKey = new LinkedHashMap&lt;&gt;();</span>
   private List&lt;ObjectNode&gt; cachedSortedElements;
   private List&lt;Comparator&lt;ObjectNode&gt;&gt; lastComparators;
 
   /**
    * Upserts an element into the bucket.
    *
-   * &lt;p&gt;Production behavior: Always called with an empty candidate node. When a key exists, returns
-   * the existing node unchanged. When key is new, inserts and returns the candidate.
+   * &lt;p&gt;Production behavior: Always called with an empty candidate node. When a key exists, it
+   * returns the existing node unchanged. When the key is new, inserts and returns the candidate.
    *
-   * &lt;p&gt;This implements first-write-wins semantics: the first insert establishes the node,
-   * subsequent upserts with the same key return the existing node without modification.
+   * &lt;p&gt;This implements first-write-wins semantics: the first insert establishes the node, later
+   * upserts with the same key return the existing node without modification.
    *
    * @param key composite key identifying the element
    * @param candidate node to insert (production: always empty; will be populated by callers)
    * @return the node in the bucket (either newly inserted or pre-existing)
    */
   public ObjectNode upsert(CompositeKey key, ObjectNode candidate) {
-<span class="fc" id="L28">    Objects.requireNonNull(key, &quot;key must not be null&quot;);</span>
-<span class="fc" id="L29">    Objects.requireNonNull(candidate, &quot;candidate must not be null&quot;);</span>
+<span class="fc" id="L25">    Objects.requireNonNull(key, &quot;key must not be null&quot;);</span>
+<span class="fc" id="L26">    Objects.requireNonNull(candidate, &quot;candidate must not be null&quot;);</span>
 
-<span class="fc bfc" id="L31" title="All 2 branches covered.">    return existsInBucket(key) ? byKey.get(key) : insertNew(key, candidate);</span>
+<span class="fc bfc" id="L28" title="All 2 branches covered.">    return existsInBucket(key) ? byKey.get(key) : insertNew(key, candidate);</span>
   }
 
   private boolean existsInBucket(CompositeKey key) {
-<span class="fc" id="L35">    return byKey.containsKey(key);</span>
+<span class="fc" id="L32">    return byKey.containsKey(key);</span>
   }
 
   private ObjectNode insertNew(CompositeKey key, ObjectNode candidate) {
-<span class="fc" id="L39">    byKey.put(key, candidate);</span>
-<span class="fc" id="L40">    insertionOrder.add(candidate);</span>
-<span class="fc" id="L41">    invalidateCache();</span>
-<span class="fc" id="L42">    return candidate;</span>
+<span class="fc" id="L36">    byKey.put(key, candidate);</span>
+<span class="fc" id="L37">    invalidateCache();</span>
+<span class="fc" id="L38">    return candidate;</span>
   }
 
   private void invalidateCache() {
-<span class="fc" id="L46">    cachedSortedElements = null;</span>
-<span class="fc" id="L47">    lastComparators = null;</span>
-<span class="fc" id="L48">  }</span>
+<span class="fc" id="L42">    cachedSortedElements = null;</span>
+<span class="fc" id="L43">    lastComparators = null;</span>
+<span class="fc" id="L44">  }</span>
 
   public List&lt;ObjectNode&gt; ordered(List&lt;Comparator&lt;ObjectNode&gt;&gt; comparators) {
-<span class="fc bfc" id="L51" title="All 2 branches covered.">    if (isCached(comparators)) {</span>
-<span class="fc" id="L52">      return cachedSortedElements;</span>
+<span class="fc bfc" id="L47" title="All 2 branches covered.">    if (isCached(comparators)) {</span>
+<span class="fc" id="L48">      return cachedSortedElements;</span>
     }
-<span class="fc" id="L54">    List&lt;ObjectNode&gt; elements = sortElements(comparators);</span>
-<span class="fc" id="L55">    cacheResults(comparators, elements);</span>
-<span class="fc" id="L56">    return elements;</span>
+<span class="fc" id="L50">    List&lt;ObjectNode&gt; elements = sortElements(comparators);</span>
+<span class="fc" id="L51">    cacheResults(comparators, elements);</span>
+<span class="fc" id="L52">    return elements;</span>
   }
 
   private boolean isCached(List&lt;Comparator&lt;ObjectNode&gt;&gt; comparators) {
-<span class="pc bpc" id="L60" title="1 of 4 branches missed.">    return cachedSortedElements != null &amp;&amp; Objects.equals(lastComparators, comparators);</span>
+<span class="pc bpc" id="L56" title="1 of 4 branches missed.">    return cachedSortedElements != null &amp;&amp; Objects.equals(lastComparators, comparators);</span>
   }
 
   private List&lt;ObjectNode&gt; sortElements(List&lt;Comparator&lt;ObjectNode&gt;&gt; comparators) {
-<span class="fc" id="L64">    List&lt;ObjectNode&gt; elements = new ArrayList&lt;&gt;(byKey.values());</span>
-<span class="fc bfc" id="L65" title="All 2 branches covered.">    if (!comparators.isEmpty()) {</span>
-<span class="fc" id="L66">      elements.sort(buildCombinedComparator(comparators));</span>
+<span class="fc" id="L60">    List&lt;ObjectNode&gt; elements = new ArrayList&lt;&gt;(byKey.values());</span>
+<span class="fc bfc" id="L61" title="All 2 branches covered.">    if (!comparators.isEmpty()) {</span>
+<span class="fc" id="L62">      elements.sort(buildCombinedComparator(comparators));</span>
     }
-<span class="fc" id="L68">    return elements;</span>
+<span class="fc" id="L64">    return elements;</span>
   }
 
   private Comparator&lt;ObjectNode&gt; buildCombinedComparator(List&lt;Comparator&lt;ObjectNode&gt;&gt; comparators) {
-<span class="fc" id="L72">    return comparators.stream().reduce(Comparator::thenComparing).orElseThrow();</span>
+<span class="fc" id="L68">    return comparators.stream().reduce(Comparator::thenComparing).orElseThrow();</span>
   }
 
   private void cacheResults(List&lt;Comparator&lt;ObjectNode&gt;&gt; comparators, List&lt;ObjectNode&gt; elements) {
-<span class="fc" id="L76">    cachedSortedElements = elements;</span>
-<span class="fc" id="L77">    lastComparators = new ArrayList&lt;&gt;(comparators);</span>
-<span class="fc" id="L78">  }</span>
-
-  public ArrayNode asArray(
-      ObjectMapper objectMapper, List&lt;Comparator&lt;ObjectNode&gt;&gt; nodeComparators) {
-<span class="fc" id="L82">    ArrayNode arrayNode = objectMapper.createArrayNode();</span>
-<span class="fc" id="L83">    ordered(nodeComparators).forEach(arrayNode::add);</span>
-<span class="fc" id="L84">    return arrayNode;</span>
-  }
+<span class="fc" id="L72">    cachedSortedElements = elements;</span>
+<span class="fc" id="L73">    lastComparators = new ArrayList&lt;&gt;(comparators);</span>
+<span class="fc" id="L74">  }</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>
