@@ -89,6 +89,17 @@
                 </configuration>
             </plugin>
 
+            <!-- Configure PMD to exclude JMH generated code -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-pmd-plugin</artifactId>
+                <configuration>
+                    <excludeRoots>
+                        <excludeRoot>${project.build.directory}/generated-sources</excludeRoot>
+                    </excludeRoots>
+                </configuration>
+            </plugin>
+
             <!-- JMH benchmark plugin -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

@@ -110,18 +110,21 @@ public class Flat2PojoCoreBenchmark {
   // ==================== Simple Flat Structure Benchmarks ====================
 
   @Benchmark
+  @SuppressWarnings("PMD.MethodNamingConventions")
   public void convertAll_Simple_2500(Blackhole bh) {
     List<Map> results = converter.convertAll(simple2500, Map.class, simpleConfig);
     bh.consume(results);
   }
 
   @Benchmark
+  @SuppressWarnings("PMD.MethodNamingConventions")
   public void convertAll_Simple_5000(Blackhole bh) {
     List<Map> results = converter.convertAll(simple5000, Map.class, simpleConfig);
     bh.consume(results);
   }
 
   @Benchmark
+  @SuppressWarnings("PMD.MethodNamingConventions")
   public void convertAll_Simple_10000(Blackhole bh) {
     List<Map> results = converter.convertAll(simple10000, Map.class, simpleConfig);
     bh.consume(results);
@@ -130,18 +133,21 @@ public class Flat2PojoCoreBenchmark {
   // ==================== Nested List with Grouping Benchmarks ====================
 
   @Benchmark
+  @SuppressWarnings("PMD.MethodNamingConventions")
   public void convertAll_NestedList_2500(Blackhole bh) {
     List<Map> results = converter.convertAll(nestedList2500, Map.class, nestedListConfig);
     bh.consume(results);
   }
 
   @Benchmark
+  @SuppressWarnings("PMD.MethodNamingConventions")
   public void convertAll_NestedList_5000(Blackhole bh) {
     List<Map> results = converter.convertAll(nestedList5000, Map.class, nestedListConfig);
     bh.consume(results);
   }
 
   @Benchmark
+  @SuppressWarnings("PMD.MethodNamingConventions")
   public void convertAll_NestedList_10000(Blackhole bh) {
     List<Map> results = converter.convertAll(nestedList10000, Map.class, nestedListConfig);
     bh.consume(results);
@@ -150,18 +156,21 @@ public class Flat2PojoCoreBenchmark {
   // ==================== Complex Multi-Level Lists Benchmarks ====================
 
   @Benchmark
+  @SuppressWarnings("PMD.MethodNamingConventions")
   public void convertAll_Complex_2500(Blackhole bh) {
     List<Map> results = converter.convertAll(complex2500, Map.class, complexConfig);
     bh.consume(results);
   }
 
   @Benchmark
+  @SuppressWarnings("PMD.MethodNamingConventions")
   public void convertAll_Complex_5000(Blackhole bh) {
     List<Map> results = converter.convertAll(complex5000, Map.class, complexConfig);
     bh.consume(results);
   }
 
   @Benchmark
+  @SuppressWarnings("PMD.MethodNamingConventions")
   public void convertAll_Complex_10000(Blackhole bh) {
     List<Map> results = converter.convertAll(complex10000, Map.class, complexConfig);
     bh.consume(results);
