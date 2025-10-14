@@ -26,6 +26,11 @@ primitives:                       # String-to-array split rules
       delimiter: ","              # Split delimiter (default: ",")
       trim: false                 # Trim whitespace from elements (default: false)
 
+primitiveLists:                   # Aggregate primitive values across rows into arrays
+  - path: "schedule/weekdays"     # Absolute path
+    orderDirection: insertion     # insertion | asc | desc (default: insertion)
+    dedup: true                   # Remove duplicates (default: true)
+
 nullPolicy:
   blanksAsNulls: false            # Treat blank strings as null (default: false when omitted)
 
@@ -439,6 +444,249 @@ coordinates=40.7128|-74.0060
 - `trim`: Whether to trim whitespace from each part — default: false
 - Empty parts are preserved (e.g., `"a,,b"` → `["a", "", "b"]`)
 - Respects `nullPolicy.blanksAsNulls` for empty parts
+
+## Primitive List Rules
+
+Aggregate primitive values across multiple rows into arrays on a single output object. This is useful when multiple rows contain different values for the same field, and you want to collect them all into an array.
+
+```yaml
+primitiveLists:
+  - path: "definitions/schedule/weekdays"
+    orderDirection: insertion   # insertion | asc | desc (default: insertion)
+    dedup: true                 # Remove duplicates (default: true)
+  - path: "definitions/tags"
+    orderDirection: asc
+    dedup: false
+```
+
+**Input (multiple rows):**
+```
+Row 1: definitions/id/identifier=D-1, definitions/schedule/weekdays=Mon
+Row 2: definitions/id/identifier=D-1, definitions/schedule/weekdays=Tue
+Row 3: definitions/id/identifier=D-1, definitions/schedule/weekdays=Wed
+```
+
+**Output:**
+```json
+{
+  "definitions": [
+    {
+      "id": {"identifier": "D-1"},
+      "schedule": {
+        "weekdays": ["Mon", "Tue", "Wed"]
+      }
+    }
+  ]
+}
+```
+
+### Configuration Options
+
+- **path** (required): Absolute path to the field to aggregate
+- **orderDirection** (optional, default: `insertion`): How to order the collected values
+  - `insertion`: Maintain the order values are encountered (first-seen, first-in-array)
+  - `asc`: Sort values in ascending order (alphabetically for strings, numerically for numbers)
+  - `desc`: Sort values in descending order
+- **dedup** (optional, default: `true`): Whether to remove duplicate values
+  - `true`: Only unique values are included in the array
+  - `false`: All values are included, even duplicates
+
+### Scoping Behavior
+
+Primitive aggregation is **scope-aware**, meaning it respects the hierarchical structure of your data:
+
+**Root-Level Aggregation:**
+```yaml
+primitiveLists:
+  - path: "weekdays"
+```
+
+All rows contribute to a single array at the root level:
+```
+Input:  [{weekdays: "Mon"}, {weekdays: "Tue"}]
+Output: {weekdays: ["Mon", "Tue"]}
+```
+
+**List-Scoped Aggregation:**
+```yaml
+lists:
+  - path: "definitions"
+    keyPaths: ["id/identifier"]
+primitiveLists:
+  - path: "definitions/schedule/weekdays"
+```
+
+Each list element gets its own aggregated array:
+```
+Input:
+  [{definitions/id/identifier: "D-1", definitions/schedule/weekdays: "Mon"},
+   {definitions/id/identifier: "D-1", definitions/schedule/weekdays: "Tue"},
+   {definitions/id/identifier: "D-2", definitions/schedule/weekdays: "Sat"}]
+
+Output:
+  {definitions: [
+    {id: {identifier: "D-1"}, schedule: {weekdays: ["Mon", "Tue"]}},
+    {id: {identifier: "D-2"}, schedule: {weekdays: ["Sat"]}}
+  ]}
+```
+
+### Multiple Field Aggregation
+
+Aggregate multiple fields independently within the same object:
+
+```yaml
+primitiveLists:
+  - path: "definitions/schedule/weekdays"
+    orderDirection: insertion
+  - path: "definitions/tags"
+    orderDirection: asc  # Sort tags alphabetically
+    dedup: true          # Remove duplicate tags
+```
+
+**Input:**
+```
+Row 1: definitions/id/identifier=D-1, definitions/schedule/weekdays=Mon, definitions/tags=urgent
+Row 2: definitions/id/identifier=D-1, definitions/schedule/weekdays=Tue, definitions/tags=backend
+Row 3: definitions/id/identifier=D-1, definitions/schedule/weekdays=Wed, definitions/tags=critical
+```
+
+**Output:**
+```json
+{
+  "definitions": [
+    {
+      "id": {"identifier": "D-1"},
+      "schedule": {
+        "weekdays": ["Mon", "Tue", "Wed"]
+      },
+      "tags": ["backend", "critical", "urgent"]
+    }
+  ]
+}
+```
+
+Note: `weekdays` are in insertion order, while `tags` are sorted alphabetically (asc).
+
+### Mixing Aggregation with Regular Fields
+
+Aggregation works seamlessly with regular field merging and conflict resolution:
+
+```yaml
+lists:
+  - path: "definitions"
+    keyPaths: ["id/identifier"]
+    dedupe: true
+    onConflict: "merge"
+primitiveLists:
+  - path: "definitions/schedule/weekdays"
+```
+
+**Input:**
+```
+Row 1: definitions/id/identifier=D-1, definitions/name=Core Services, definitions/priority=5, definitions/schedule/weekdays=Mon
+Row 2: definitions/id/identifier=D-1, definitions/schedule/weekdays=Tue
+Row 3: definitions/id/identifier=D-1, definitions/audit/modifiedBy=alice, definitions/schedule/weekdays=Wed
+```
+
+**Output:**
+```json
+{
+  "definitions": [
+    {
+      "id": {"identifier": "D-1"},
+      "name": "Core Services",
+      "priority": 5,
+      "audit": {"modifiedBy": "alice"},
+      "schedule": {
+        "weekdays": ["Mon", "Tue", "Wed"]
+      }
+    }
+  ]
+}
+```
+
+### Aggregation vs Split Rules
+
+**Primitive Split Rules** and **Primitive Aggregation Rules** serve different purposes:
+
+| Feature | Primitive Split | Primitive Aggregation |
+|---------|----------------|----------------------|
+| **Purpose** | Split a single delimited string into array | Collect values from multiple rows into array |
+| **Input** | Single row with delimited string | Multiple rows with individual values |
+| **Use Case** | CSV-style fields: `"tag1,tag2,tag3"` | Database JOINs producing multiple rows |
+| **Configuration** | `primitives` + `split` | `primitiveLists` with `orderDirection` and `dedup` |
+
+**Example showing the difference:**
+
+**Split Rule:**
+```yaml
+primitives:
+  - path: "definitions/tags"
+    split: {delimiter: ",", trim: true}
+```
+```
+Input:  definitions/id/identifier=D-1, definitions/tags="java, spring, boot"
+Output: {definitions: [{id: {identifier: "D-1"}, tags: ["java", "spring", "boot"]}]}
+```
+
+**Aggregation Rule:**
+```yaml
+primitiveLists:
+  - path: "definitions/tags"
+```
+```
+Input:
+  Row 1: definitions/id/identifier=D-1, definitions/tags=java
+  Row 2: definitions/id/identifier=D-1, definitions/tags=spring
+  Row 3: definitions/id/identifier=D-1, definitions/tags=boot
+Output: {definitions: [{id: {identifier: "D-1"}, tags: ["java", "spring", "boot"]}]}
+```
+
+### Use Cases
+
+**1. Database JOIN Results**
+
+When a database query joins related tables and produces multiple rows for the same entity:
+```sql
+SELECT d.id, d.name, s.day_of_week
+FROM definitions d
+JOIN schedules s ON d.id = s.definition_id
+```
+Produces multiple rows per definition, each with one day. Aggregation collects all days into an array.
+
+**2. Event Streams**
+
+Aggregating events or log entries over time:
+```yaml
+primitiveLists:
+  - path: "events/timestamps"
+    orderDirection: asc  # Chronological order
+```
+
+**3. Many-to-Many Relationships**
+
+Collecting related entities across multiple rows:
+```yaml
+primitiveLists:
+  - path: "products/categories"
+    orderDirection: asc
+    dedup: true          # Remove duplicate categories
+  - path: "products/tags"
+    orderDirection: asc
+    dedup: true
+```
+
+**4. Cartesian Product Flattening**
+
+When data comes from a cartesian product and you need to de-duplicate and aggregate:
+```yaml
+lists:
+  - path: "projects"
+    keyPaths: ["id"]
+primitiveLists:
+  - path: "projects/contributors"
+    dedup: true          # Remove duplicate contributor names
+```
 
 ## Null Policy
 

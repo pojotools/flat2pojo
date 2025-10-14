@@ -23,6 +23,7 @@ A high-performance Java library for converting flat maps to structured POJOs usi
 - **Hierarchical grouping** - Convert flat rows into nested lists and objects
 - **Flexible ordering** - Sort list elements by multiple fields with null handling
 - **Conflict resolution** - Handle value conflicts with configurable policies
+- **Primitive aggregation** - Collect values across multiple rows into arrays
 - **Type safety** - Full Jackson integration with your existing POJOs
 - **Performance** - O(n) processing with minimal allocations
 - **Extensible** - Custom value processing and reporting via SPI
@@ -69,6 +70,7 @@ public record Task(
     String title,
     String status,
     int priority,
+    List<String> tags,
     List<Comment> comments
 ) {}
 
@@ -98,6 +100,9 @@ lists:
       - path: "timestamp"
         direction: asc
 
+primitiveLists:
+  - path: "tasks/tags"
+
 nullPolicy:
   blanksAsNulls: true
 ```
@@ -109,9 +114,11 @@ nullPolicy:
 List<Map<String, Object>> flatData = List.of(
     Map.of("id", "proj1", "name", "Project Alpha",
            "tasks/id", "task1", "tasks/title", "Setup", "tasks/priority", "1",
+           "tasks/tags", "backend",
            "tasks/comments/id", "c1", "tasks/comments/text", "Looks good"),
     Map.of("id", "proj1", "name", "Project Alpha",
            "tasks/id", "task1", "tasks/title", "Setup", "tasks/priority", "2",
+           "tasks/tags", "urgent",
            "tasks/comments/id", "c2", "tasks/comments/text", "Ready to deploy")
 );
 
@@ -135,6 +142,7 @@ List<ProjectRoot> projects = converter.convertAll(flatData, ProjectRoot.class, c
         "id": "task1",
         "title": "Setup",
         "priority": 2,
+        "tags": ["backend", "urgent"],
         "comments": [
           {"id": "c1", "text": "Looks good"},
           {"id": "c2", "text": "Ready to deploy"}
@@ -189,6 +197,7 @@ Quick overview of key configuration options:
 - **rootKeys** - Fields that group rows into separate root objects
 - **lists** - Hierarchical grouping with deduplication and sorting
 - **primitives** - String-to-array split rules
+- **primitiveLists** - Collect values across rows into arrays
 - **nullPolicy** - Blank string handling
 - **SPI extensions** - Custom preprocessing and reporting
 

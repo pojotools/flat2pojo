@@ -3,25 +3,24 @@ package io.github.pojotools.flat2pojo.core.impl;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.github.pojotools.flat2pojo.core.config.MappingConfig;
-import io.github.pojotools.flat2pojo.core.engine.GroupingEngine;
+import io.github.pojotools.flat2pojo.core.engine.ArrayManager;
+import io.github.pojotools.flat2pojo.core.engine.Path;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
 /** Processes a single list rule for a row. Single Responsibility: List rule processing logic. */
 final class ListRuleProcessor {
   private final ProcessingContext context;
-  private final GroupingEngine groupingEngine;
+  private final ArrayManager arrayManager;
   private final ListElementWriter writer;
-  private final Map<String, ObjectNode> listElementCache; // Shared across rows
+  private final Map<String, ObjectNode> listElementCache =
+      new LinkedHashMap<>(); // Shared across rows
 
-  ListRuleProcessor(
-      final GroupingEngine groupingEngine,
-      final ProcessingContext context,
-      final Map<String, ObjectNode> listElementCache) {
+  ListRuleProcessor(final AssemblerDependencies dependencies, final ProcessingContext context) {
     this.context = context;
-    this.groupingEngine = groupingEngine;
-    this.writer = new ListElementWriter(context);
-    this.listElementCache = listElementCache;
+    this.arrayManager = dependencies.arrayManager();
+    this.writer = new ListElementWriter(context, dependencies.primitiveArrayManager());
   }
 
   void processRule(
@@ -44,7 +43,8 @@ final class ListRuleProcessor {
     if (listElement == null) {
       markAsSkipped(skippedListPaths, rule);
     } else {
-      cacheAndPopulate(rowValues, listElement, rule);
+      listElementCache.put(rule.path(), listElement);
+      copyValuesToElement(rowValues, listElement, rule);
     }
   }
 
@@ -92,7 +92,7 @@ final class ListRuleProcessor {
     final String parentListPath = context.hierarchyCache().getParentListPath(listPath);
     final ObjectNode baseObject = findBaseObject(parentListPath, root);
     final String relativePath = computeRelativePath(listPath, parentListPath);
-    return groupingEngine.upsertListElementRelative(baseObject, relativePath, rowValues, rule);
+    return arrayManager.upsertListElement(baseObject, relativePath, rowValues, rule);
   }
 
   private ObjectNode findBaseObject(final String parentListPath, final ObjectNode root) {
@@ -114,14 +114,6 @@ final class ListRuleProcessor {
     return parentListPath == null ? root : listElementCache.get(parentListPath);
   }
 
-  private void cacheAndPopulate(
-      final Map<String, JsonNode> rowValues,
-      final ObjectNode listElement,
-      final MappingConfig.ListRule rule) {
-    listElementCache.put(rule.path(), listElement);
-    copyValuesToElement(rowValues, listElement, rule);
-  }
-
   private void copyValuesToElement(
       final Map<String, JsonNode> rowValues,
       final ObjectNode element,
@@ -139,11 +131,13 @@ final class ListRuleProcessor {
       final ObjectNode element,
       final Map.Entry<String, JsonNode> entry,
       final WriteContext writeContext) {
-    final String suffix =
+    final String relativePath =
         context.pathResolver().stripPrefix(entry.getKey(), writeContext.pathPrefix());
-    if (!context.hierarchyCache().isUnderAnyChildList(suffix, writeContext.rule().path())) {
+    if (!context.hierarchyCache().isUnderAnyChildList(relativePath, writeContext.rule().path())) {
+      final String absolutePath = entry.getKey();
+      final Path path = new Path(relativePath, absolutePath);
       writer.writeWithConflictPolicy(
-          element, suffix, entry.getValue(), writeContext.rule().onConflict(), entry.getKey());
+          element, path, entry.getValue(), writeContext.rule().onConflict());
     }
   }
 

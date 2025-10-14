@@ -5,11 +5,8 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import io.github.pojotools.flat2pojo.spi.Reporter;
 import io.github.pojotools.flat2pojo.spi.ValuePreprocessor;
-import java.util.Comparator;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import org.immutables.value.Value;
@@ -58,6 +55,11 @@ public abstract class MappingConfig {
   }
 
   @Value.Default
+  public List<PrimitiveListRule> primitiveLists() {
+    return List.of();
+  }
+
+  @Value.Default
   public NullPolicy nullPolicy() {
     return new NullPolicy(false);
   }
@@ -75,22 +77,8 @@ public abstract class MappingConfig {
   // ======= DERIVED/CACHED FIELDS =======
 
   @Value.Derived
-  public char separatorChar() {
-    return separator().length() == 1 ? separator().charAt(0) : '/';
-  }
-
-  @Value.Derived
   public Set<String> listPaths() {
     return precomputeListPaths();
-  }
-
-  @Value.Derived
-  public Map<String, Set<String>> childListPrefixesMap() {
-    return precomputeChildListPrefixes();
-  }
-
-  public Set<String> getChildListPrefixes(final String listPath) {
-    return childListPrefixesMap().getOrDefault(listPath, Set.of());
   }
 
   // ======= CONVENIENCE BUILDER =======
@@ -107,54 +95,6 @@ public abstract class MappingConfig {
       paths.add(rule.path());
     }
     return Set.copyOf(paths);
-  }
-
-  private Map<String, Set<String>> precomputeChildListPrefixes() {
-    final List<ListRule> rules = lists();
-    if (rules.isEmpty()) {
-      return Map.of();
-    }
-
-    final Map<String, Set<String>> prefixMap = new HashMap<>();
-    final String sep = separator();
-
-    // Sort rules by path length (shorter first) to optimize parent-child detection
-    // This allows us to build the map in a single pass: O(n log n) instead of O(n²)
-    final List<String> sortedPaths =
-        rules.stream().map(ListRule::path).sorted(Comparator.comparingInt(String::length)).toList();
-
-    for (final String rulePath : sortedPaths) {
-      prefixMap.put(rulePath, new HashSet<>());
-    }
-
-    // For each path, find its DIRECT parent (longest matching prefix)
-    for (int i = 0; i < sortedPaths.size(); i++) {
-      final String childPath = sortedPaths.get(i);
-      final String childPrefix = childPath + sep;
-
-      // Find the longest (most specific) parent
-      String directParent = null;
-      for (int j = i - 1; j >= 0; j--) { // Iterate backwards to find longest match first
-        final String potentialParent = sortedPaths.get(j);
-        if (childPath.startsWith(potentialParent + sep)) {
-          directParent = potentialParent;
-          break; // Found the direct parent, stop searching
-        }
-      }
-
-      // Add this child to its direct parent's set (if found)
-      if (directParent != null) {
-        prefixMap.get(directParent).add(childPrefix);
-      }
-    }
-
-    // Make sets immutable
-    final Map<String, Set<String>> immutableMap = new HashMap<>();
-    for (final var entry : prefixMap.entrySet()) {
-      immutableMap.put(entry.getKey(), Set.copyOf(entry.getValue()));
-    }
-
-    return Map.copyOf(immutableMap);
   }
 
   // ======= VALUE TYPES =======
@@ -175,12 +115,7 @@ public abstract class MappingConfig {
     merge
   }
 
-  public record OrderBy(String path, Direction direction, Nulls nulls) {}
-
-  public enum Direction {
-    asc,
-    desc
-  }
+  public record OrderBy(String path, OrderDirection direction, Nulls nulls) {}
 
   public enum Nulls {
     first,
@@ -188,4 +123,12 @@ public abstract class MappingConfig {
   }
 
   public record PrimitiveSplitRule(String path, String delimiter, boolean trim) {}
+
+  public record PrimitiveListRule(String path, OrderDirection orderDirection, boolean dedup) {}
+
+  public enum OrderDirection {
+    insertion,
+    asc,
+    desc
+  }
 }

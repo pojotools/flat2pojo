@@ -6,7 +6,7 @@ import java.util.Map;
  * Processes individual flat rows and builds object graph structure. Enables plugin-based
  * preprocessing and alternative row-processing strategies.
  *
- * <p>Single Responsibility: Transform a single flat key-value row into nested JSON structure.
+ * <p>Single Responsibility: Transform a single flat key-value row into a nested JSON structure.
  */
 interface RowProcessor {
   /**
@@ -17,7 +17,7 @@ interface RowProcessor {
   void processRow(Map<String, ?> row);
 
   /**
-   * Materializes accumulated rows into target POJO type.
+   * Materializes accumulated rows into a target POJO type.
    *
    * @param type target class to convert to
    * @param <T> target type

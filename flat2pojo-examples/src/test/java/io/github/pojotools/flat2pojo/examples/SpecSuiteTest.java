@@ -2161,7 +2161,8 @@ class SpecSuiteTest {
             lists: []
           """);
 
-    List<Map<String, ?>> rows = List.of(Map.of("metadata/name", "Alpha", "metadata/version", "1.0"));
+    List<Map<String, ?>> rows =
+        List.of(Map.of("metadata/name", "Alpha", "metadata/version", "1.0"));
 
     var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
 
@@ -2427,6 +2428,1068 @@ class SpecSuiteTest {
             {
               "id": { "identifier": "D-1" },
               "tags": ["java", " spring", " boot"]
+            }
+          ]
+        }
+        """,
+        out);
+  }
+
+  // ===== Tests for Array Leaf Aggregation Feature (NOT YET IMPLEMENTED) =====
+  // These tests document the DESIRED behavior for aggregating primitive values
+  // across multiple rows into arrays. This feature does not currently exist.
+
+  @Test
+  void test46_array_leaf_aggregation_simple_weekdays() {
+    // DESIRED BEHAVIOR: Aggregate primitive values from multiple rows into an array
+    // Input: Multiple rows with "weekdays" field
+    // Expected: Single object with weekdays as an array
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists: []
+            primitiveLists:
+              - path: "weekdays"
+          """);
+
+    List<Map<String, ?>> rows = List.of(Map.of("weekdays", "Mon"), Map.of("weekdays", "Tue"));
+
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "weekdays": ["Mon", "Tue"]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test47_array_leaf_aggregation_nested_path() {
+    // DESIRED BEHAVIOR: Aggregate primitive values at nested paths
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists:
+              - path: "definitions"
+                keyPaths: ["id/identifier"]
+            primitiveLists:
+              - path: "definitions/schedule/weekdays"
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of("definitions/id/identifier", "D-1", "definitions/schedule/weekdays", "Mon"),
+            Map.of("definitions/id/identifier", "D-1", "definitions/schedule/weekdays", "Tue"),
+            Map.of("definitions/id/identifier", "D-1", "definitions/schedule/weekdays", "Wed"));
+
+    var out =
+        TestSupport.firstElementOrThrow(
+            converter.convertAll(rows, ImmutableProductRoot.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "definitions": [
+            {
+              "id": { "identifier": "D-1" },
+              "schedule": {
+                "weekdays": ["Mon", "Tue", "Wed"]
+              }
+            }
+          ]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test48_array_leaf_aggregation_multiple_definitions() {
+    // DESIRED BEHAVIOR: Aggregate primitive values per list item
+    // Each definition should have its own aggregated array
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists:
+              - path: "definitions"
+                keyPaths: ["id/identifier"]
+            primitiveLists:
+              - path: "definitions/schedule/weekdays"
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of(
+                "definitions/id/identifier", "D-1",
+                "definitions/name", "Work Schedule",
+                "definitions/schedule/weekdays", "Mon"),
+            Map.of("definitions/id/identifier", "D-1", "definitions/schedule/weekdays", "Tue"),
+            Map.of("definitions/id/identifier", "D-1", "definitions/schedule/weekdays", "Wed"),
+            Map.of(
+                "definitions/id/identifier", "D-2",
+                "definitions/name", "Weekend Schedule",
+                "definitions/schedule/weekdays", "Sat"),
+            Map.of("definitions/id/identifier", "D-2", "definitions/schedule/weekdays", "Sun"));
+
+    var out =
+        TestSupport.firstElementOrThrow(
+            converter.convertAll(rows, ImmutableProductRoot.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "definitions": [
+            {
+              "id": { "identifier": "D-1" },
+              "name": "Work Schedule",
+              "schedule": {
+                "weekdays": ["Mon", "Tue", "Wed"]
+              }
+            },
+            {
+              "id": { "identifier": "D-2" },
+              "name": "Weekend Schedule",
+              "schedule": {
+                "weekdays": ["Sat", "Sun"]
+              }
+            }
+          ]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test49_array_leaf_aggregation_multiple_fields() {
+    // DESIRED BEHAVIOR: Aggregate multiple primitive fields independently
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists:
+              - path: "definitions"
+                keyPaths: ["id/identifier"]
+            primitiveLists:
+              - path: "definitions/schedule/weekdays"
+              - path: "definitions/tags"
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of(
+                "definitions/id/identifier", "D-1",
+                "definitions/schedule/weekdays", "Mon",
+                "definitions/tags", "urgent"),
+            Map.of(
+                "definitions/id/identifier", "D-1",
+                "definitions/schedule/weekdays", "Tue",
+                "definitions/tags", "backend"),
+            Map.of(
+                "definitions/id/identifier", "D-1",
+                "definitions/schedule/weekdays", "Wed",
+                "definitions/tags", "critical"));
+
+    var out =
+        TestSupport.firstElementOrThrow(
+            converter.convertAll(rows, ImmutableProductRoot.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "definitions": [
+            {
+              "id": { "identifier": "D-1" },
+              "schedule": {
+                "weekdays": ["Mon", "Tue", "Wed"]
+              },
+              "tags": ["urgent", "backend", "critical"]
+            }
+          ]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test50_array_leaf_aggregation_with_mixed_data() {
+    // DESIRED BEHAVIOR: Mix aggregated arrays with regular scalar fields
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists:
+              - path: "definitions"
+                keyPaths: ["id/identifier"]
+                dedupe: true
+                onConflict: "merge"
+            primitiveLists:
+              - path: "definitions/schedule/weekdays"
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of(
+                "definitions/id/identifier", "D-1",
+                "definitions/name", "Core Services",
+                "definitions/priority", 5,
+                "definitions/schedule/weekdays", "Mon"),
+            Map.of("definitions/id/identifier", "D-1", "definitions/schedule/weekdays", "Tue"),
+            Map.of(
+                "definitions/id/identifier", "D-1",
+                "definitions/audit/modifiedBy", "alice",
+                "definitions/schedule/weekdays", "Wed"));
+
+    var out =
+        TestSupport.firstElementOrThrow(
+            converter.convertAll(rows, ImmutableProductRoot.class, cfg));
+
+    // Regular fields should be merged, aggregated field should become array
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "definitions": [
+            {
+              "id": { "identifier": "D-1" },
+              "name": "Core Services",
+              "priority": 5,
+              "audit": {
+                "modifiedBy": "alice"
+              },
+              "schedule": {
+                "weekdays": ["Mon", "Tue", "Wed"]
+              }
+            }
+          ]
+        }
+        """,
+        out);
+  }
+
+  // ===== Tests for Smart Features of Array Leaf Aggregation =====
+
+  @Test
+  void test52_array_aggregation_multiple_fields() {
+    // Smart Feature 2: Multiple Field Support
+    // Aggregate several fields independently in the same configuration
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists:
+              - path: "products"
+                keyPaths: ["id"]
+            primitiveLists:
+              - path: "products/tags"
+              - path: "products/colors"
+              - path: "products/sizes"
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of(
+                "products/id", "shirt-001",
+                "products/name", "T-Shirt",
+                "products/tags", "casual",
+                "products/colors", "red",
+                "products/sizes", "S"),
+            Map.of(
+                "products/id", "shirt-001",
+                "products/tags", "cotton",
+                "products/colors", "blue",
+                "products/sizes", "M"),
+            Map.of(
+                "products/id", "shirt-001",
+                "products/tags", "summer",
+                "products/colors", "green",
+                "products/sizes", "L"));
+
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "products": [
+            {
+              "id": "shirt-001",
+              "name": "T-Shirt",
+              "tags": ["casual", "cotton", "summer"],
+              "colors": ["red", "blue", "green"],
+              "sizes": ["S", "M", "L"]
+            }
+          ]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test53_array_aggregation_mixed_with_merge() {
+    // Smart Feature 3: Mixed Operations
+    // Combine aggregation with deduplication and merge
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists:
+              - path: "users"
+                keyPaths: ["id"]
+                dedupe: true
+                onConflict: "merge"
+            primitiveLists:
+              - path: "users/roles"
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of(
+                "users/id", "alice",
+                "users/name", "Alice Smith",
+                "users/roles", "admin"),
+            Map.of(
+                "users/id", "alice",
+                "users/email", "alice@example.com",
+                "users/roles", "developer"),
+            Map.of(
+                "users/id", "alice",
+                "users/department", "Engineering",
+                "users/roles", "reviewer"));
+
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
+
+    // Regular fields (name, email, department) are merged
+    // roles values are aggregated into an array
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "users": [
+            {
+              "id": "alice",
+              "name": "Alice Smith",
+              "email": "alice@example.com",
+              "department": "Engineering",
+              "roles": ["admin", "developer", "reviewer"]
+            }
+          ]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test54_array_aggregation_order_preservation() {
+    // Smart Feature 4: Order Preservation
+    // Arrays maintain the direction values appear in input rows
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists:
+              - path: "tasks"
+                keyPaths: ["id"]
+            primitiveLists:
+              - path: "tasks/comments"
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of(
+                "tasks/id", "task-1",
+                "tasks/title", "Fix bug",
+                "tasks/comments", "Started investigation"),
+            Map.of("tasks/id", "task-1", "tasks/comments", "Found root cause"),
+            Map.of("tasks/id", "task-1", "tasks/comments", "Implemented fix"),
+            Map.of("tasks/id", "task-1", "tasks/comments", "Testing complete"),
+            Map.of("tasks/id", "task-1", "tasks/comments", "Deployed to production"));
+
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
+
+    // Comment array preserves chronological direction from input rows
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "tasks": [
+            {
+              "id": "task-1",
+              "title": "Fix bug",
+              "comments": [
+                "Started investigation",
+                "Found root cause",
+                "Implemented fix",
+                "Testing complete",
+                "Deployed to production"
+              ]
+            }
+          ]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test55_unique_flag_deduplicates_values() {
+    // DESIRED BEHAVIOR: With dedup: true, duplicate values are removed
+    // Simulates cartesian product scenario where same value appears multiple times
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists:
+              - path: "tasks"
+                keyPaths: ["id"]
+            primitiveLists:
+              - path: "tasks/tags"
+                dedup: true
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of("tasks/id", "1", "tasks/tags", "urgent"),
+            Map.of("tasks/id", "1", "tasks/tags", "backend"),
+            Map.of("tasks/id", "1", "tasks/tags", "urgent"), // duplicate
+            Map.of("tasks/id", "1", "tasks/tags", "backend")); // duplicate
+
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "tasks": [
+            {
+              "id": "1",
+              "tags": ["urgent", "backend"]
+            }
+          ]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test56_default_behavior_without_unique_keeps_duplicates() {
+    // DESIRED BEHAVIOR: With dedup: false, duplicates are kept
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists:
+              - path: "tasks"
+                keyPaths: ["id"]
+            primitiveLists:
+              - path: "tasks/tags"
+                dedup: false
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of("tasks/id", "1", "tasks/tags", "urgent"),
+            Map.of("tasks/id", "1", "tasks/tags", "backend"),
+            Map.of("tasks/id", "1", "tasks/tags", "urgent")); // duplicate
+
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "tasks": [
+            {
+              "id": "1",
+              "tags": ["urgent", "backend", "urgent"]
+            }
+          ]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test57_unique_flag_per_item_scoping() {
+    // DESIRED BEHAVIOR: Each list item has independent deduplication
+    // Same value across different items is NOT deduplicated
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists:
+              - path: "tasks"
+                keyPaths: ["id"]
+            primitiveLists:
+              - path: "tasks/tags"
+                dedup: true
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of("tasks/id", "1", "tasks/tags", "urgent"),
+            Map.of("tasks/id", "1", "tasks/tags", "urgent"), // dup for task 1
+            Map.of("tasks/id", "2", "tasks/tags", "urgent"), // NOT a dup (different task)
+            Map.of("tasks/id", "2", "tasks/tags", "urgent")); // dup for task 2
+
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "tasks": [
+            {
+              "id": "1",
+              "tags": ["urgent"]
+            },
+            {
+              "id": "2",
+              "tags": ["urgent"]
+            }
+          ]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test58_mixed_unique_and_non_unique_fields() {
+    // DESIRED BEHAVIOR: Some fields deduplicate, others don't
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists:
+              - path: "tasks"
+                keyPaths: ["id"]
+            primitiveLists:
+              - path: "tasks/tags"
+                dedup: true
+              - path: "tasks/comments"
+                dedup: false
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of("tasks/id", "1", "tasks/tags", "urgent", "tasks/comments", "Started"),
+            Map.of("tasks/id", "1", "tasks/tags", "backend", "tasks/comments", "In progress"),
+            Map.of("tasks/id", "1", "tasks/tags", "urgent", "tasks/comments", "Started")); // dups
+
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "tasks": [
+            {
+              "id": "1",
+              "tags": ["urgent", "backend"],
+              "comments": ["Started", "In progress", "Started"]
+            }
+          ]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test59_unique_flag_order_preservation() {
+    // DESIRED BEHAVIOR: First occurrence determines position
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists:
+              - path: "tasks"
+                keyPaths: ["id"]
+            primitiveLists:
+              - path: "tasks/tags"
+                dedup: true
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of("tasks/id", "1", "tasks/tags", "urgent"),
+            Map.of("tasks/id", "1", "tasks/tags", "backend"),
+            Map.of("tasks/id", "1", "tasks/tags", "critical"),
+            Map.of("tasks/id", "1", "tasks/tags", "backend"), // duplicate - should be skipped
+            Map.of("tasks/id", "1", "tasks/tags", "urgent")); // duplicate - should be skipped
+
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "tasks": [
+            {
+              "id": "1",
+              "tags": ["urgent", "backend", "critical"]
+            }
+          ]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test60_primitiveLists_defaults() {
+    // Verify default behavior: orderDirection=insertion, dedup=true
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists: []
+            primitiveLists:
+              - path: "priorities"
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of("priorities", 3),
+            Map.of("priorities", 1),
+            Map.of("priorities", 3), // duplicate - should be removed
+            Map.of("priorities", 2));
+
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper, """
+        {
+          "priorities": [3, 1, 2]
+        }
+        """, out);
+  }
+
+  @Test
+  void test61_primitiveLists_insertion_order() {
+    // Verify insertion order is maintained
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists: []
+            primitiveLists:
+              - path: "priorities"
+                orderDirection: insertion
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of("priorities", 3),
+            Map.of("priorities", 1),
+            Map.of("priorities", 5),
+            Map.of("priorities", 2),
+            Map.of("priorities", 4));
+
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "priorities": [3, 1, 5, 2, 4]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test62_primitiveLists_ascending_order_numbers() {
+    // Verify numeric ascending sorting
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists: []
+            primitiveLists:
+              - path: "priorities"
+                orderDirection: asc
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of("priorities", 3),
+            Map.of("priorities", 1),
+            Map.of("priorities", 5),
+            Map.of("priorities", 2),
+            Map.of("priorities", 4));
+
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "priorities": [1, 2, 3, 4, 5]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test63_primitiveLists_descending_order_numbers() {
+    // Verify numeric descending sorting
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists: []
+            primitiveLists:
+              - path: "priorities"
+                orderDirection: desc
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of("priorities", 3),
+            Map.of("priorities", 1),
+            Map.of("priorities", 5),
+            Map.of("priorities", 2),
+            Map.of("priorities", 4));
+
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "priorities": [5, 4, 3, 2, 1]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test64_primitiveLists_ascending_order_strings() {
+    // Verify string lexicographic ascending sorting
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists: []
+            primitiveLists:
+              - path: "names"
+                orderDirection: asc
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of("names", "Charlie"),
+            Map.of("names", "Alice"),
+            Map.of("names", "Eve"),
+            Map.of("names", "Bob"),
+            Map.of("names", "David"));
+
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "names": ["Alice", "Bob", "Charlie", "David", "Eve"]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test65_primitiveLists_descending_order_strings() {
+    // Verify string lexicographic descending sorting
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists: []
+            primitiveLists:
+              - path: "names"
+                orderDirection: desc
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of("names", "Charlie"),
+            Map.of("names", "Alice"),
+            Map.of("names", "Eve"),
+            Map.of("names", "Bob"),
+            Map.of("names", "David"));
+
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "names": ["Eve", "David", "Charlie", "Bob", "Alice"]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test66_primitiveLists_ascending_with_dedup() {
+    // Verify sorted + deduplication works together
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists: []
+            primitiveLists:
+              - path: "priorities"
+                orderDirection: asc
+                dedup: true
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of("priorities", 3),
+            Map.of("priorities", 1),
+            Map.of("priorities", 3), // duplicate
+            Map.of("priorities", 2),
+            Map.of("priorities", 1), // duplicate
+            Map.of("priorities", 5));
+
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "priorities": [1, 2, 3, 5]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test67_primitiveLists_ascending_with_duplicates() {
+    // Verify sorted with duplicates allowed
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            allowSparseRows: false
+            lists: []
+            primitiveLists:
+              - path: "priorities"
+                orderDirection: asc
+                dedup: false
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of("priorities", 3),
+            Map.of("priorities", 1),
+            Map.of("priorities", 3), // duplicate - kept
+            Map.of("priorities", 2),
+            Map.of("priorities", 1), // duplicate - kept
+            Map.of("priorities", 5));
+
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "priorities": [1, 1, 2, 3, 3, 5]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test68_primitiveLists_nested_ascending() {
+    // Verify ascending order works for nested primitive lists (within a list structure)
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            lists:
+              - path: "tasks"
+                keyPaths: ["taskId"]
+            primitiveLists:
+              - path: "tasks/priorities"
+                orderDirection: asc
+                dedup: true
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of("tasks/taskId", 1, "tasks/priorities", 3),
+            Map.of("tasks/taskId", 1, "tasks/priorities", 1),
+            Map.of("tasks/taskId", 1, "tasks/priorities", 5),
+            Map.of("tasks/taskId", 1, "tasks/priorities", 2));
+
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "tasks": [
+            {
+              "taskId": 1,
+              "priorities": [1, 2, 3, 5]
+            }
+          ]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test69_primitiveLists_nested_descending() {
+    // Verify descending order works for nested primitive lists
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            lists:
+              - path: "tasks"
+                keyPaths: ["taskId"]
+            primitiveLists:
+              - path: "tasks/priorities"
+                orderDirection: desc
+                dedup: true
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of("tasks/taskId", 1, "tasks/priorities", 3),
+            Map.of("tasks/taskId", 1, "tasks/priorities", 1),
+            Map.of("tasks/taskId", 1, "tasks/priorities", 5),
+            Map.of("tasks/taskId", 1, "tasks/priorities", 2));
+
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "tasks": [
+            {
+              "taskId": 1,
+              "priorities": [5, 3, 2, 1]
+            }
+          ]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test70_primitiveLists_nested_multiple_different_orders() {
+    // Verify multiple primitive lists in same nested context can have different ordering
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            lists:
+              - path: "tasks"
+                keyPaths: ["taskId"]
+            primitiveLists:
+              - path: "tasks/tags"
+                orderDirection: insertion
+                dedup: true
+              - path: "tasks/priorities"
+                orderDirection: asc
+                dedup: true
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of("tasks/taskId", 1, "tasks/tags", "urgent", "tasks/priorities", 3),
+            Map.of("tasks/taskId", 1, "tasks/tags", "bug", "tasks/priorities", 1),
+            Map.of("tasks/taskId", 1, "tasks/tags", "frontend", "tasks/priorities", 2));
+
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "tasks": [
+            {
+              "taskId": 1,
+              "tags": ["urgent", "bug", "frontend"],
+              "priorities": [1, 2, 3]
+            }
+          ]
+        }
+        """,
+        out);
+  }
+
+  @Test
+  void test71_primitiveLists_nested_multiple_list_items() {
+    // Verify primitive lists work correctly when there are multiple list items (scoping test)
+    MappingConfig cfg =
+        TestSupport.loadMappingConfigFromYaml(
+            """
+            separator: "/"
+            lists:
+              - path: "tasks"
+                keyPaths: ["taskId"]
+            primitiveLists:
+              - path: "tasks/tags"
+                orderDirection: asc
+                dedup: true
+          """);
+
+    List<Map<String, ?>> rows =
+        List.of(
+            Map.of("tasks/taskId", 1, "tasks/tags", "urgent"),
+            Map.of("tasks/taskId", 1, "tasks/tags", "bug"),
+            Map.of("tasks/taskId", 2, "tasks/tags", "feature"),
+            Map.of("tasks/taskId", 2, "tasks/tags", "backend"),
+            Map.of("tasks/taskId", 3, "tasks/tags", "docs"));
+
+    var out = TestSupport.firstElementOrThrow(converter.convertAll(rows, JsonNode.class, cfg));
+
+    PojoJsonAssert.assertPojoJsonEquals(
+        objectMapper,
+        """
+        {
+          "tasks": [
+            {
+              "taskId": 1,
+              "tags": ["bug", "urgent"]
+            },
+            {
+              "taskId": 2,
+              "tags": ["backend", "feature"]
+            },
+            {
+              "taskId": 3,
+              "tags": ["docs"]
             }
           ]
         }

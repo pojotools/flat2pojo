@@ -5,7 +5,8 @@ import io.github.pojotools.flat2pojo.core.api.Flat2Pojo;
 import io.github.pojotools.flat2pojo.core.config.ListHierarchyCache;
 import io.github.pojotools.flat2pojo.core.config.MappingConfig;
 import io.github.pojotools.flat2pojo.core.config.MappingConfigLoader;
-import io.github.pojotools.flat2pojo.core.engine.GroupingEngine;
+import io.github.pojotools.flat2pojo.core.engine.ArrayManager;
+import io.github.pojotools.flat2pojo.core.engine.PrimitiveArrayManager;
 import io.github.pojotools.flat2pojo.core.engine.ValueTransformer;
 import io.github.pojotools.flat2pojo.core.util.PathResolver;
 import java.util.ArrayList;
@@ -63,10 +64,13 @@ public final class Flat2PojoCore implements Flat2Pojo {
   }
 
   private AssemblerDependencies buildAssemblerDependencies(final MappingConfig config) {
-    final GroupingEngine groupingEngine = new GroupingEngine(objectMapper, config);
-    final ValueTransformer valueTransformer = new ValueTransformer(objectMapper, config);
-    final ResultMaterializer materializer = new ResultMaterializer(objectMapper);
-    return new AssemblerDependencies(objectMapper, groupingEngine, valueTransformer, materializer);
+    return AssemblerDependencies.builder()
+        .objectMapper(objectMapper)
+        .arrayManager(new ArrayManager(objectMapper, config))
+        .valueTransformer(new ValueTransformer(objectMapper, config))
+        .primitiveArrayManager(new PrimitiveArrayManager(objectMapper, config))
+        .materializer(new ResultMaterializer(objectMapper))
+        .build();
   }
 
   private <T> List<T> convertWithoutGrouping(

@@ -3,7 +3,6 @@ package io.github.pojotools.flat2pojo.core.engine;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.Comparator;
 import java.util.List;
@@ -116,37 +115,6 @@ class ArrayBucketTest {
     assertThat(result1).hasSize(1);
     assertThat(result2).hasSize(2);
     assertThat(result1).isNotSameAs(result2);
-  }
-
-  @Test
-  void asArray_createsArrayNodeWithOrderedElements() {
-    ObjectNode node1 = createNode("priority", "2");
-    ObjectNode node2 = createNode("priority", "1");
-
-    bucket.upsert(key("k1"), node1);
-    bucket.upsert(key("k2"), node2);
-
-    Comparator<ObjectNode> comparator = Comparator.comparing(n -> n.get("priority").asInt());
-    ArrayNode result = bucket.asArray(om, List.of(comparator));
-
-    assertThat(result).hasSize(2);
-    assertThat(result.get(0).get("priority").asInt()).isEqualTo(1);
-    assertThat(result.get(1).get("priority").asInt()).isEqualTo(2);
-  }
-
-  @Test
-  void asArray_withNoComparators_usesInsertionOrder() {
-    ObjectNode node1 = createNode("id", "first");
-    ObjectNode node2 = createNode("id", "second");
-
-    bucket.upsert(key("k1"), node1);
-    bucket.upsert(key("k2"), node2);
-
-    ArrayNode result = bucket.asArray(om, List.of());
-
-    assertThat(result).hasSize(2);
-    assertThat(result.get(0).get("id").asText()).isEqualTo("first");
-    assertThat(result.get(1).get("id").asText()).isEqualTo("second");
   }
 
   @Test

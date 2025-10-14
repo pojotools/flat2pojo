@@ -38,7 +38,7 @@ final class ComparatorBuilder {
 
     for (final var orderBy : rule.orderBy()) {
       final String relativePath = orderBy.path();
-      final boolean isAscending = orderBy.direction() == MappingConfig.Direction.asc;
+      final boolean isAscending = orderBy.direction() == MappingConfig.OrderDirection.asc;
       final boolean nullsFirst = orderBy.nulls() == MappingConfig.Nulls.first;
 
       comparatorList.add(createFieldComparator(relativePath, isAscending, nullsFirst));
