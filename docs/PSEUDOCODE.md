@@ -29,11 +29,20 @@
    └─ Validate orderBy paths are relative
 
 2. BUILD processing pipeline
-   ├─ Create PathResolver (separator-aware path operations)
-   ├─ Build ListHierarchyCache (parent-child list relationships)
-   ├─ Create ArrayManager (object array management with deduplication)
-   ├─ Create PrimitiveArrayManager (primitive array management with optimization)
-   ├─ Create ValueTransformer (value→JsonNode conversion)
+   ├─ Create AssemblerDependencies:
+   │  ├─ PathResolver (separator-aware path operations)
+   │  ├─ ListHierarchyCache (parent-child list relationships)
+   │  ├─ ArrayNodeResolver (resolves/creates array nodes in tree)
+   │  ├─ CompositeKeyExtractor (extracts composite keys from rows)
+   │  ├─ ComparatorBuilder (precomputes orderBy comparators)
+   │  ├─ PrimitiveArrayRuleCache (fast O(1) primitive list rule lookup)
+   │  ├─ PrimitiveArrayNodeFactory (creates primitive array nodes)
+   │  └─ ValueTransformer (value→JsonNode conversion)
+   ├─ Create ProcessingContext:
+   │  ├─ Reporter (warnings/errors callback)
+   │  ├─ ValuePreprocessor (optional row transformation)
+   │  └─ ConflictPolicy (from config)
+   ├─ Create ProcessingPipeline (dependencies, context)
    └─ Create ResultMaterializer (JSON→POJO converter)
 
 3. BRANCH by rootKeys configuration
@@ -91,10 +100,25 @@ FOR EACH listRule IN config.lists() (declaration order):
 PHASE 4: Write direct (non-list) values
 FOR EACH entry IN rowValues:
   IF NOT underAnyList(path) AND NOT underSkippedList(path):
-    ListElementWriter.writeDirectly(root, path, value)
+    directValueWriter.writeDirectly(root, path, value)
+      └─ Routes to PrimitiveArrayManager if primitive list, else writes scalar
 ```
 
 ## KEY COLLABORATORS
+
+### 0. ProcessingPipeline: Factory for creating RowProcessor instances
+
+```
+record ProcessingPipeline(AssemblerDependencies dependencies, ProcessingContext context)
+
+createAssembler():
+RETURN new RowGraphAssembler(dependencies, context)
+
+Purpose:
+- Encapsulates all dependencies and context needed for row processing
+- Eliminates repetitive parameter passing
+- Created once per conversion, used to spawn assemblers per group
+```
 
 ### 1. ListRuleProcessor: Processes a single list rule for a row
 
@@ -115,7 +139,7 @@ ELSE:
   relativePath = rule.path
 
 STEP 3: Create/get list element
-listElement = groupingEngine.upsertListElementRelative(
+listElement = arrayManager.upsertListElement(
   baseObject, relativePath, rowValues, rule
 )
 
@@ -129,9 +153,9 @@ listElementCache[rule.path] = listElement
 copyValuesToElement(rowValues, listElement, rule)
 ```
 
-### 2. ArrayManager: Manages arrays with deduplication and sorting
+### 2. ArrayManager: Manages object arrays with deduplication and sorting
 
-**Replaces:** GroupingEngine (now phased out, ArrayManager used directly)
+**Purpose:** Manages list element creation, deduplication by composite keys, and array finalization.
 
 **State (per RowGraphAssembler instance):**
 - buckets: IdentityHashMap<ArrayNode, ArrayBucket>
@@ -362,7 +386,27 @@ RETURN SWITCH value:
   default → objectMapper.valueToTree(value)
 ```
 
-### 8. ListElementWriter: Writes values with conflict handling
+### 8. DirectValueWriter: Writes non-list values directly
+
+```
+writeDirectly(target, path, value):
+IF path.isEmpty():
+  RETURN
+
+IF isPrimitiveListPath(path):
+  writeToPrimitiveList(target, path, value)
+    └─ primitiveArrayManager.addValue(scope, path, value, target)
+ELSE:
+  writeToScalarField(target, path, value)
+    └─ parent.set(lastSegment, value)  // Direct overwrite, no conflict handling
+
+Purpose:
+- Routes primitive list values to PrimitiveArrayManager
+- Writes scalar fields directly without conflict policies
+- Used for non-list paths only (list values use ListElementWriter)
+```
+
+### 9. ListElementWriter: Writes list element values with conflict handling
 
 ```
 writeWithConflictPolicy(target, path, value, policy, absolutePath):
@@ -375,18 +419,13 @@ conflictContext = new ConflictContext(policy, absolutePath, reporter)
 
 ConflictHandler.writeScalarWithPolicy(parent, lastSegment, value, conflictContext)
 
----
-
-writeDirectly(target, path, value):
-IF path.isEmpty():
-  RETURN
-
-parent = pathResolver.traverseAndEnsurePath(target, path)
-lastSegment = pathResolver.getFinalSegment(path)
-parent.set(lastSegment, value)  // Direct overwrite
+Purpose:
+- Used only for writing values to list elements
+- Applies configured conflict policy (error, firstWriteWins, lastWriteWins, merge)
+- Handles multi-row population of same list element
 ```
 
-### 9. ConflictHandler: Resolves field conflicts
+### 10. ConflictHandler: Resolves field conflicts
 
 ```
 writeScalarWithPolicy(target, field, newValue, context):
@@ -413,7 +452,7 @@ SWITCH context.policy:
       target[field] = newValue  // Fallback to lastWriteWins
 ```
 
-### 10. ListHierarchyCache: Pre-computed list hierarchy
+### 11. ListHierarchyCache: Pre-computed list hierarchy
 
 **Computed once per config:**
 
@@ -451,7 +490,7 @@ FOR EACH listPath IN declaredListPaths:
 RETURN false
 ```
 
-### 11. ResultMaterializer: JSON to POJO conversion
+### 12. ResultMaterializer: JSON to POJO conversion
 
 ```
 materialize(root, type):
@@ -488,7 +527,7 @@ CATCH Exception e:
 
 ### Hot Paths
 1. **ValueTransformer.transformRowValuesToJsonNodes** - Called once per row
-2. **GroupingEngine.upsertListElementRelative** - Called once per list rule per row
+2. **ArrayManager.upsertListElement** - Called once per list rule per row
 3. **ArrayBucket.upsert** - Called for each list element creation
 4. **ArrayFinalizer.finalizeArrays** - Called once per group (depth-first tree walk)
 
